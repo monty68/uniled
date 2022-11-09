@@ -13,7 +13,7 @@ HAVE FUN! 😎
 
 # UniLED - The Universal Light Controller
 
-Currently supports the SP107E, SP601E, SP611E and SP6117E range of cheap BLE addressable LED controllers.
+Currently supports the SP107E, SP601E, SP611E and SP617E range of cheap BLE addressable LED controllers.
 
 ---
 
