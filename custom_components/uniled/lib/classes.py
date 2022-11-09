@@ -342,14 +342,14 @@ class UNILEDChannel:
         command = self.device.model.construct_power_change(self, state)
         if await self.device.send_command(command):
             self._status = replace(self._status, power=state)
+            self._fire_callbacks()
 
             # If the master, update all the other channels
             if self.number == 0:
                 for channel in self.device.channels:
                     if channel.number == self.number:
                         continue
-                    await channel.set_status(replace(channel.status, power=state))
-            self._fire_callbacks()
+                    channel.set_status(replace(channel.status, power=state))
 
     async def async_set_white(self, level: int) -> None:
         """Set channel white level."""
@@ -426,7 +426,7 @@ class UNILEDChannel:
             return
         raise ValueError(f"Effect code: {code} is not valid")
 
-    async def set_status(self, status: UNILEDStatus) -> None:
+    def set_status(self, status: UNILEDStatus) -> None:
         """Set status of channel"""
         _LOGGER.debug("%s: Set Status: %s", self.name, status)
         self._status = status

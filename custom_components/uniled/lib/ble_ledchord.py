@@ -237,7 +237,7 @@ class LEDCHORD(UNILEDBLEModel):
         """The bytes to send for a power state change"""
         return self.construct_message(
             bytearray(
-                [0x00, 0x50, 0x4D, _Msg.CMD_LED_ON if turn_on else _Msg.CMD_LED_OFF]
+                [0x00, 0x00, 0x00, _Msg.CMD_LED_ON if turn_on else _Msg.CMD_LED_OFF]
             )
         )
 

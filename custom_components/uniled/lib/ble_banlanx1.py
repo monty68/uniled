@@ -170,7 +170,7 @@ class BANLANX1(UNILEDBLEModel):
             else:
                 return None
 
-            await device.channels[1].set_status(
+            device.channels[1].set_status(
                 UNILEDStatus(
                     power=data[0] == 0x01,
                     fxtype=data[1],
@@ -185,7 +185,7 @@ class BANLANX1(UNILEDBLEModel):
                 )
             )
 
-            await device.channels[2].set_status(
+            device.channels[2].set_status(
                 UNILEDStatus(
                     power=data[11] == 0x01,
                     fxtype=data[12],

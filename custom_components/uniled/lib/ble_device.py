@@ -128,7 +128,7 @@ class UNILEDBLE(UNILEDDevice):
         if self._model:
             new_master_state = await self._model.async_decode_notifications(self, _sender, data)
             if new_master_state is not None:
-                await self.master.set_status(new_master_state)
+                self.master.set_status(new_master_state)
 
     async def _ensure_connected(self) -> None:
         """Ensure connection to device is established."""
@@ -249,8 +249,8 @@ class UNILEDBLE(UNILEDDevice):
         for command in commands:
             _LOGGER.debug("%s: Sending command: %s ", self.name, command.hex())
             await self._client.write_gatt_char(self._write_char, command, False)
-            if to_send > 1:
-                await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
+            #if to_send > 1:
+            await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
 
     def _reset_disconnect_timer(self) -> None:
         """Reset disconnect timer."""
