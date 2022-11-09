@@ -43,9 +43,9 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
-[license]: https://github.com/custom-components/uniled/blob/main/LICENSE
-[license-shield]: https://img.shields.io/github/license/custom-components/uniled.svg?style=for-the-badge
+[license]: https://github.com/monty68/uniled/blob/main/LICENSE
+[license-shield]: https://img.shields.io/github/license/monty68/uniled.svg?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/custom-components/uniled.svg?style=for-the-badge
+[releases-shield]: https://img.shields.io/github/release/monty68/uniled.svg?style=for-the-badge
 [releases]: https://github.com/monty68/uniled/releases
 [user_profile]: https://github.com/monty68
