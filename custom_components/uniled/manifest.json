@@ -1,0 +1,14 @@
+{
+  "domain": "uniled",
+  "name": "Universal Light Controller",
+  "documentation": "https://github.com/monty68/uniled",
+  "issue_tracker": "https://github.com/monty68/uniled/issues",
+  "integration_type": "hub",
+  "config_flow": true,
+  "dependencies": ["bluetooth"],
+  "bluetooth": [{ "manufacturer_id": 20563 }, { "local_name": "sp107e" }],
+  "codeowners": ["@monty68"],
+  "requirements": [],
+  "iot_class": "local_polling",
+  "version": "0.0.4"
+}
