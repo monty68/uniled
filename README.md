@@ -33,11 +33,11 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 
 ***
 
-[uniled]: https://github.com/custom-components/uniled
+[uniled]: https://github.com/monty68/uniled
 [buymecoffee]: https://www.buymeacoffee.com/monty68
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
 [commits-shield]: https://img.shields.io/github/commit-activity/y/custom-components/uniled.svg?style=for-the-badge
-[commits]: https://github.com/custom-components/uniled/commits/master
+[commits]: https://github.com/monty68/uniled/commits/main
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [discord]: https://discord.gg/Qa5fW2R
 [discord-shield]: https://img.shields.io/discord/330944238910963714.svg?style=for-the-badge
@@ -47,5 +47,5 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 [license-shield]: https://img.shields.io/github/license/custom-components/uniled.svg?style=for-the-badge
 [maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/custom-components/uniled.svg?style=for-the-badge
-[releases]: https://github.com/custom-components/uniled/releases
+[releases]: https://github.com/monty68/uniled/releases
 [user_profile]: https://github.com/monty68
