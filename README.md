@@ -1,19 +1,23 @@
-[![GitHub Release][releases-shield]][releases]
-[![GitHub Activity][commits-shield]][commits]
-[![License][license-shield]][license]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
+# ![HA][ha-logo] UniLED - The Universal Light Controller
 
-# Important Notice
+
+UniLED Currently supports the following range of cheap BLE addressable LED controllers:
+
+- SP107E 
+- SP601E 
+- [SP611E][SP61xE]
+- [SP617E][SP61xE]
+
+## Important Notice
 
 The Home Assistant component and platforms in this repository are an "Alpha" release meaning this component is in the early stages of development,
 will be subject to regular change, may cause issues with Home Assistant, contain bugs or unwanted "features". Use at your own risk!
 
+This is also my very first Python and Home Assistant component development.
+
 HAVE FUN! 😎
-
-# UniLED - The Universal Light Controller
-
-Currently supports the SP107E, SP601E, SP611E and SP617E range of cheap BLE addressable LED controllers.
 
 ---
 
@@ -34,6 +38,9 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 ***
 
 [uniled]: https://github.com/monty68/uniled
+[SP61xE]: docs/sp61Xe.md
+[ha-logo]: docs/ha-logo-32x32.png
+
 [buymecoffee]: https://www.buymeacoffee.com/monty68
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
 [commits-shield]: https://img.shields.io/github/commit-activity/y/custom-components/uniled.svg?style=for-the-badge
