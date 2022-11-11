@@ -1,7 +1,6 @@
 """Support for UniLED lights."""
 from __future__ import annotations
 
-from abc import abstractmethod
 from typing import Any
 
 from homeassistant import config_entries
@@ -25,6 +24,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, SIGNAL_STATE_UPDATED
 from .coordinator import UNILEDUpdateCoordinator
 from .lib.classes import UNILEDChannel, UNILEDDevice
+from .lib.models_db import UNILED_TRANSPORT_BLE, UNILED_TRANSPORT_NET
 
 import logging
 
@@ -50,7 +50,8 @@ class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
         self._channel_id = channel_id
         self._attr_name = f"{self._channel.name} {name}"
         mangled_name = self._channel.name.replace(" ", "_").lower()
-        self._attr_unique_id = f"_{self._device.id}_{mangled_name}"
+        base_unique_id = coordinator.entry.unique_id or coordinator.entry.entry_id
+        self._attr_unique_id = f"_{base_unique_id}_{mangled_name}"
         if key is not None:
             self._attr_unique_id = f"_{self._attr_unique_id}_{key}"
         self._attr_device_info = _async_device_info(self._device, coordinator.entry)
@@ -78,13 +79,6 @@ class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
 
     async def async_added_to_hass(self) -> None:
         """Handle entity which will be added."""
-        # self.async_on_remove(
-        #    async_dispatcher_connect(
-        #        self.hass,
-        #        SIGNAL_STATE_UPDATED.format(self._device.address),
-        #        self.async_write_ha_state,
-        #    )
-        # )
         self.async_on_remove(
             self._channel.register_callback(self._handle_coordinator_update)
         )
@@ -95,10 +89,6 @@ class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
         """Handle updated data from the coordinator."""
         self._async_update_attrs()
         self.async_write_ha_state()
-
-        # if self.coordinator.last_update_success != self._responding:
-        #    self.async_write_ha_state()
-        # self._responding = self.coordinator.last_update_success
 
     #@abstractmethod
     @callback
@@ -114,14 +104,15 @@ def _async_device_info(
         ATTR_IDENTIFIERS: {(DOMAIN, entry.entry_id)},
         ATTR_MANUFACTURER: device.manufacturer,
         ATTR_MODEL: device.model_name,
-        ATTR_NAME: f"{device.id} ({device.name})",
-        # ATTR_NAME: entry.data.get(CONF_NAME, entry.title),
+        ATTR_NAME: entry.data.get(CONF_NAME, entry.title),
         # ATTR_SW_VERSION: hex(device.version),
     }
 
-    device_info[ATTR_CONNECTIONS] = {(dr.CONNECTION_BLUETOOTH, device.address)}
-
-    # if entry.unique_id:
-    #    device_info[ATTR_CONNECTIONS] = {(dr.CONNECTION_NETWORK_MAC, entry.unique_id)}
+    # TODO Fix for NET transport!
+    if device.transport == UNILED_TRANSPORT_BLE:
+        device_info[ATTR_CONNECTIONS] = {(dr.CONNECTION_BLUETOOTH, device.address)}
+    elif device.transport == UNILED_TRANSPORT_NET:
+        if entry.unique_id:
+            device_info[ATTR_CONNECTIONS] = {(dr.CONNECTION_NETWORK_MAC, entry.unique_id)}
 
     return device_info

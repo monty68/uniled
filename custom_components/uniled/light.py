@@ -38,6 +38,8 @@ async def async_setup_entry(
     """Set up the light platform for UniLED."""
     coordinator: UNILEDUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    _LOGGER.debug("Setup light entities for %s", coordinator.device.name)
+
     update_channels = partial(
         async_update_channels,
         coordinator,

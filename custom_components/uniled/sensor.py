@@ -4,6 +4,12 @@ from __future__ import annotations
 from functools import partial
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -13,12 +19,6 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
 )
-
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .entity import UNILEDEntity
@@ -34,7 +34,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the light platform for UniLED."""
+    """Set up the sensor platform for UniLED."""
     coordinator: UNILEDUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     update_channels = partial(
@@ -66,10 +66,12 @@ def async_update_channels(
 
     async_add_entities(new_entities)
 
+
 class UNILEDConnectivitySensor(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SensorEntity
 ):
     """Representation of a UniLED connectivity sensor."""
+
     _attr_entity_registry_enabled_default = False
     _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
     _attr_state_class = SensorStateClass.MEASUREMENT

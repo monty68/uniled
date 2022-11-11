@@ -6,9 +6,13 @@
   "integration_type": "hub",
   "config_flow": true,
   "dependencies": ["bluetooth"],
-  "bluetooth": [{ "manufacturer_id": 20563 }, { "local_name": "sp107e" }],
+  "bluetooth": [
+    { "manufacturer_id": 20563 },
+    { "local_name": "sp107e" },
+    { "local_name": "sp110e" }
+  ],
   "codeowners": ["@monty68"],
   "requirements": [],
   "iot_class": "local_polling",
-  "version": "0.0.4"
+  "version": "0.0.5"
 }

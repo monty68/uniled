@@ -7,7 +7,7 @@ from typing import Final
 from .artifacts import (
     UNILEDModelType,
     UNILEDInputs,
-    UNILEDModes,
+    UNILEDEffectType,
     UNILEDEffects
 )
 from .states import (
@@ -180,29 +180,29 @@ BANLANX2_EFFECTS: Final = {
     0x8D: UNILEDEffects.SEGMENT_SPIN_PURPLE,
     0x8E: UNILEDEffects.SEGMENT_SPIN_WHITE,
     0x8F: UNILEDEffects.GRADIENT,
-    0xC9: UNILEDEffects.MUSIC_RHYTHM_SPECTRUM_FULL,
-    0xCA: UNILEDEffects.MUSIC_RHYTHM_SPECTRUM_SINGLE,
-    0xCB: UNILEDEffects.MUSIC_RHYTHM_STARS_FULL,
-    0xCC: UNILEDEffects.MUSIC_RHYTHM_STARS_SINGLE,
-    0xCD: UNILEDEffects.MUSIC_ENERGY_GRADIENT,
-    0xCE: UNILEDEffects.MUSIC_ENERGY_SINGLE,
-    0xCF: UNILEDEffects.MUSIC_PULSE_GRADIENT,
-    0xD0: UNILEDEffects.MUSIC_PULSE_SINGLE,
-    0xD1: UNILEDEffects.MUSIC_EJECTION_FORWARD_FULL,
-    0xD2: UNILEDEffects.MUSIC_EJECTION_FORWARD_SINGLE,
-    0xD3: UNILEDEffects.MUSIC_EJECTION_BACKWARD_FULL,
-    0xD4: UNILEDEffects.MUSIC_EJECTION_BACKWARD_SINGLE,
-    0xD5: UNILEDEffects.MUSIC_VU_METER_FULL,
-    0xD6: UNILEDEffects.MUSIC_VU_METER_SINGLE,
-    0xD7: UNILEDEffects.MUSIC_LOVE_AND_PEACE,
-    0xD8: UNILEDEffects.MUSIC_CHRISTMAS,
-    0xD9: UNILEDEffects.MUSIC_HEARTBEAT,
-    0xDA: UNILEDEffects.MUSIC_PARTY,
+    0xC9: UNILEDEffects.SOUND_RHYTHM_SPECTRUM_FULL,
+    0xCA: UNILEDEffects.SOUND_RHYTHM_SPECTRUM_SINGLE,
+    0xCB: UNILEDEffects.SOUND_RHYTHM_STARS_FULL,
+    0xCC: UNILEDEffects.SOUND_RHYTHM_STARS_SINGLE,
+    0xCD: UNILEDEffects.SOUND_ENERGY_GRADIENT,
+    0xCE: UNILEDEffects.SOUND_ENERGY_SINGLE,
+    0xCF: UNILEDEffects.SOUND_PULSE_GRADIENT,
+    0xD0: UNILEDEffects.SOUND_PULSE_SINGLE,
+    0xD1: UNILEDEffects.SOUND_EJECTION_FORWARD_FULL,
+    0xD2: UNILEDEffects.SOUND_EJECTION_FORWARD_SINGLE,
+    0xD3: UNILEDEffects.SOUND_EJECTION_BACKWARD_FULL,
+    0xD4: UNILEDEffects.SOUND_EJECTION_BACKWARD_SINGLE,
+    0xD5: UNILEDEffects.SOUND_VU_METER_FULL,
+    0xD6: UNILEDEffects.SOUND_VU_METER_SINGLE,
+    0xD7: UNILEDEffects.SOUND_LOVE_AND_PEACE,
+    0xD8: UNILEDEffects.SOUND_CHRISTMAS,
+    0xD9: UNILEDEffects.SOUND_HEARTBEAT,
+    0xDA: UNILEDEffects.SOUND_PARTY,
 }
 
 
 @dataclass(frozen=True)
-class BANLANX2(UNILEDBLEModel):
+class _BANLANX2(UNILEDBLEModel):
     """BanlanX v2 Protocol Implementation"""
 
     ##
@@ -413,10 +413,10 @@ class BANLANX2(UNILEDBLEModel):
         if fxtype is None:
             fxtype = channel.status.fxtype
         if fxtype == BANLANX2_TYPE_SOLID:
-            return UNILEDModes.STATIC
+            return UNILEDEffectType.STATIC
         if fxtype >= BANLANX2_TYPE_SOUND:
-            return UNILEDModes.SOUND
-        return UNILEDModes.DYNAMIC
+            return UNILEDEffectType.SOUND
+        return UNILEDEffectType.PATTERN
 
     def rangeof_channel_effect_speed(
         self, channel: UNILEDChannel
@@ -434,7 +434,7 @@ class BANLANX2(UNILEDBLEModel):
 ##
 ## SP611E
 ##
-SP611E = BANLANX2(
+SP611E = _BANLANX2(
     model_num=0x611E,
     model_name="SP611E",
     model_type=UNILEDModelType.STRIP,
@@ -454,7 +454,7 @@ SP611E = BANLANX2(
 ##
 ## SP617E
 ##
-SP617E = BANLANX2(
+SP617E = _BANLANX2(
     model_num=0x617E,
     model_name="SP617E",
     model_type=UNILEDModelType.STRIP,

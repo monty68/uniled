@@ -49,13 +49,6 @@ class UNILEDModel:
         return None
 
     @abstractmethod
-    def construct_gain_change(
-        self, device: UNILEDDevice, gain: int
-    ) -> list[bytearray] | None:
-        """The bytes to send for a gain/sensitivity change"""
-        return None
-
-    @abstractmethod
     def construct_input_change(
         self, device: UNILEDDevice, audio_input: int
     ) -> bytearray | None:
@@ -120,6 +113,13 @@ class UNILEDModel:
         """The bytes to send for an efect length change."""
         return None
 
+    @abstractmethod
+    def construct_input_gain_change(
+        self, device: UNILEDDevice, gain: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a gain/sensitivity change"""
+        return None
+
     ##
     ## Device Informational
     ##
@@ -138,13 +138,6 @@ class UNILEDModel:
     ##
     ## Channel Informational
     ##
-    @abstractmethod
-    def rangeof_channel_input_gain(
-        self, device: UNILEDChannel
-    ) -> tuple(int, int, int) | None:
-        """Range of input gain (min,max,step)."""
-        return None
-
     @abstractmethod
     def listof_channel_effects(self, channel: UNILEDChannel) -> list | None:
         """List of available channel effects"""
@@ -185,6 +178,12 @@ class UNILEDModel:
         """Range of effect length (min,max,step)."""
         return None
 
+    @abstractmethod
+    def rangeof_channel_input_gain(
+        self, device: UNILEDChannel
+    ) -> tuple(int, int, int) | None:
+        """Range of input gain (min,max,step)."""
+        return None
 
 class UNILEDChannel:
     """UniLED Channel Class"""
@@ -194,14 +193,13 @@ class UNILEDChannel:
         self._number: int = number
         self._device: UNILEDDevice = device
         self._status: UNILEDStatus = UNILEDStatus()
-
-        _LOGGER.debug("%s: Init %s", self.device.name, self.name)
+        _LOGGER.debug("%s: Init Channel %s", self.device.name, self._number)
 
     @property
     def name(self) -> str:
         """Returns the channel name."""
         if self.number == 0:
-            return "Master" # if len(self.device.model.channels) > 1 else ""
+            return "Master" if len(self.device.channels) > 1 else ""
         return f"Channel {self.number}"
 
     @property
@@ -220,12 +218,12 @@ class UNILEDChannel:
         return self._status
 
     @property
-    def effect(self) -> int:
+    def effect(self) -> int | None:
         """Returns effect number"""
         return self._status.effect
 
     @property
-    def nameof_effect(self) -> str:
+    def nameof_effect(self) -> str | None:
         """Returns effect name"""
         assert self.device.model is not None  # nosec
         name =  self.device.model.nameof_channel_effect(self, self._status.effect)
@@ -234,7 +232,7 @@ class UNILEDChannel:
         return f"FX ({self._status.effect})"
 
     @property
-    def effect_type(self) -> int:
+    def effect_type(self) -> int | None:
         """Returns effect number"""
         return self._status.fxtype
 
@@ -251,7 +249,7 @@ class UNILEDChannel:
         return self.device.model.listof_channel_effects(self)
 
     @property
-    def effect_speed(self) -> int:
+    def effect_speed(self) -> int | None:
         """Current effect speed."""
         return self._status.speed
 
@@ -262,7 +260,7 @@ class UNILEDChannel:
         return self.device.model.rangeof_channel_effect_speed(self)
 
     @property
-    def effect_length(self) -> int:
+    def effect_length(self) -> int | None:
         """Current effect length."""
         return self._status.length
 
@@ -273,7 +271,7 @@ class UNILEDChannel:
         return self.device.model.rangeof_channel_effect_length(self)
 
     @property
-    def input_gain(self) -> int:
+    def input_gain(self) -> int | None:
         """Returns the current input gain."""
         return self._status.gain
 
@@ -426,6 +424,54 @@ class UNILEDChannel:
             return
         raise ValueError(f"Effect code: {code} is not valid")
 
+    async def async_set_effect_speed(self, value: int) -> None:
+        """Set effect speed."""
+        _LOGGER.debug("%s: Set Effect Speed: %s", self.name, value)
+        if (rangeof := self.rangeof_effect_speed) is None:
+            return
+        if not rangeof[0] <= value <= rangeof[1]:
+            raise ValueError("Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}")
+
+        if not await self.device.send_command(
+            self.device.model.construct_effect_speed_change(self, value)
+        ):
+            value = self._status.speed
+        self._status = replace(self._status, speed=value)
+        self._fire_callbacks()
+
+    async def async_set_effect_length(self, value: int) -> None:
+        """Set effect length."""
+        _LOGGER.debug("%s: Set Effect Length: %s", self.name, value)
+        if (rangeof := self.rangeof_effect_length) is None:
+            return
+        if not rangeof[0] <= value <= rangeof[1]:
+            raise ValueError("Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}")
+
+        if not await self.device.send_command(
+            self.device.model.construct_effect_length_change(self, value)
+        ):
+            value = self._status.length
+        self._status = replace(self._status, length=value)
+        self._fire_callbacks()
+
+    async def async_set_input_gain(self, value: int) -> None:
+        """Set input gain."""
+        _LOGGER.debug("%s: Set Input Gain: %s", self.name, value)
+        if (rangeof := self.rangeof_input_gain) is None:
+            return
+        if not rangeof[0] <= value <= rangeof[1]:
+            raise ValueError("Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}")
+
+        if not await self.device.send_command(
+            self.device.model.construct_input_gain_change(self, value)
+        ):
+            value = self._status.length
+        self._status = replace(self._status, gain=value)
+        self._fire_callbacks()
+
+
+
+
     def set_status(self, status: UNILEDStatus) -> None:
         """Set status of channel"""
         _LOGGER.debug("%s: Set Status: %s", self.name, status)
@@ -548,8 +594,8 @@ class UNILEDDevice:
 
     @property
     @abstractmethod
-    def id(self) -> str:
-        """Return the ID of the device."""
+    def transport(self) -> str:
+        """Return the device transport."""
 
     @property
     @abstractmethod

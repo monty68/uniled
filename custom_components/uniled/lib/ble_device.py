@@ -23,7 +23,7 @@ from .ble_retry import (
     BLEAK_BACKOFF_TIME,
 )
 from .classes import UNILEDDevice
-from .models_db import UNILED_BLE_MODELS
+from .models_db import UNILED_TRANSPORT_BLE, UNILED_BLE_MODELS
 
 import logging
 
@@ -61,14 +61,14 @@ class UNILEDBLE(UNILEDDevice):
         self._expected_disconnect = False
         self.loop = asyncio.get_running_loop()
         self._resolve_protocol_event = asyncio.Event()
-        _LOGGER.debug("%s: Init", self.name)
         super().__init__()
+        _LOGGER.debug("%s: Init BLE Device", self.name)
         self.set_device_and_advertisement(ble_device, advertisement_data)
 
     @property
-    def id(self) -> str:
-        """Return the ID of the device."""
-        return self.simpler_address(self.address)
+    def transport(self) -> str:
+        """Return the device transport."""
+        return UNILED_TRANSPORT_BLE
 
     @property
     def name(self) -> str:
@@ -104,7 +104,7 @@ class UNILEDBLE(UNILEDDevice):
         self._advertisement_data = advertisement or self._advertisement_data
         _LOGGER.debug("%s: Set device %s", self.name, advertisement)
 
-        if self._advertisement_data and not self._model:
+        if self._advertisement_data and self._model is None:
             self._model = self.match_valid_device(ble_device, advertisement)
             if self._model is not None:
                 self._create_channels()
@@ -126,7 +126,9 @@ class UNILEDBLE(UNILEDDevice):
         """Handle notification responses."""
         _LOGGER.debug("%s: Notification received: %s", self.name, data.hex())
         if self._model:
-            new_master_state = await self._model.async_decode_notifications(self, _sender, data)
+            new_master_state = await self._model.async_decode_notifications(
+                self, _sender, data
+            )
             if new_master_state is not None:
                 self.master.set_status(new_master_state)
 
@@ -172,9 +174,9 @@ class UNILEDBLE(UNILEDDevice):
                 await client.start_notify(self._read_char, self._notification_handler)
                 if not self._model:
                     await self._resolve_protocol()
-        # Send any "on connection" message(s)
-        if self._model:
-            await self.send_command(self._model.construct_connect_message())
+                else:
+                    # Send any "on connection" message(s)
+                    await self.send_command(self._model.construct_connect_message())
 
     async def _send_command_while_connected(
         self, commands: list[bytes], retry: int | None = None
@@ -249,8 +251,8 @@ class UNILEDBLE(UNILEDDevice):
         for command in commands:
             _LOGGER.debug("%s: Sending command: %s ", self.name, command.hex())
             await self._client.write_gatt_char(self._write_char, command, False)
-            #if to_send > 1:
-            await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
+            if to_send > 1:
+                await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
 
     def _reset_disconnect_timer(self) -> None:
         """Reset disconnect timer."""
@@ -353,7 +355,7 @@ class UNILEDBLE(UNILEDDevice):
             # _LOGGER.debug("Probing: %s - %s", model.model_name, advertisement)
             if model.is_device_valid(device, advertisement):
                 _LOGGER.debug(
-                    "Identified '%s' as '%s', from '%s'",
+                    "Identified '%s' as '%s', by '%s'",
                     device.name,
                     model.model_name,
                     model.manufacturer,

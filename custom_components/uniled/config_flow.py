@@ -19,7 +19,7 @@ from .const import DOMAIN
 from .lib.ble_device import UNILEDBLE
 from .lib.models_db import (
     UNILED_TRANSPORT_BLE,
-    #UNILED_TRANSPORT_NET,
+    # UNILED_TRANSPORT_NET,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,7 +47,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not UNILEDBLE.match_valid_device(
             discovery_info.device, discovery_info.advertisement
         ):
-            _LOGGER.debug("Discovered bluetooth device: %s is not supported!", discovery_info.address)
+            _LOGGER.debug(
+                "Discovered bluetooth device: %s is not supported!",
+                discovery_info.address,
+            )
             async_rediscover_address(self.hass, discovery_info.address)
             return self.async_abort(reason="not_supported")
 
@@ -72,21 +75,23 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(
                 discovery_info.address, raise_on_progress=False
             )
-
             self._abort_if_unique_id_configured()
-            errors["base"] = await UNILEDBLE.contactable(
-                discovery_info.device, discovery_info.advertisement
-            )
 
-            if errors["base"]:
-                async_rediscover_address(self.hass, discovery_info.address)
-                return self.async_abort(reason=errors["base"])
+            if 0:
+                errors["base"] = await UNILEDBLE.contactable(
+                    discovery_info.device, discovery_info.advertisement
+                )
+
+                if errors["base"]:
+                    async_rediscover_address(self.hass, discovery_info.address)
+                    return self.async_abort(reason=errors["base"])
 
             return self.async_create_entry(
                 title=local_name,
                 data={
                     CONF_DEVICE_CLASS: UNILED_TRANSPORT_BLE,
                     CONF_ADDRESS: discovery_info.address,
+                    # CONF_UNIQUE_ID: format_mac(discovery_info.address)
                 },
             )
 

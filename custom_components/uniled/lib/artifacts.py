@@ -8,6 +8,7 @@ from .helpers import StrEnum
 
 UNKNOWN: Final = "Uknown"
 
+
 @dataclass(frozen=True)
 class UNILEDModelType(IntEnum):
     """Model Type"""
@@ -15,17 +16,8 @@ class UNILEDModelType(IntEnum):
     BULB = 0
     STRIP = 1
 
-class UNILEDColorOrder(StrEnum):
-    """LED Ordering Names"""
 
-    RGB = "RGB"
-    RBG = "RBG"
-    GRB = "GRB"
-    GBR = "GBR"
-    BRG = "BRG"
-    BGR = "BGR"
-
-class UNILEDChipsets(StrEnum):
+class UNILEDChipset(StrEnum):
     """LED Chipset Names"""
 
     SM16703 = "SM16703"
@@ -57,12 +49,15 @@ class UNILEDChipsets(StrEnum):
     P9412 = "P9412"
 
 
-class UNILEDModes(StrEnum):
-    """Effect Mode/Type Names"""
+class UNILEDColorOrder(StrEnum):
+    """LED Ordering Names"""
 
-    STATIC = "Static"
-    DYNAMIC = "Dynamic"
-    SOUND = "Sound"
+    RGB = "RGB"
+    RBG = "RBG"
+    GRB = "GRB"
+    GBR = "GBR"
+    BRG = "BRG"
+    BGR = "BGR"
 
 
 class UNILEDInputs(StrEnum):
@@ -72,6 +67,14 @@ class UNILEDInputs(StrEnum):
     INTMIC = "Int. Mic"
     EXTMIC = "Ext. Mic"
     PLAYER = "Player"
+
+
+class UNILEDEffectType(StrEnum):
+    """Effect Mode/Type Names"""
+
+    PATTERN = "Pattern"
+    STATIC = "Static"
+    SOUND = "Sound"
 
 
 class UNILEDEffects(StrEnum):
@@ -251,22 +254,22 @@ class UNILEDEffects(StrEnum):
 
     GRADIENT = "Gradient"
 
-    # Music Modes (SP611E)
-    MUSIC_RHYTHM_SPECTRUM_FULL = "Full Color Rhythm Spectrum"
-    MUSIC_RHYTHM_SPECTRUM_SINGLE = "Single Color Rhythm Spectrum"
-    MUSIC_RHYTHM_STARS_FULL = "Full Color Rhythm Stars"
-    MUSIC_RHYTHM_STARS_SINGLE = "Single Color Rhythm Stars"
-    MUSIC_ENERGY_GRADIENT = "Gradient Energy"
-    MUSIC_ENERGY_SINGLE = "Single Color Energy"
-    MUSIC_PULSE_GRADIENT = "Gradient Pulse"
-    MUSIC_PULSE_SINGLE = "Single Color Pulse"
-    MUSIC_EJECTION_FORWARD_FULL = "Full Color Ejection Forward"
-    MUSIC_EJECTION_FORWARD_SINGLE = "Single Color Ejection Forward"
-    MUSIC_EJECTION_BACKWARD_FULL = "Full Color Ejection Backward"
-    MUSIC_EJECTION_BACKWARD_SINGLE = "Single Color Ejection Backward"
-    MUSIC_VU_METER_FULL = "Full Color VuMeter"
-    MUSIC_VU_METER_SINGLE = "Single Color VuMeter"
-    MUSIC_LOVE_AND_PEACE = "Love & Peace"
-    MUSIC_CHRISTMAS = "Christmas"
-    MUSIC_HEARTBEAT = "Heartbeat"
-    MUSIC_PARTY = "Party"
+    # Sound Activated
+    SOUND_RHYTHM_SPECTRUM_FULL = "Full Color Rhythm Spectrum"
+    SOUND_RHYTHM_SPECTRUM_SINGLE = "Single Color Rhythm Spectrum"
+    SOUND_RHYTHM_STARS_FULL = "Full Color Rhythm Stars"
+    SOUND_RHYTHM_STARS_SINGLE = "Single Color Rhythm Stars"
+    SOUND_ENERGY_GRADIENT = "Gradient Energy"
+    SOUND_ENERGY_SINGLE = "Single Color Energy"
+    SOUND_PULSE_GRADIENT = "Gradient Pulse"
+    SOUND_PULSE_SINGLE = "Single Color Pulse"
+    SOUND_EJECTION_FORWARD_FULL = "Full Color Ejection Forward"
+    SOUND_EJECTION_FORWARD_SINGLE = "Single Color Ejection Forward"
+    SOUND_EJECTION_BACKWARD_FULL = "Full Color Ejection Backward"
+    SOUND_EJECTION_BACKWARD_SINGLE = "Single Color Ejection Backward"
+    SOUND_VU_METER_FULL = "Full Color VuMeter"
+    SOUND_VU_METER_SINGLE = "Single Color VuMeter"
+    SOUND_LOVE_AND_PEACE = "Love & Peace"
+    SOUND_CHRISTMAS = "Christmas"
+    SOUND_HEARTBEAT = "Heartbeat"
+    SOUND_PARTY = "Party"

@@ -22,9 +22,9 @@ from .coordinator import UNILEDUpdateCoordinator
 from .const import DOMAIN, DEVICE_TIMEOUT
 
 PLATFORMS: list[Platform] = [
-    Platform.LIGHT,
     Platform.SENSOR,
-    # Platform.NUMBER
+    Platform.NUMBER,
+    Platform.LIGHT,
 ]
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up UNILED from a config entry."""
+
     address: str = entry.data[CONF_ADDRESS]
     ble_device = bluetooth.async_ble_device_from_address(
         hass, address.upper(), True
@@ -41,7 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"Could not find BTF BLE device with address {address}"
         )
 
-    _LOGGER.debug("Setup Device Entry for BLE Device: %s", ble_device)
+    _LOGGER.debug("*** Setup Device Entry for BLE Device: %s (%s)", ble_device, entry.data)
 
     service_info = bluetooth.async_last_service_info(hass, address, connectable=True)
     if not service_info:
@@ -49,16 +50,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     uniled = UNILEDBLE(ble_device, service_info.advertisement)
 
-    async def _async_update():
-        """Update the device state."""
-        try:
-            await uniled.update()
-        except BLEAK_EXCEPTIONS as ex:
-            raise UpdateFailed(str(ex)) from ex
-
     startup_event = asyncio.Event()
     cancel_first_update = uniled.register_callback(lambda *_: startup_event.set())
     coordinator = UNILEDUpdateCoordinator(hass, uniled, entry)
+
+    async def _async_update():
+        """Update the device state."""
+        try:
+            await uniled.update(force=True)
+        except BLEAK_EXCEPTIONS as ex:
+            raise UpdateFailed(str(ex)) from ex
 
     try:
         await coordinator.async_config_entry_first_refresh()
@@ -70,14 +71,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         async with async_timeout.timeout(DEVICE_TIMEOUT):
             await startup_event.wait()
+            _LOGGER.debug("*** BLE Device: %s, Responded", ble_device)
     except asyncio.TimeoutError as ex:
         raise ConfigEntryNotReady(
             "Unable to communicate with the device; "
             f"Try moving the Bluetooth adapter closer to {uniled.name}"
-        ) from ex
-    except AssertionError as ex:
-        raise ConfigEntryNotReady(
-            "Assertion error while setting up {uniled.name}"
         ) from ex
     finally:
         cancel_first_update()
@@ -100,6 +98,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             bluetooth.BluetoothScanningMode.PASSIVE,
         )
     )
+
+    _LOGGER.debug("***Add entry for BLE Device: %s, ID: %s, Unique ID: %s", ble_device, entry.entry_id, entry.unique_id)
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

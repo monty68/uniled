@@ -32,7 +32,7 @@ class UNILEDUpdateCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{self.device.model_name} {self.device.id}",
+            name=f"{self.device.name}",
             update_interval=timedelta(seconds=UPDATE_SECONDS),
             # We don't want an immediate refresh since the device
             # takes a moment to reflect the state change
