@@ -6,14 +6,11 @@ from typing import Final
 
 from .artifacts import (
     UNILEDModelType,
-    UNILEDInputs,
+    UNILEDInput,
     UNILEDEffectType,
     UNILEDEffects
 )
-from .states import (
-    UNILED_STATE_INPUT,
-    UNILEDStatus,
-)
+from .states import UNILEDStatus
 from .classes import UNILEDDevice, UNILEDChannel
 from .ble_model import UNILEDBLEModel
 from .ble_banlanx1 import (
@@ -30,9 +27,9 @@ BANLANX2_TYPE_SOLID: Final = 0xBE
 BANLANX2_TYPE_SOUND: Final = 0xC9
 
 BANLANX2_INPUTS: Final = {
-    0x00: UNILEDInputs.INTMIC,
-    0x01: UNILEDInputs.PLAYER,
-    0x02: UNILEDInputs.EXTMIC,
+    0x00: UNILEDInput.INTMIC,
+    0x01: UNILEDInput.PLAYER,
+    0x02: UNILEDInput.EXTMIC,
 }
 
 BANLANX2_EFFECTS: Final = {
@@ -278,9 +275,7 @@ class _BANLANX2(UNILEDBLEModel):
                     level=data[9],
                     rgb=(data[12], data[13], data[14]),
                     gain=data[16],
-                    extra={
-                        UNILED_STATE_INPUT: data[15],
-                    },
+                    input=data[15]
                 )
 
             # Status Response #2
@@ -357,13 +352,19 @@ class _BANLANX2(UNILEDBLEModel):
         return self.construct_message(bytearray([0xA0, 0x66, 0x01, level]))
 
     def construct_color_change(
-        self, channel: UNILEDChannel, red: int, green: int, blue: int, level: int
+        self, channel: UNILEDChannel, red: int, green: int, blue: int, white: int | None
     ) -> bytearray | None:
         """The bytes to send for a level change"""
         if channel.status.effect < BANLANX2_TYPE_SOLID:
             return None
+
+        if self.model_num != 0x6117E:
+            white = 0xFF
+        elif white is None:
+            white = channel.status.white
+
         return self.construct_message(
-            bytearray([0xA0, 0x69, 0x04, red, green, blue, level])
+            bytearray([0xA0, 0x69, 0x04, red, green, blue, white])
         )
 
     ##
@@ -444,7 +445,7 @@ SP611E = _BANLANX2(
     manufacturer_data=b"\x04\x10\xff\x10",
     resolve_protocol=False,
     channels=1,
-    extra_data={},
+    needs_on=True,
     # service_uuid=BASE_UUID_FORMAT.format("ffe0"),
     service_uuids=["5833ff01-9b8b-5191-6142-22a4536ef123"],
     write_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["ffe1"]],
@@ -464,7 +465,7 @@ SP617E = _BANLANX2(
     manufacturer_data=b"\x17\x10!\x06",
     resolve_protocol=False,
     channels=1,
-    extra_data={},
+    needs_on=True,
     service_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]],
     write_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe1"]],
     read_uuids=[],

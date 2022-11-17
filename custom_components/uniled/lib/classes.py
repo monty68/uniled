@@ -6,7 +6,12 @@ from collections.abc import Callable
 from abc import abstractmethod
 from typing import Any
 
-from .artifacts import UNILEDModelType
+from .artifacts import (
+    UNILED_CHIP_ORDERS,
+    UNILED_CHIP_TYPES,
+    UNILEDModelType,
+    UNILEDEffectType,
+)
 from .states import UNILEDStatus
 
 import colorsys
@@ -21,12 +26,12 @@ class UNILEDModel:
 
     model_num: int  # The model number
     model_name: str  # The model name
-    model_type: UNILEDModelType # Type of device model
+    model_type: UNILEDModelType  # Type of device model
     description: str  # Description of the model ({type} {color_mode})
     manufacturer: str  # The manufacturers name
     manufacturer_id: int
     channels: int
-    extra_data: dict(str, Any)
+    needs_on: bool
 
     ##
     ## Protocol Wrapper
@@ -39,28 +44,38 @@ class UNILEDModel:
     ##
     ## Device Control
     ##
-    @abstractmethod
     def construct_on_connect(self) -> list[bytearray]:
         """The bytes to send when first connecting."""
+        return None
 
     @abstractmethod
     def construct_status_query(self, device: UNILEDDevice) -> list[bytearray]:
         """The bytes to send for a status query."""
-        return None
-
-    @abstractmethod
-    def construct_input_change(
-        self, device: UNILEDDevice, audio_input: int
-    ) -> bytearray | None:
-        """The bytes to send for an input change."""
-        return None
 
     @abstractmethod
     async def async_decode_notifications(
         self, device: UNILEDDevice, sender: int, data: bytearray
     ) -> UNILEDStatus | None:
         """Handle notification responses."""
-        return device.master.status
+
+    def construct_input_change(
+        self, device: UNILEDDevice, audio_input: int
+    ) -> bytearray | None:
+        """The bytes to send for an input change."""
+        return None
+
+    ##
+    ## Device Informational
+    ##
+    def nameof_device_input_type(
+        self, device: UNILEDDevice, audio_input: int | None = None
+    ) -> str | None:
+        """Name a device input type."""
+        return None
+
+    def listof_device_inputs(self, device: UNILEDDevice) -> list | None:
+        """List of available device inputs."""
+        return None
 
     ##
     ## Channel Control
@@ -71,119 +86,204 @@ class UNILEDModel:
     ) -> list[bytearray]:
         """The bytes to send for a power state change."""
 
-    @abstractmethod
+    def construct_mode_change(
+        self, channel: UNILEDChannel, mode: str
+    ) -> list[bytearray]:
+        """The bytes to send for a mode change."""
+        return None
+
     def construct_white_change(
         self, channel: UNILEDChannel, level: int
     ) -> list[bytearray] | None:
         """The bytes to send for a white level change."""
         return None
 
-    @abstractmethod
     def construct_level_change(
         self, channel: UNILEDChannel, level: int
     ) -> list[bytearray] | None:
         """The bytes to send for a color level change."""
         return None
 
-    @abstractmethod
     def construct_color_change(
-        self, channel: UNILEDChannel, red: int, green: int, blue: int, level: int
+        self, channel: UNILEDChannel, red: int, green: int, blue: int, white: int | None
     ) -> list[bytearray] | None:
         """The bytes to send for a color change."""
         return None
 
-    @abstractmethod
     def construct_effect_change(
         self, channel: UNILEDChannel, effect: int
     ) -> list[bytearray] | None:
         """The bytes to send for an effect change."""
         return None
 
-    @abstractmethod
     def construct_effect_speed_change(
         self, channel: UNILEDChannel, speed: int
     ) -> list[bytearray] | None:
         """The bytes to send for an effect speed change."""
         return None
 
-    @abstractmethod
     def construct_effect_length_change(
         self, channel: UNILEDChannel, length: int
     ) -> list[bytearray] | None:
         """The bytes to send for an efect length change."""
         return None
 
-    @abstractmethod
+    def construct_effect_direction_change(
+        self, channel: UNILEDChannel, direction: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for an efect direction change."""
+        return None
+
+    ##
+    ## Channel Configuration
+    ##
     def construct_input_gain_change(
-        self, device: UNILEDDevice, gain: int
+        self, channel: UNILEDChannel, gain: int
     ) -> list[bytearray] | None:
         """The bytes to send for a gain/sensitivity change"""
         return None
 
-    ##
-    ## Device Informational
-    ##
-    @abstractmethod
-    def nameof_device_input_type(
-        self, device: UNILEDDevice, audio_input: int | None = None
-    ) -> str | None:
-        """Name a device input type."""
+    def construct_chip_type_change(
+        self, channel: UNILEDChannel, name: str
+    ) -> list[bytearray] | None:
+        """The bytes to send for a chip type change"""
         return None
 
-    @abstractmethod
-    def listof_device_inputs(self, device: UNILEDDevice) -> list | None:
-        """List of available device inputs."""
+    def construct_chip_order_change(
+        self, channel: UNILEDChannel, name: str
+    ) -> list[bytearray] | None:
+        """The bytes to send for a chip order change"""
+        return None
+
+    def construct_segment_count_change(
+        self, channel: UNILEDChannel, count: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a segment count change"""
+        return None
+
+    def construct_segment_length_change(
+        self, channel: UNILEDChannel, length: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a segment length change"""
         return None
 
     ##
     ## Channel Informational
     ##
-    @abstractmethod
+    def listof_channel_modes(self, channel: UNILEDChannel) -> list | None:
+        """List of available channel modes"""
+        return None
+
+    def codeof_channel_mode(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named mode"""
+        return None
+
+    def nameof_channel_mode(
+        self, channel: UNILEDChannel, mode: int | None = None
+    ) -> str | None:
+        """Name a mode."""
+        return None
+
     def listof_channel_effects(self, channel: UNILEDChannel) -> list | None:
         """List of available channel effects"""
         return None
 
-    @abstractmethod
     def codeof_channel_effects(
         self, channel: UNILEDChannel, name: str | None = None
     ) -> int | None:
         """Code of named channel effect"""
         return None
 
-    @abstractmethod
     def nameof_channel_effect(
         self, channel: UNILEDChannel, effect: int | None = None
     ) -> str | None:
         """Name an effect."""
         return None
 
-    @abstractmethod
+    def codeof_channel_effect_type(
+        self, channel: UNILEDChannel, effect: int | None = None
+    ) -> int | None:
+        """Code of channel effect type from effect code"""
+        return None
+
     def nameof_channel_effect_type(
         self, channel: UNILEDChannel, fxtype: int | None = None
     ) -> str | None:
         """Name an effects type."""
         return None
 
-    @abstractmethod
     def rangeof_channel_effect_speed(
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
         """Range of effect speed (min,max,step)."""
         return None
 
-    @abstractmethod
     def rangeof_channel_effect_length(
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
         """Range of effect length (min,max,step)."""
         return None
 
-    @abstractmethod
     def rangeof_channel_input_gain(
-        self, device: UNILEDChannel
+        self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
         """Range of input gain (min,max,step)."""
         return None
+
+    def rangeof_channel_segment_count(
+        self, channel: UNILEDChannel
+    ) -> tuple(int, int, int) | None:
+        """Range of channel segments (min,max,step)."""
+        return None
+
+    def rangeof_channel_segment_length(
+        self, channel: UNILEDChannel
+    ) -> tuple(int, int, int) | None:
+        """Range of segment LEDs (min,max,step)."""
+        return None
+
+    def rangeof_channel_led_total(
+        self, channel: UNILEDChannel
+    ) -> tuple(int, int, int) | None:
+        """Range of total LEDs (min,max,step)."""
+        return None
+
+    def nameof_channel_chip_order(
+        self, channel: UNILEDChannel, order: int | None = None
+    ) -> str | None:
+        """Name a chip order."""
+        if channel.status.chip_order is not None:
+            if order is None:
+                order = channel.status.chip_order
+            if order in UNILED_CHIP_ORDERS:
+                return UNILED_CHIP_ORDERS[order]
+        return None
+
+    def listof_channel_chip_orders(self, channel: UNILEDChannel) -> list | None:
+        """List of available chip orders"""
+        if channel.status.chip_order is not None:
+            return list(UNILED_CHIP_ORDERS.values())
+        return None
+
+    def nameof_channel_chip_type(
+        self, channel: UNILEDChannel, chip: int | None = None
+    ) -> str | None:
+        """Name a chip type."""
+        if channel.status.chip_type is not None:
+            if chip is None:
+                chip = channel.status.chip_type
+            if chip in UNILED_CHIP_TYPES:
+                return UNILED_CHIP_TYPES[chip]
+        return None
+
+    def listof_channel_chip_types(self, channel: UNILEDChannel) -> list | None:
+        """List of available chip types"""
+        if channel.status.chip_type is not None:
+            return list(UNILED_CHIP_TYPES.values())
+        return None
+
 
 class UNILEDChannel:
     """UniLED Channel Class"""
@@ -218,78 +318,27 @@ class UNILEDChannel:
         return self._status
 
     @property
-    def effect(self) -> int | None:
-        """Returns effect number"""
-        return self._status.effect
-
-    @property
-    def nameof_effect(self) -> str | None:
-        """Returns effect name"""
-        assert self.device.model is not None  # nosec
-        name =  self.device.model.nameof_channel_effect(self, self._status.effect)
-        if name is not None:
-            return name
-        return f"FX ({self._status.effect})"
-
-    @property
-    def effect_type(self) -> int | None:
-        """Returns effect number"""
-        return self._status.fxtype
-
-    @property
-    def nameof_effect_type(self) -> str | None:
-        """Range of effect speed (min,max,step)."""
-        assert self.device.model is not None  # nosec
-        return self.device.model.nameof_channel_effect_type(self, self._status.fxtype)
-
-    @property
-    def listof_effects(self) -> list | None:
-        """List of effects"""
-        assert self.device.model is not None  # nosec
-        return self.device.model.listof_channel_effects(self)
-
-    @property
-    def effect_speed(self) -> int | None:
-        """Current effect speed."""
-        return self._status.speed
-
-    @property
-    def rangeof_effect_speed(self) -> tuple(int, int, int) | None:
-        """Range of effect speed (min,max,step)."""
-        assert self.device.model is not None  # nosec
-        return self.device.model.rangeof_channel_effect_speed(self)
-
-    @property
-    def effect_length(self) -> int | None:
-        """Current effect length."""
-        return self._status.length
-
-    @property
-    def rangeof_effect_length(self) -> tuple(int, int, int) | None:
-        """Range of effect speed (min,max,step)."""
-        assert self.device.model is not None  # nosec
-        return self.device.model.rangeof_channel_effect_length(self)
-
-    @property
-    def input_gain(self) -> int | None:
-        """Returns the current input gain."""
-        return self._status.gain
-
-    @property
-    def rangeof_input_gain(self) -> tuple(int, int, int) | None:
-        """Range of effect speed (min,max,step)."""
-        assert self.device.model is not None  # nosec
-        return self.device.model.rangeof_channel_input_gain(self)
-
-    @property
     def needs_on(self) -> bool:
         """Returns if On state needed to change settings"""
-        return True  # TODO: Get from model data!
+        assert self.device.model is not None  # nosec
+        return self.device.model.needs_on
 
     @property
     def is_on(self) -> bool | None:
         """Returns current power status"""
         return self._status.power
+
+    @property
+    def mode(self) -> str | None:
+        """Name of the current effect type."""
+        assert self.device.model is not None  # nosec
+        return self.device.model.nameof_channel_mode(self, self._status.mode)
+
+    @property
+    def mode_list(self) -> list | None:
+        """List of modes"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.listof_channel_modes(self)
 
     @property
     def white(self) -> int | None:
@@ -324,6 +373,153 @@ class UNILEDChannel:
             red, green, blue = self.rgb
         return (red, green, blue, 0xFF if self.white is None else self.white)
 
+    @property
+    def effect(self) -> str | None:
+        """Returns effect name."""
+        if self.effect_number is None:
+            return None
+        assert self.device.model is not None  # nosec
+        name = self.device.model.nameof_channel_effect(self, self._status.effect)
+        if name is not None:
+            return name
+        return f"FX ({self._status.effect})"
+
+    @property
+    def effect_list(self) -> list | None:
+        """List of effects"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.listof_channel_effects(self)
+
+    @property
+    def effect_number(self) -> int | None:
+        """Returns effect number."""
+        return self._status.effect
+
+    @property
+    def effect_type(self) -> str | None:
+        """Name of the current effect type."""
+        if self._status.fxtype is None:
+            return None
+        assert self.device.model is not None  # nosec
+        return self.device.model.nameof_channel_effect_type(self, self._status.fxtype)
+
+    @property
+    def effect_type_is_static(self) -> bool:
+        """Test if effec type is sound activated"""
+        if self._status.fxtype is None:
+            return False
+        return self._status.fxtype == UNILEDEffectType.STATIC
+
+    @property
+    def effect_type_is_pattern(self) -> bool:
+        """Test if effec type is sound activated"""
+        if self._status.fxtype is None:
+            return False
+        return self._status.fxtype == UNILEDEffectType.PATTERN
+
+    @property
+    def effect_type_is_sound(self) -> bool:
+        """Test if effec type is sound activated"""
+        if self._status.fxtype is None:
+            return False
+        return self.effect_type.startswith(UNILEDEffectType.SOUND)
+
+    @property
+    def effect_speed(self) -> int | None:
+        """Current effect speed."""
+        return self._status.speed
+
+    @property
+    def effect_speed_range(self) -> tuple(int, int, int) | None:
+        """Range of effect speed (min,max,step)."""
+        if self.effect_speed is None:
+            return None
+        assert self.device.model is not None  # nosec
+        return self.device.model.rangeof_channel_effect_speed(self)
+
+    @property
+    def effect_length(self) -> int | None:
+        """Current effect length."""
+        return self._status.length
+
+    @property
+    def effect_length_range(self) -> tuple(int, int, int) | None:
+        """Range of effect speed (min,max,step)."""
+        if self.effect_length is None:
+            return None
+        assert self.device.model is not None  # nosec
+        return self.device.model.rangeof_channel_effect_length(self)
+
+    @property
+    def effect_direction(self) -> bool | None:
+        """Name of current effect direction."""
+        return self._status.direction
+
+    @property
+    def input_gain(self) -> int | None:
+        """Returns the current input gain."""
+        return self._status.gain
+
+    @property
+    def input_gain_range(self) -> tuple(int, int, int) | None:
+        """Range of effect speed (min,max,step)."""
+        if self.input_gain is None:
+            return None
+        assert self.device.model is not None  # nosec
+        return self.device.model.rangeof_channel_input_gain(self)
+
+    @property
+    def segment_count(self) -> int | None:
+        """Returns the current number of segments"""
+        return self._status.segment_count
+
+    @property
+    def segment_count_range(self) -> tuple(int, int, int) | None:
+        """Range of channel segments (min,max,step)."""
+        assert self.device.model is not None  # nosec
+        return self.device.model.rangeof_channel_segment_count(self)
+
+    @property
+    def segment_length(self) -> int | None:
+        """Returns the current number of segments"""
+        return self._status.segment_length
+
+    @property
+    def segment_length_range(self) -> tuple(int, int, int) | None:
+        """Range of segment LEDs (min,max,step)."""
+        assert self.device.model is not None  # nosec
+        return self.device.model.rangeof_channel_segment_length(self)
+
+    @property
+    def total_led_range(self) -> tuple(int, int, int) | None:
+        """Range of total LEDs (min,max,step)."""
+        assert self.device.model is not None  # nosec
+        return self.device.model.rangeof_channel_led_total(self)
+
+    @property
+    def chip_order(self) -> str | None:
+        """Name of current chip order"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.nameof_channel_chip_order(self)
+
+    @property
+    def chip_order_list(self) -> list | None:
+        """List of available chip orders"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.listof_channel_chip_orders(self)
+
+    @property
+    def chip_type(self) -> str | None:
+        """Name of current chip type"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.nameof_channel_chip_type(self)
+
+    @property
+    def chip_type_list(self) -> list | None:
+        """List of available chip types"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.listof_channel_chip_types(self)
+
     async def async_turn_on(self) -> None:
         """Turn channel on."""
         await self.async_set_power(True)
@@ -342,12 +538,21 @@ class UNILEDChannel:
             self._status = replace(self._status, power=state)
             self._fire_callbacks()
 
-            # If the master, update all the other channels
-            if self.number == 0:
-                for channel in self.device.channels:
-                    if channel.number == self.number:
-                        continue
-                    channel.set_status(replace(channel.status, power=state))
+    async def async_set_mode(self, name: str) -> None:
+        """Set mode by name."""
+        _LOGGER.debug("%s: Set Mode: %s", self.name, name)
+        if self._status.mode is None:
+            return
+        try:
+            mode = self.device.model.codeof_channel_mode(self, name)
+            if mode is not None and mode != self._status.mode:
+                await self.device.send_command(
+                    self.device.model.construct_mode_change(self, mode)
+                )
+                self._status = replace(self._status, mode=mode)
+        except IndexError as exc:
+            raise ValueError(f"Effect name: {name} is not valid") from exc
+        self._fire_callbacks()
 
     async def async_set_white(self, level: int) -> None:
         """Set channel white level."""
@@ -373,94 +578,120 @@ class UNILEDChannel:
             self._status = replace(self._status, level=level)
             self._fire_callbacks()
 
-    async def async_set_rgb(
-        self, rgb: tuple[int, int, int], level: int | None = None
-    ) -> None:
+    async def async_set_rgb(self, rgb: tuple[int, int, int]) -> None:
         """Set channel RGB levels."""
-        _LOGGER.debug("%s: Set RGB: %s Level: %s", self.name, rgb, level)
+        _LOGGER.debug("%s: Set RGB: %s, Current: %s", self.name, rgb, self.rgb)
         if self.rgb is None:
             return
-        if level is None:
-            level = self.level
-        elif not 0 <= level <= 255:
-            raise ValueError("Value {} is outside the valid range of 0-255")
         for value in rgb:
             if not 0 <= value <= 255:
                 raise ValueError("Value {} is outside the valid range of 0-255")
-        command = self.device.model.construct_color_change(self, *rgb, level)
+        command = self.device.model.construct_color_change(self, *rgb, None)
         if await self.device.send_command(command):
-            self._status = replace(self._status, rgb=rgb, level=level)
+            self._status = replace(self._status, rgb=rgb)
             self._fire_callbacks()
 
     async def async_set_rgbw(self, rgbw: tuple[int, int, int, int]) -> None:
         """Set channel RGBW levels."""
+        _LOGGER.debug("%s: Set RGBW: %s, Current: %s", self.name, rgbw, self.rgbw)
         if self.rgbw is None:
             return
         for value in rgbw:
             if not 0 <= value <= 255:
                 raise ValueError("Value {} is outside the valid range of 0-255")
-        # TODO: Needs coding!
 
-    async def async_set_effect_byname(self, name: str) -> None:
+        red, green, blue, white = rgbw
+        command = self.device.model.construct_color_change(
+            self, red, green, blue, white
+        )
+
+        if await self.device.send_command(command):
+            self._status = replace(self._status, rgb=(red, green, blue), white=white)
+            self._fire_callbacks()
+
+    async def async_set_effect(self, name: str) -> None:
         """Set effect by name."""
-        _LOGGER.debug("%s: Set Effect: %s", self.name, name)
-        try:
-            code = self.device.model.codeof_channel_effect(self, name)
-            if code is not None:
-                await self.async_set_effect_bycode(code)
-        except IndexError as exc:
-            raise ValueError(f"Effect name: {name} is not valid") from exc
-        return
+        if self._status.effect is not None:
+            _LOGGER.debug("%s: Set Effect: %s", self.name, name)
+            try:
+                code = self.device.model.codeof_channel_effect(self, name)
+                if code is not None:
+                    await self._async_set_effect_bycode(code)
+            except IndexError as exc:
+                raise ValueError(f"Effect name: {name} is not valid") from exc
 
-    async def async_set_effect_bycode(self, code: int) -> None:
+    async def _async_set_effect_bycode(self, code: int) -> None:
         """Set effect by id code."""
         if self.device.model.nameof_channel_effect(self, code) is not None:
             if code != self.effect:
                 await self.device.send_command(
                     self.device.model.construct_effect_change(self, code)
                 )
-                self._status = replace(self._status, effect=code)
+                self._status = replace(
+                    self._status,
+                    effect=code,
+                    fxtype=self.device.model.codeof_channel_effect_type(self, code),
+                )
                 self._fire_callbacks()
             return
         raise ValueError(f"Effect code: {code} is not valid")
 
     async def async_set_effect_speed(self, value: int) -> None:
         """Set effect speed."""
-        _LOGGER.debug("%s: Set Effect Speed: %s", self.name, value)
-        if (rangeof := self.rangeof_effect_speed) is None:
-            return
-        if not rangeof[0] <= value <= rangeof[1]:
-            raise ValueError("Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}")
+        if self._status.speed is not None:
+            _LOGGER.debug("%s: Set Effect Speed: %s", self.name, value)
+            if (rangeof := self.effect_speed_range) is None:
+                return
+            if not rangeof[0] <= value <= rangeof[1]:
+                raise ValueError(
+                    "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                )
 
-        if not await self.device.send_command(
-            self.device.model.construct_effect_speed_change(self, value)
-        ):
-            value = self._status.speed
-        self._status = replace(self._status, speed=value)
+            if not await self.device.send_command(
+                self.device.model.construct_effect_speed_change(self, value)
+            ):
+                value = self._status.speed
+            self._status = replace(self._status, speed=value)
         self._fire_callbacks()
 
     async def async_set_effect_length(self, value: int) -> None:
         """Set effect length."""
-        _LOGGER.debug("%s: Set Effect Length: %s", self.name, value)
-        if (rangeof := self.rangeof_effect_length) is None:
-            return
-        if not rangeof[0] <= value <= rangeof[1]:
-            raise ValueError("Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}")
+        if self._status.length is not None:
+            _LOGGER.debug("%s: Set Effect Length: %s", self.name, value)
+            if (rangeof := self.effect_length_range) is None:
+                return
+            if not rangeof[0] <= value <= rangeof[1]:
+                raise ValueError(
+                    "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                )
 
-        if not await self.device.send_command(
-            self.device.model.construct_effect_length_change(self, value)
-        ):
-            value = self._status.length
-        self._status = replace(self._status, length=value)
+            if not await self.device.send_command(
+                self.device.model.construct_effect_length_change(self, value)
+            ):
+                value = self._status.length
+            self._status = replace(self._status, length=value)
+        self._fire_callbacks()
+
+    async def async_set_effect_direction(self, value: bool) -> None:
+        """Set effect direction."""
+        if self._status.direction is not None:
+            _LOGGER.debug("%s: Set Effect Direction: %s", self.name, value)
+            if not await self.device.send_command(
+                self.device.model.construct_effect_direction_change(self, value)
+            ):
+                value = self._status.direction
+            self._status = replace(self._status, direction=value)
         self._fire_callbacks()
 
     async def async_set_input_gain(self, value: int) -> None:
         """Set input gain."""
         _LOGGER.debug("%s: Set Input Gain: %s", self.name, value)
-        if (rangeof := self.rangeof_input_gain) is None:
+        if (rangeof := self.input_gain_range) is None:
             return
         if not rangeof[0] <= value <= rangeof[1]:
-            raise ValueError("Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}")
+            raise ValueError(
+                "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+            )
 
         if not await self.device.send_command(
             self.device.model.construct_input_gain_change(self, value)
@@ -469,14 +700,70 @@ class UNILEDChannel:
         self._status = replace(self._status, gain=value)
         self._fire_callbacks()
 
+    async def async_set_chip_type(self, value: str) -> None:
+        """Set chip type."""
+        if self._status.chip_type is not None:
+            _LOGGER.debug("%s: Set Chip Type: %s", self.name, value)
+            if not await self.device.send_command(
+                self.device.model.construct_chip_type_change(self, value)
+            ):
+                value = self._status.chip_type
+            self._status = replace(self._status, direction=value)
+        self._fire_callbacks()
 
+    async def async_set_chip_order(self, value: str) -> None:
+        """Set chip order."""
+        if self._status.chip_order is not None:
+            _LOGGER.debug("%s: Set Chip Order: %s", self.name, value)
+            if not await self.device.send_command(
+                self.device.model.construct_chip_order_change(self, value)
+            ):
+                value = self._status.chip_order
+            self._status = replace(self._status, direction=value)
+        self._fire_callbacks()
 
+    async def async_set_segment_count(self, value: int) -> None:
+        """Set segment count."""
+        if self._status.segment_count is not None:
+            _LOGGER.debug("%s: Set Segment Count: %s", self.name, value)
+            if (rangeof := self.segment_count_range) is None:
+                return
+            if not rangeof[0] <= value <= rangeof[1]:
+                raise ValueError(
+                    "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                )
 
-    def set_status(self, status: UNILEDStatus) -> None:
+            if not await self.device.send_command(
+                self.device.model.construct_segment_count_change(self, value)
+            ):
+                value = self._status.segment_count
+            self._status = replace(self._status, segment_count=value)
+        self._fire_callbacks()
+
+    async def async_set_segment_length(self, value: int) -> None:
+        """Set segment length."""
+        if self._status.segment_length is not None:
+            _LOGGER.debug("%s: Set Segment Length: %s", self.name, value)
+            if (rangeof := self.segment_length_range) is None:
+                return
+            if not rangeof[0] <= value <= rangeof[1]:
+                raise ValueError(
+                    "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                )
+
+            if not await self.device.send_command(
+                self.device.model.construct_segment_length_change(self, value)
+            ):
+                value = self._status.segment_length
+            self._status = replace(self._status, segment_length=value)
+        self._fire_callbacks()
+
+    def set_status(self, status: UNILEDStatus, force_update: bool = True) -> None:
         """Set status of channel"""
         _LOGGER.debug("%s: Set Status: %s", self.name, status)
         self._status = status
-        self._fire_callbacks()
+        if force_update:
+            self._fire_callbacks()
 
     def register_callback(
         self, callback: Callable[[UNILEDChannel], None]

@@ -17,7 +17,7 @@ class UNILEDModelType(IntEnum):
     STRIP = 1
 
 
-class UNILEDChipset(StrEnum):
+class UNILEDChipType(StrEnum):
     """LED Chipset Names"""
 
     SM16703 = "SM16703"
@@ -49,7 +49,47 @@ class UNILEDChipset(StrEnum):
     P9412 = "P9412"
 
 
-class UNILEDColorOrder(StrEnum):
+UNILED_CHIP_TYPES: Final = {
+    # 3 Color - RGB
+    0x00: UNILEDChipType.SM16703,
+    0x01: UNILEDChipType.TM1804,
+    0x02: UNILEDChipType.UCS1903,
+    0x03: UNILEDChipType.WS2811,
+    0x04: UNILEDChipType.WS2801,
+    0x05: UNILEDChipType.SK6812,
+    0x06: UNILEDChipType.LPD6803,
+    0x07: UNILEDChipType.LPD8806,
+    0x08: UNILEDChipType.APA102,
+    0x09: UNILEDChipType.APA105,
+    0x0A: UNILEDChipType.DMX512,
+    0x0B: UNILEDChipType.TM1914,
+    0x0C: UNILEDChipType.TM1913,
+    0x0D: UNILEDChipType.P9813,
+    0x0E: UNILEDChipType.INK1003,
+    0x0F: UNILEDChipType.P943S,
+    0x10: UNILEDChipType.P9411,
+    0x11: UNILEDChipType.P9413,
+    0x12: UNILEDChipType.TX1812,
+    0x13: UNILEDChipType.TX1813,
+    0x14: UNILEDChipType.GS8206,
+    0x15: UNILEDChipType.GS8208,
+    0x16: UNILEDChipType.SK9822,
+    # 4 Color - RGBW
+    0x17: UNILEDChipType.TM1814,
+    0x18: UNILEDChipType.SK6812_RGBW,
+    0x19: UNILEDChipType.P9414,
+    0x1A: UNILEDChipType.P9412,
+}
+
+UNILED_CHIP_4COLOR: Final = [
+    0x17,  # TM1814
+    0x18,  # SK6812_RGBW
+    0x19,  # P9414
+    0x1A,  # P9412
+]
+
+
+class UNILEDChipOrder(StrEnum):
     """LED Ordering Names"""
 
     RGB = "RGB"
@@ -60,7 +100,29 @@ class UNILEDColorOrder(StrEnum):
     BGR = "BGR"
 
 
-class UNILEDInputs(StrEnum):
+UNILED_CHIP_ORDERS: Final = {
+    0x00: UNILEDChipOrder.RGB,
+    0x01: UNILEDChipOrder.RBG,
+    0x02: UNILEDChipOrder.GRB,
+    0x03: UNILEDChipOrder.GBR,
+    0x04: UNILEDChipOrder.BRG,
+    0x05: UNILEDChipOrder.BGR,
+}
+
+
+class UNILEDMode(StrEnum):
+    """Mode Names"""
+
+    OFF = "Off"
+    MANUAL = "Manual"
+    SINGULAR = "Single FX"
+    AUTO = "Cycle Effects"
+    AUTO_PATTERN = "Cycle Pattern FX's"
+    AUTO_SCENE = "Cycle Scenes"
+    AUTO_SOUND = "Cycle Sound FX's"
+
+
+class UNILEDInput(StrEnum):
     """Audio Input Names"""
 
     AUXIN = "Aux In"
@@ -75,6 +137,13 @@ class UNILEDEffectType(StrEnum):
     PATTERN = "Pattern"
     STATIC = "Static"
     SOUND = "Sound"
+
+
+class UNILEDEffectDirection(StrEnum):
+    """Effect Direction Names"""
+
+    BACKWARDS = "Backwards"
+    FORWARDS = "Forwards"
 
 
 class UNILEDEffects(StrEnum):
@@ -167,6 +236,7 @@ class UNILEDEffects(StrEnum):
     WAVE_PURPLE_WHITE = "Purple/White Wave"
 
     STARS = "Stars"
+    STARS_TWINKLE = "Twinkle Stars"
     STARS_RED = "Red Stars"
     STARS_GREEN = "Green Stars"
     STARS_BLUE = "Blue Stars"

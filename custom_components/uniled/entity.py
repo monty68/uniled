@@ -56,6 +56,9 @@ class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
             self._attr_unique_id = f"_{self._attr_unique_id}_{key}"
         self._attr_device_info = _async_device_info(self._device, coordinator.entry)
 
+    #@property
+    #def force_update(self) -> bool:
+    #    return True
 
     @property
     def id(self) -> int:

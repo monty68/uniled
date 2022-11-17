@@ -2,12 +2,22 @@
 
 The **SP61xE** are a range of small and cheap BLE controllers for addressable LEDs (pixels)
 
-*Note, this entire guide is for Bluetooth LE libraries, and uses hexidecimal notation unless otherwise stated.*
+![SP61xE][SP61xE]
+
+## SP611E LED Controller
+
+The SP611E supports 3 color RGB chipsets: WS2811, WS2812B, WS2813, WS2815, LC8808B, GS8208, SK6812, SM16703 and UCS1903.
+
+## SP617E LED Controller
+
+The SP617E supports 4 color RGBW chipsets: SK6812, SM16704, UCS2904, WS2814 and TM1824
 
 ## BLE configuration
 
 The service can be found with UUID `ffe0`. Under this is (at least) the , `0000ffe1-0000-1000-8000-00805f9b34fb` 
 characteristic used to send commands and receive any responses.
+
+*Note, this entire guide uses hexidecimal notation unless otherwise stated.*
 
 # Command Message Format
 
@@ -41,15 +51,14 @@ All command messages begin with three bytes:
 | State Packet |#1 |
 | ----------- | ----------- |
 | Length | 20 |
-| Format | `H1 H2 P# ?? ?? PS SN EN ?? ?? ?? EL RR GG BB IN IG ?? ?? ??` |
+| Format | `H1 H2 P# FT D# PS SN EN ?? LV ES EL RR GG BB IN IG ?? ?? ??` |
 | Example | `53 43 01 17 0f 00 00 cd 02 ff 0a 96 ff 00 00 00 10 09 04 0b` |
 **Fields**
 1.  `H1` - Header Byte 1, always `53` (Ascii `S`)
 2.  `H2` - Header Byte 2, always `43` (Ascii `P`)
 3.  `P#` - Packet Number, always `01`
-4.  `??`
-5.  `??` 
-6.  `PS` - **Power State** (0x00 = Off, 0x01 = On)
+4.  `FT` - Frame Type, `0x17` = Single, `0x18` = Double, `0x19` = Triple
+5.  `D#` - Data Bytes to follow, should always be 0x0F6.  `PS` - **Power State** (0x00 = Off, 0x01 = On)
 7.  `SN` - **Scene Number** (Note Used, always 0x00)
 8.  `EN` - **Effect Number** (See Effects List below)
 9.  `??`
@@ -68,15 +77,14 @@ All command messages begin with three bytes:
 | State Packet | #2 |
 | ----------- | ----------- |
 | Length | 14 |
-| Format | `H1 H2 P# ?? ?? ?? ?? ?? RR GG BB ?? ?? ??` |
+| Format |  `H1 H2 P# FT D# ?? ?? ?? RR GG BB ?? ?? ??` |
 | Example | `53 43 02 18 09 0a 1e 00 00 ff 00 10 00 00` |
 **Fields**
 1.  `H1` - Header Byte 1, always `53` (Ascii `S`)
 2.  `H2` - Header Byte 2, always `43` (Ascii `P`)
 3.  `P#` - Packet Number, always `02`
-4.  `??`
-5.  `??`
-6.  `??`
+4.  `FT` - Frame Type, `0x17` = Single, `0x18` = Double, `0x19` = Triple
+5.  `D#` - Data Bytes to follow, should always be 0x0F6.  `??`
 7.  `??`
 8.  `??`
 9.  `RR` - **Red Level** (0x00 - 0xFF) for Channel 2?
@@ -141,6 +149,10 @@ All command messages begin with three bytes:
 2.  `C#` - Command Number, always `63`
 3.  `D#` - Data Bytes to follow, always `01`
 4.  `VV` - **Effect Number** (See Effects List below)
+### Effects List
+- `01 - 8F` - Dynamic Effects
+- `BE` - Static (Solid Color)
+- `C9 - DA` - Music Effects
 </p>
 </details>
 
@@ -249,13 +261,4 @@ All command messages begin with three bytes:
 </p>
 </details>
 
----
-<details><summary>Effects List</summary>
-<p>
-
-- `01 - 8F` - Dynamic Effects
-- `BE` - Static (Solid Color)
-- `C9 - DA` - Music Effects
-
-</p>
-</details>
+[SP61xE]: img/sp61xe.jpg

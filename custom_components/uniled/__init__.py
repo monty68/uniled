@@ -22,8 +22,10 @@ from .coordinator import UNILEDUpdateCoordinator
 from .const import DOMAIN, DEVICE_TIMEOUT
 
 PLATFORMS: list[Platform] = [
-    Platform.SENSOR,
+    Platform.SELECT,
     Platform.NUMBER,
+    Platform.SWITCH,
+    Platform.SENSOR,
     Platform.LIGHT,
 ]
 
@@ -53,13 +55,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     startup_event = asyncio.Event()
     cancel_first_update = uniled.register_callback(lambda *_: startup_event.set())
     coordinator = UNILEDUpdateCoordinator(hass, uniled, entry)
-
-    async def _async_update():
-        """Update the device state."""
-        try:
-            await uniled.update(force=True)
-        except BLEAK_EXCEPTIONS as ex:
-            raise UpdateFailed(str(ex)) from ex
 
     try:
         await coordinator.async_config_entry_first_refresh()

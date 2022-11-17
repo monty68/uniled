@@ -15,7 +15,6 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from .const import DOMAIN
 from .entity import UNILEDEntity
 from .coordinator import UNILEDUpdateCoordinator
-from .lib.artifacts import UNILEDEffectType
 
 import logging
 
@@ -27,7 +26,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the number platform for UniLED."""
+    """Set up the UniLED number platform."""
     coordinator: UNILEDUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     update_channels = partial(
@@ -47,7 +46,7 @@ def async_update_channels(
     current_ids: set[int],
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Update segments."""
+    """Update channels."""
     channel_ids = {channel.number for channel in coordinator.device.channels}
     new_entities: list[UNILEDEntity] = []
     rangeof: tuple(int, int, int)
@@ -60,18 +59,27 @@ def async_update_channels(
         except IndexError:
             continue
         if channel.effect is not None:
-            if (rangeof := channel.rangeof_effect_speed) is not None:
+            if (rangeof := channel.effect_speed_range) is not None:
                 new_entities.append(
                     UNILEDEffectSpeedNumber(coordinator, channel_id, rangeof)
                 )
-            if (rangeof := channel.rangeof_effect_length) is not None:
+            if (rangeof := channel.effect_length_range) is not None:
                 new_entities.append(
                     UNILEDEffectLengthNumber(coordinator, channel_id, rangeof)
                 )
-            if (rangeof := channel.rangeof_input_gain) is not None:
+            if (rangeof := channel.input_gain_range) is not None:
                 new_entities.append(
                     UNILEDSensitivityNumber(coordinator, channel_id, rangeof)
                 )
+
+        if (rangeof := channel.segment_count_range) is not None:
+            new_entities.append(
+                UNILEDSegmentCountNumber(coordinator, channel_id, rangeof)
+            )
+        if (rangeof := channel.segment_length_range) is not None:
+            new_entities.append(
+                UNILEDSegmentLengthNumber(coordinator, channel_id, rangeof)
+            )
 
     async_add_entities(new_entities)
 
@@ -79,7 +87,7 @@ def async_update_channels(
 class UNILEDEffectSpeedNumber(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], NumberEntity
 ):
-    """Defines a UniLED effect speed number."""
+    """Defines a UniLED effect speed number control."""
 
     _attr_entity_registry_enabled_default = True
     _attr_entity_category = None
@@ -92,11 +100,17 @@ class UNILEDEffectSpeedNumber(
         channel_id: int,
         rangeof: tuple(int, int, int),
     ) -> None:
-        """Initialize a UniLED light."""
+        """Initialize a UniLED effect speed control."""
         super().__init__(coordinator, channel_id, "Effect Speed", "speed")
         self._attr_native_min_value = rangeof[0]
         self._attr_native_max_value = rangeof[1]
         self._attr_native_step = rangeof[2]
+
+    @property
+    def available(self) -> bool:
+        if not self.channel.is_on or self.channel.effect_type_is_static:
+            return False
+        return super().available
 
     @property
     def native_value(self) -> float:
@@ -108,7 +122,7 @@ class UNILEDEffectSpeedNumber(
         new_speed = int(value)
         if not self.channel.is_on:
             raise HomeAssistantError("Speed can only be adjusted when the light is on")
-        if self.channel.effect_type == UNILEDEffectType.STATIC.value:
+        if self.channel.effect_type_is_static:
             raise HomeAssistantError(
                 "Effect Speed can only be adjusted when an effect is active"
             )
@@ -119,7 +133,7 @@ class UNILEDEffectSpeedNumber(
 class UNILEDEffectLengthNumber(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], NumberEntity
 ):
-    """Defines a UniLED effect length number."""
+    """Defines a UniLED effect length number control."""
 
     _attr_entity_registry_enabled_default = True
     _attr_entity_category = None
@@ -132,11 +146,17 @@ class UNILEDEffectLengthNumber(
         channel_id: int,
         rangeof: tuple(int, int, int),
     ) -> None:
-        """Initialize a UniLED light."""
+        """Initialize a UniLED effect length control."""
         super().__init__(coordinator, channel_id, "Effect Length", "length")
         self._attr_native_min_value = rangeof[0]
         self._attr_native_max_value = rangeof[1]
         self._attr_native_step = rangeof[2]
+
+    @property
+    def available(self) -> bool:
+        if not self.channel.is_on or self.channel.effect_type_is_static:
+            return False
+        return super().available
 
     @property
     def native_value(self) -> float:
@@ -150,7 +170,7 @@ class UNILEDEffectLengthNumber(
             raise HomeAssistantError(
                 "Effect length can only be adjusted when the light is on"
             )
-        if self.channel.effect_type == UNILEDEffectType.STATIC.value:
+        if self.channel.effect_type_is_static:
             raise HomeAssistantError(
                 "Effect length can only be adjusted when an effect is active"
             )
@@ -161,16 +181,12 @@ class UNILEDEffectLengthNumber(
 class UNILEDSensitivityNumber(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], NumberEntity
 ):
-    """Defines a UniLED effect length number."""
+    """Defines a UniLED sensitivity number control."""
 
     _attr_entity_registry_enabled_default = True
     _attr_entity_category = EntityCategory.CONFIG
     _attr_mode = NumberMode.SLIDER
     _attr_icon = "mdi:knob"
-
-    _attr_native_min_value = 1
-    _attr_native_max_value = 16
-    _attr_native_step = 1
 
     def __init__(
         self,
@@ -178,11 +194,17 @@ class UNILEDSensitivityNumber(
         channel_id: int,
         rangeof: tuple(int, int, int),
     ) -> None:
-        """Initialize a UniLED light."""
+        """Initialize a UniLED sensitivity control."""
         super().__init__(coordinator, channel_id, "Effect Sensitivity", "sensitivity")
         self._attr_native_min_value = rangeof[0]
         self._attr_native_max_value = rangeof[1]
         self._attr_native_step = rangeof[2]
+
+    @property
+    def available(self) -> bool:
+        if not self.channel.is_on or not self.channel.effect_type_is_sound:
+            return False
+        return super().available
 
     @property
     def native_value(self) -> float:
@@ -192,14 +214,76 @@ class UNILEDSensitivityNumber(
     async def async_set_native_value(self, value: float) -> None:
         """Set the UniLED sensitivity value."""
         new_gain = int(value)
-        _LOGGER.debug("%s: Effect Type: %s (%s)", self.channel.name, self.channel.nameof_effect_type, UNILEDEffectType.SOUND)
         if not self.channel.is_on:
             raise HomeAssistantError(
                 "Sensitivity can only be adjusted when the light is on"
             )
-        if not self.channel.nameof_effect_type.startswith(UNILEDEffectType.SOUND):
+        if not self.channel.effect_type_is_sound:
             raise HomeAssistantError(
                 "Sensitivity can only be adjusted when a sound activated effect is active"
             )
         await self.channel.async_set_input_gain(new_gain)
         await self.coordinator.async_request_refresh()
+
+
+class UNILEDSegmentCountNumber(
+    UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], NumberEntity
+):
+    """Defines a UniLED segment count number control."""
+
+    _attr_entity_registry_enabled_default = False
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_mode = NumberMode.BOX
+    _attr_icon = "mdi:numeric"
+
+    def __init__(
+        self,
+        coordinator: UNILEDUpdateCoordinator,
+        channel_id: int,
+        rangeof: tuple(int, int, int),
+    ) -> None:
+        """Initialize a UniLED segment count control."""
+        super().__init__(coordinator, channel_id, "Segments", "segment_count")
+        self._attr_native_min_value = rangeof[0]
+        self._attr_native_max_value = rangeof[1]
+        self._attr_native_step = rangeof[2]
+
+    @property
+    def native_value(self) -> float:
+        """Return the UniLED sensitivity."""
+        return cast(float, self.channel.segment_count)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the UniLED sensitivity value."""
+        await self.channel.async_set_segment_count(int(value))
+
+class UNILEDSegmentLengthNumber(
+    UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], NumberEntity
+):
+    """Defines a UniLED segment length number control."""
+
+    _attr_entity_registry_enabled_default = False
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_mode = NumberMode.BOX
+    _attr_icon = "mdi:numeric"
+
+    def __init__(
+        self,
+        coordinator: UNILEDUpdateCoordinator,
+        channel_id: int,
+        rangeof: tuple(int, int, int),
+    ) -> None:
+        """Initialize a UniLED segment length control."""
+        super().__init__(coordinator, channel_id, "Segment Length", "segment_length")
+        self._attr_native_min_value = rangeof[0]
+        self._attr_native_max_value = rangeof[1]
+        self._attr_native_step = rangeof[2]
+
+    @property
+    def native_value(self) -> float:
+        """Return the UniLED sensitivity."""
+        return cast(float, self.channel.segment_length)
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the UniLED sensitivity value."""
+        await self.channel.async_set_segment_length(int(value))

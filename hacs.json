@@ -1,0 +1,6 @@
+{
+  "name": "Universal Lighting Controllers",
+  "hacs": "1.6.0",
+  "domains": ["light", "number", "select", "switch", "sensor"],
+  "homeassistant": "0.118.0"
+}

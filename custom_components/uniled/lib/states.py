@@ -1,44 +1,54 @@
-"""UniLED State"""
+"""UniLED State and Status"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
 
-UNILED_STATE_AUTO = "auto"
-UNILED_STATE_AUTO_MATRIX_FX = "auto_matrix_fx"
-UNILED_STATE_AUTO_STRIP_FX = "auto_strip_fx"
-UNILED_STATE_INPUT = "input"
-UNILED_STATE_SETUP = "setup"
-
-UNILED_STATE_GAIN = "gain"  # TODO: Remove when updated: banlax2.py!
-
-UNILED_STATE_MUSIC_COLOR = "music_color"
-UNILED_STATE_COLUMN_COLOR = "column_color"
-UNILED_STATE_DOT_COLOR = "dot_color"
+from .helpers import StrEnum
 
 
 @dataclass(frozen=True)
-class UNILEDSetup:
-    """UniLED Strip Setup Class"""
+class UNILEDState(StrEnum):
+    """UniLED Channel States Class"""
 
-    order: int | None = None
-    chipset: int | None = None
-    segments: int | None = None
-    leds: int | None = None
-
+    POWER = "power"
+    MODE = "mode"
+    EFFECT = "effect"
+    TYPE = "fxtype"
+    SPEED = "speed"
+    LENGTH = "length"
+    DIRECTION = "direction"
+    LEVEL = "level"
+    WHITE = "white"
+    RGB = "rgb"
+    RGB2 = "rgb2"
+    #RGBW = "rgbw"
+    GAIN = "gain"
+    INPUT = "input"
+    CHIPTYPE = "chip_type"
+    CHIPORDER = "chip_order"
+    SEGMENT_COUNT = "segment_count"
+    SEGMENT_LENGTH = "segment_length"
 
 @dataclass(frozen=True)
 class UNILEDStatus:
-    """UniLED Channel State Class"""
+    """UniLED Channel Status Class"""
 
-    power: bool = False
+    power: bool | None = None
+    mode: int | None = None
+    level: int | None = None
+    white: int | None = None
+    rgb: tuple[int, int, int] | None = None
+    rgb2: tuple[int, int, int] | None = None
     effect: int | None = None
     fxtype: int | None = None
     speed: int | None = None
     length: int | None = None
     direction: int | None = None
+    input: int | None = None
     gain: int | None = None
-    white: int | None = None
-    level: int | None = None
-    rgb: tuple[int, int, int] | None = None
+    chip_type: int | None = None
+    chip_order: int | None = None
+    segment_count: int | None = None
+    segment_length: int | None = None
     extra: dict(str, Any) = field(default_factory=dict)

@@ -83,16 +83,6 @@ class UNILEDLight(
         self._async_update_attrs()
 
     @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        try:
-            self.device.channels[self.id]
-        except IndexError:
-            return False
-
-        return super().available
-
-    @property
     def icon(self) -> str:
         if self.device.model_type == UNILEDModelType.STRIP:
             return "mdi:led-strip-variant"
@@ -121,18 +111,47 @@ class UNILEDLight(
     @property
     def effect(self) -> str | None:
         """Return the current effect of the light."""
-        return self.channel.nameof_effect
+        return self.channel.effect
 
     @property
     def effect_list(self) -> list[str]:
         """Return the list of supported effects."""
-        return self.channel.listof_effects
+        return self.channel.effect_list
+
+    @property
+    def extra_state_attributes(self):
+        """Return the device state attributes."""
+        extra = {}
+
+        if self.channel.effect_number is not None:
+            extra["effect_number"] = self.channel.effect_number
+
+            if self.channel.effect_type is not None:
+                extra["effect_type"] = self.channel.effect_type
+
+            if not self.channel.effect_type_is_static:
+                if (rangeof := self.channel.effect_speed_range) is not None:
+                    extra[
+                        f"effect_speed ({rangeof[0]}-{rangeof[1]})"
+                    ] = self.channel.effect_speed
+                if (rangeof := self.channel.effect_length_range) is not None:
+                    extra[
+                        f"effect_length ({rangeof[0]}-{rangeof[1]})"
+                    ] = self.channel.effect_length
+                if self.channel.effect_direction is not None:
+                    extra["effect_direction"] = self.channel.effect_direction
+                if (
+                    self.channel.effect_type_is_sound
+                    and (rangeof := self.channel.input_gain_range) is not None
+                ):
+                    extra[
+                        f"sensitivity ({rangeof[0]}-{rangeof[1]})"
+                    ] = self.channel.input_gain
+        return extra
 
     @callback
     def _async_update_attrs(self) -> None:
         """Handle updating _attr values."""
-        _LOGGER.debug("%s: Updating attributes", self.name)
-
         if self.channel.rgb is not None:
             self._attr_supported_color_modes = {ColorMode.RGB}
             self._attr_color_mode = ColorMode.RGB
@@ -141,27 +160,30 @@ class UNILEDLight(
                 self._attr_supported_color_modes = {ColorMode.RGBW}
                 self._attr_color_mode = ColorMode.RGBW
                 self._attr_rgbw_color = self.channel.rgbw
+        elif self.channel.level is not None:
+            self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
+        else:
+            self._attr_supported_color_modes = {ColorMode.ONOFF}
+
         if self.channel.effect is not None:
             self._attr_supported_features = LightEntityFeature.EFFECT
 
         self._attr_brightness = self.channel.level
         self._attr_is_on = self.channel.is_on
-        self._attr_effect = self.channel.nameof_effect
-        self._attr_effect_list = self.channel.listof_effects
+        self._attr_effect = self.channel.effect
+        self._attr_effect_list = self.channel.effect_list
+        self._attr_extra_state_attributes = self.extra_state_attributes
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Instruct the light to turn on."""
-
         if self.channel.needs_on or not kwargs:
             if not self.is_on:
                 await self.channel.async_turn_on()
             if not kwargs:
                 return
 
-        level = kwargs.get(ATTR_BRIGHTNESS, self.brightness)
-
         if ATTR_RGB_COLOR in kwargs:
-            await self.channel.async_set_rgb(kwargs[ATTR_RGB_COLOR], level)
+            await self.channel.async_set_rgb(kwargs[ATTR_RGB_COLOR])
             return
         if ATTR_RGBW_COLOR in kwargs:
             await self.channel.async_set_rgbw(kwargs[ATTR_RGBW_COLOR])
@@ -174,13 +196,7 @@ class UNILEDLight(
             return
         if ATTR_EFFECT in kwargs:
             if effect := kwargs.get(ATTR_EFFECT, self.effect):
-                _LOGGER.debug(
-                    "%s: Effect, from: %s to: %s",
-                    self.device.name,
-                    self._attr_effect,
-                    effect,
-                )
-                await self.channel.async_set_effect_byname(effect)
+                await self.channel.async_set_effect(effect)
             return
 
     async def async_turn_off(self, **kwargs: Any) -> None:

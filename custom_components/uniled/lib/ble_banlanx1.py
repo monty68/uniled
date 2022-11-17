@@ -1,23 +1,20 @@
 """UniLED BLE Devices - SP601E - SP LED (BanlanX)"""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Final
+from dataclasses import dataclass, replace
+from typing import Final, cast
+from enum import IntEnum
 
 from .artifacts import (
+    UNKNOWN,
     UNILEDModelType,
-    UNILEDColorOrder,
-    UNILEDInputs,
+    UNILEDChipOrder,
+    UNILEDMode,
+    UNILEDInput,
     UNILEDEffectType,
     UNILEDEffects,
 )
-from .states import (
-    UNILED_STATE_SETUP,
-    UNILED_STATE_INPUT,
-    UNILED_STATE_AUTO,
-    UNILEDSetup,
-    UNILEDStatus,
-)
+from .states import UNILEDStatus
 from .classes import UNILEDDevice, UNILEDChannel
 from .ble_model import UNILEDBLEModel, BASE_UUID_FORMAT as BANLANX1_UUID_FORMAT
 
@@ -28,64 +25,90 @@ _LOGGER = logging.getLogger(__name__)
 BANLANX1_MANUFACTURER_ID: Final = 20563
 BANLANX1_MANUFACTURER: Final = "SPLED (BanlanX)"
 
-BANLANX1_TYPE_SOLID: Final = 0x25
-BANLANX1_TYPE_SOUND: Final = 0x65
-
-BANLANX1_LED_ORDERS: Final = {
-    0x00: UNILEDColorOrder.RGB,
-    0x01: UNILEDColorOrder.RBG,
-    0x02: UNILEDColorOrder.GRB,
-    0x03: UNILEDColorOrder.GBR,
-    0x04: UNILEDColorOrder.BRG,
-    0x05: UNILEDColorOrder.BGR,
-}
+BANLANX1_MODE_OFF: Final = 0xFF
+BANLANX1_SCENE_OFF: Final = 0xFF
+BANLANX1_EFFECT_PATTERN: Final = 0x01
+BANLANX1_EFFECT_SOLID: Final = 0x25
+BANLANX1_EFFECT_SOUND: Final = 0x65
 
 BANLANX1_INPUTS: Final = {
-    0x00: UNILEDInputs.INTMIC,
+    0x00: UNILEDInput.INTMIC,
+}
+
+BANLANX1_MODES: Final = {
+    0x00: UNILEDMode.MANUAL,
+    0x01: UNILEDMode.AUTO_SCENE,
+    BANLANX1_MODE_OFF: UNILEDMode.OFF,
+}
+
+
+@dataclass(frozen=True)
+class _FXType(IntEnum):
+    STATIC = 0x00
+    PATTERN = 0x01
+    SOUND = 0x02
+
+
+BANLANX1_EFFECT_TYPES: dict(int, str) = {
+    _FXType.STATIC.value: UNILEDEffectType.STATIC,
+    _FXType.PATTERN.value: UNILEDEffectType.PATTERN,
+    _FXType.SOUND.value: UNILEDEffectType.SOUND,
 }
 
 BANLANX1_EFFECTS: Final = {
-    0x19: UNILEDEffects.SOLID,
-    0x01: UNILEDEffects.RAINBOW,  # Directional
-    0x02: UNILEDEffects.RAINBOW_STARS,
-    0x03: "Twinkle Stars",  # Colorable
-    0x04: UNILEDEffects.FIRE,  # Directional
-    0x05: UNILEDEffects.STACKING,  # Colorable & Directional
-    0x06: UNILEDEffects.COMET,  # Colorable & Directional
-    0x07: UNILEDEffects.WAVE,  # Colorable & Directional
-    0x08: "Chasing",  # Colorable & Directional
-    0x09: "Red/Blue/White",  # Directional
-    0x0A: "Green/Yellow/White",  # Directional
-    0x0B: "Red/Green/White",  # Directional
-    0x0C: "Red/Yellow",  # Directional
-    0x0D: "Red/White",  # Directional
-    0x0E: "Green/White",  # Directional
-    0x0F: UNILEDEffects.GRADIENT,
-    0x10: "Wiping",  # Colorable & Directional
-    0x11: UNILEDEffects.BREATH,  # Colorable
-    0x12: "Full Color Comet Wiping",
-    0x13: "Comet Wiping",  # Colorable
-    0x14: "Pixel Dot Wiping",  # Colorable
-    0x15: "Full Color Meteor Rain",  # Directional
-    0x16: "Meteor Rain",  # Colorable & Directional
-    0x17: "Color Dots",  # Directional
-    0x18: "Color Block",  # Directional
-    0x65: UNILEDEffects.SOUND_RHYTHM_SPECTRUM_FULL,
-    0x66: UNILEDEffects.SOUND_RHYTHM_SPECTRUM_SINGLE,  # Colorable
-    0x67: UNILEDEffects.SOUND_RHYTHM_STARS_FULL,
-    0x68: UNILEDEffects.SOUND_RHYTHM_STARS_SINGLE,  # Colorable
-    0x69: "Full Color Beat Injection",  # Directional
-    0x6A: "Beat Injection",  # Colorable & Directional
-    0x6B: UNILEDEffects.SOUND_ENERGY_GRADIENT,
-    0x6C: UNILEDEffects.SOUND_ENERGY_SINGLE,  # Colorable
-    0x6D: UNILEDEffects.SOUND_PULSE_GRADIENT,
-    0x6E: UNILEDEffects.SOUND_PULSE_SINGLE,  # Colorable
-    0x6F: "Full Color Ripple",
-    0x70: "Ripple",  # Colorable
-    0x71: UNILEDEffects.SOUND_LOVE_AND_PEACE,
-    0x72: UNILEDEffects.SOUND_CHRISTMAS,
-    0x73: UNILEDEffects.SOUND_HEARTBEAT,
-    0x74: UNILEDEffects.SOUND_PARTY,
+    BANLANX1_EFFECT_SOLID: UNILEDEffects.SOLID,
+    BANLANX1_EFFECT_PATTERN + 0: UNILEDEffects.RAINBOW,  # Directional
+    BANLANX1_EFFECT_PATTERN + 1: UNILEDEffects.RAINBOW_STARS,
+    BANLANX1_EFFECT_PATTERN + 2: UNILEDEffects.STARS_TWINKLE,  # Colorable
+    BANLANX1_EFFECT_PATTERN + 3: UNILEDEffects.FIRE,  # Directional
+    BANLANX1_EFFECT_PATTERN + 4: UNILEDEffects.STACKING,  # Colorable & Directional
+    BANLANX1_EFFECT_PATTERN + 5: UNILEDEffects.COMET,  # Colorable & Directional
+    BANLANX1_EFFECT_PATTERN + 6: UNILEDEffects.WAVE,  # Colorable & Directional
+    BANLANX1_EFFECT_PATTERN + 7: "Chasing",  # Colorable & Directional
+    BANLANX1_EFFECT_PATTERN + 8: "Red/Blue/White",  # Directional
+    BANLANX1_EFFECT_PATTERN + 9: "Green/Yellow/White",  # Directional
+    BANLANX1_EFFECT_PATTERN + 10: "Red/Green/White",  # Directional
+    BANLANX1_EFFECT_PATTERN + 11: "Red/Yellow",  # Directional
+    BANLANX1_EFFECT_PATTERN + 12: "Red/White",  # Directional
+    BANLANX1_EFFECT_PATTERN + 13: "Green/White",  # Directional
+    BANLANX1_EFFECT_PATTERN + 14: UNILEDEffects.GRADIENT,
+    BANLANX1_EFFECT_PATTERN + 15: "Wiping",  # Colorable & Directional
+    BANLANX1_EFFECT_PATTERN + 16: UNILEDEffects.BREATH,  # Colorable
+    BANLANX1_EFFECT_PATTERN + 17: "Full Color Comet Wiping",
+    BANLANX1_EFFECT_PATTERN + 18: "Comet Wiping",  # Colorable
+    BANLANX1_EFFECT_PATTERN + 19: "Pixel Dot Wiping",  # Colorable
+    BANLANX1_EFFECT_PATTERN + 20: "Full Color Meteor Rain",  # Directional
+    BANLANX1_EFFECT_PATTERN + 21: "Meteor Rain",  # Colorable & Directional
+    BANLANX1_EFFECT_PATTERN + 22: "Color Dots",  # Directional
+    BANLANX1_EFFECT_PATTERN + 23: "Color Block",  # Directional
+    BANLANX1_EFFECT_SOUND + 0: UNILEDEffects.SOUND_RHYTHM_SPECTRUM_FULL,
+    BANLANX1_EFFECT_SOUND + 1: UNILEDEffects.SOUND_RHYTHM_SPECTRUM_SINGLE,  # Colorable
+    BANLANX1_EFFECT_SOUND + 2: UNILEDEffects.SOUND_RHYTHM_STARS_FULL,
+    BANLANX1_EFFECT_SOUND + 3: UNILEDEffects.SOUND_RHYTHM_STARS_SINGLE,  # Colorable
+    BANLANX1_EFFECT_SOUND + 4: "Full Color Beat Injection",  # Directional
+    BANLANX1_EFFECT_SOUND + 5: "Beat Injection",  # Colorable & Directional
+    BANLANX1_EFFECT_SOUND + 6: UNILEDEffects.SOUND_ENERGY_GRADIENT,
+    BANLANX1_EFFECT_SOUND + 7: UNILEDEffects.SOUND_ENERGY_SINGLE,  # Colorable
+    BANLANX1_EFFECT_SOUND + 8: UNILEDEffects.SOUND_PULSE_GRADIENT,
+    BANLANX1_EFFECT_SOUND + 9: UNILEDEffects.SOUND_PULSE_SINGLE,  # Colorable
+    BANLANX1_EFFECT_SOUND + 10: "Full Color Ripple",
+    BANLANX1_EFFECT_SOUND + 11: "Ripple",  # Colorable
+    BANLANX1_EFFECT_SOUND + 12: UNILEDEffects.SOUND_LOVE_AND_PEACE,
+    BANLANX1_EFFECT_SOUND + 13: UNILEDEffects.SOUND_CHRISTMAS,
+    BANLANX1_EFFECT_SOUND + 14: UNILEDEffects.SOUND_HEARTBEAT,
+    BANLANX1_EFFECT_SOUND + 15: UNILEDEffects.SOUND_PARTY,
+}
+
+BANLANX1_SCENES: Final = {
+    0x00: "Scene 1",
+    0x01: "Scene 2",
+    0x02: "Scene 3",
+    0x03: "Scene 4",
+    0x04: "Scene 5",
+    0x05: "Scene 6",
+    0x06: "Scene 7",
+    0x07: "Scene 8",
+    0x08: "Scene 9",
 }
 
 
@@ -98,7 +121,6 @@ class _BANLANX1(UNILEDBLEModel):
     ##
     def construct_connect_message(self) -> bytearray | None:
         """The bytes to send when first connecting."""
-        #return self.construct_message(bytearray([0xAA, 0x2A, 0x02, 0x00, 0x01]))
         return None
 
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
@@ -125,36 +147,32 @@ class _BANLANX1(UNILEDBLEModel):
                     device.last_notification_data[5:] + data[5:]
                 )
 
-                # This leaves a byte array with the following layout:
+                # This leaves a 24 byte array with the following layout:
                 #
-                # -----------------------------------------------------------------------
-                # 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23
-                # -----------------------------------------------------------------------
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Auto Mode (0x00 = Off, 0x01 = On)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Unknown
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Gain/Sensitivity (0x01 - 0x0F)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Blue Level (x00 - 0xFF)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Green Level (0x00 - 0xFF)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Red Level (0x00 - 0xFF)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Effect Direction? (0x00 = Backwards, 0x01 = Forwards)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Effect Length (0x01 - 0x96)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Effect Speed (0x01 - 0x1E)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Level (0x00 - 0xFF)
-                # |  |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Color Order
-                # |  |  |  |  |  |  |  |  |  |  |  |  Channel 2 Effect
-                # |  |  |  |  |  |  |  |  |  |  |  Channel 2 Power State
-                # |  |  |  |  |  |  |  |  |  |  Channel 1 Gain/Sensitivity (0x01 - 0x0F)
-                # |  |  |  |  |  |  |  |  |  Channel 1 Blue Level (x00 - 0xFF)
-                # |  |  |  |  |  |  |  |  Channel 1 Green Level (0x00 - 0xFF)
-                # |  |  |  |  |  |  |  Channel 1 Red Level (0x00 - 0xFF)
-                # |  |  |  |  |  |  Channel 1 Effect Direction? (0x00 = Backwards, 0x01 = Forwards)
-                # |  |  |  |  |  Channel 1 Effect Length (0x01 - 0x96)
-                # |  |  |  |  Channel 1 Effect Speed (0x01 - 0x1E)
-                # |  |  |  Channel 1 Level (0x00 - 0xFF)
-                # |  |  Channel 1 Color Order
-                # |  Channel 1 Effect
-                # Channel 1 Power State
+                # 0  = Channel 1 Power State
+                # 1  = Channel 1 Effect
+                # 2  = Channel 1 Color Order
+                # 3  = Channel 1 Level (0x00 - 0xFF)
+                # 4  = Channel 1 Effect Speed (0x01 - 0x1E)
+                # 5  = Channel 1 Effect Length (0x01 - 0x96)
+                # 6  = Channel 1 Effect Direction? (0x00 = Backwards, 0x01 = Forwards)
+                # 7  = Channel 1 Red Level (0x00 - 0xFF)
+                # 8  = Channel 1 Green Level (0x00 - 0xFF)
+                # 9  = Channel 1 Blue Level (x00 - 0xFF)
+                # 10 = Channel 1 Gain/Sensitivity (0x01 - 0x0F)
+                # 11 = Channel 2 Power State
+                # 12 = Channel 2 Effect
+                # 13 = Channel 2 Color Order
+                # 14 = Channel 2 Level (0x00 - 0xFF)
+                # 15 = Channel 2 Effect Speed (0x01 - 0x1E)
+                # 16 = Channel 2 Effect Length (0x01 - 0x96)
+                # 17 = Channel 2 Effect Direction? (0x00 = Backwards, 0x01 = Forwards)
+                # 18 = Channel 2 Red Level (0x00 - 0xFF)
+                # 19 = Channel 2 Green Level (0x00 - 0xFF)
+                # 20 = Channel 2 Blue Level (x00 - 0xFF)
+                # 21 = Channel 2 Gain/Sensitivity (0x01 - 0x0F)
+                # 22 = Unknown
+                # 23 = Auto Mode (0x00 = Off, 0x01 = On)
                 #
                 if data[3] == 0x19:
                     return None
@@ -173,40 +191,43 @@ class _BANLANX1(UNILEDBLEModel):
             device.channels[1].set_status(
                 UNILEDStatus(
                     power=data[0] == 0x01,
-                    fxtype=data[1],
                     effect=data[1],
+                    fxtype=self.codeof_channel_effect_type(device.channels[1], data[1]),
                     level=data[3],
                     speed=data[4],
                     length=data[5],
                     direction=data[6],
                     rgb=(data[7], data[8], data[9]),
                     gain=data[10],
-                    extra={UNILED_STATE_SETUP: UNILEDSetup(order=data[2])},
+                    chip_order=data[2]
                 )
             )
 
             device.channels[2].set_status(
                 UNILEDStatus(
                     power=data[11] == 0x01,
-                    fxtype=data[12],
                     effect=data[12],
+                    fxtype=self.codeof_channel_effect_type(
+                        device.channels[2], data[12]
+                    ),
                     level=data[14],
                     speed=data[15],
                     length=data[16],
                     direction=data[17],
                     rgb=(data[18], data[19], data[20]),
                     gain=data[21],
-                    extra={UNILED_STATE_SETUP: UNILEDSetup(order=data[13])},
+                    chip_order=data[13]
                 )
             )
 
+            master_power = data[0] + data[11]
             return UNILEDStatus(
-                power=data[0] + data[11],
-                level=(data[3] + data[14]) / 2,
+                power=master_power,
+                mode=data[23] if master_power else BANLANX1_MODE_OFF,
+                effect=BANLANX1_SCENE_OFF,
+                level=cast(int, (data[3] + data[14]) / 2),
                 extra={
                     "unknown": data[22],
-                    UNILED_STATE_AUTO: data[23],
-                    UNILED_STATE_INPUT: 0x00,
                 },
             )
 
@@ -219,19 +240,58 @@ class _BANLANX1(UNILEDBLEModel):
     ##
     def construct_power_change(
         self, channel: UNILEDChannel, turn_on: int
-    ) -> bytearray | None:
+    ) -> list[bytearray] | None:
         """The bytes to send for a power state change"""
         cnum = 0x02 if not channel.number else channel.number - 1
+        return [
+            self.construct_message(
+                bytearray([0xAA, 0x22, 0x02, cnum, 0x01 if turn_on else 0x00])
+            ),
+            self.construct_status_query(channel.device),
+        ]
+
+    def construct_mode_change(
+        self, channel: UNILEDChannel, mode: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a mode change."""
+        if mode == BANLANX1_MODE_OFF:
+            return self.construct_power_change(channel.device.master, False)
+        return [
+            self.construct_message(bytearray([0xAA, 0x30, 0x01, mode])),
+            self.construct_status_query(channel.device),
+        ]
+
+    def construct_level_change(
+        self, channel: UNILEDChannel, level: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a color level change."""
+        cnum = 0x02 if not channel.number else channel.number - 1
+        return [
+            self.construct_message(bytearray([0xAA, 0x25, 0x02, cnum, level])),
+            self.construct_status_query(channel.device),
+        ]
+
+    def construct_color_change(
+        self, channel: UNILEDChannel, red: int, green: int, blue: int, white: int | None
+    ) -> bytearray | None:
+        """The bytes to send for a color change."""
+        cnum = 0x02 if not channel.number else channel.number - 1
         return self.construct_message(
-            bytearray([0xAA, 0x22, 0x02, cnum, 0x01 if turn_on else 0x00])
+            bytearray([0xAA, 0x29, 0x05, cnum, red, green, blue, 0xFF])
         )
 
     def construct_effect_change(
         self, channel: UNILEDChannel, effect: int
     ) -> bytearray | None:
         """The bytes to send for an effect change."""
-        cnum = 0x02 if not channel.number else channel.number - 1
-        return self.construct_message(bytearray([0xAA, 0x23, 0x02, cnum, effect]))
+        if channel.number:
+            cnum = 0x02 if not channel.number else channel.number - 1
+            return self.construct_message(bytearray([0xAA, 0x23, 0x02, cnum, effect]))
+        # Master Channel, change to a scene (0-8)
+        return [
+            self.construct_message(bytearray([0xAA, 0x2E, 0x01, effect])),
+            self.construct_status_query(channel.device),
+        ]
 
     def construct_effect_speed_change(
         self, channel: UNILEDChannel, speed: int
@@ -247,21 +307,19 @@ class _BANLANX1(UNILEDBLEModel):
         cnum = 0x02 if not channel.number else channel.number - 1
         return self.construct_message(bytearray([0xAA, 0x27, 0x02, cnum, length]))
 
-    def construct_level_change(
-        self, channel: UNILEDChannel, level: int
+    def construct_effect_direction_change(
+        self, channel: UNILEDChannel, direction: int
     ) -> bytearray | None:
-        """The bytes to send for a color level change."""
+        """The bytes to send for an efect direction change."""
         cnum = 0x02 if not channel.number else channel.number - 1
-        return self.construct_message(bytearray([0xAA, 0x25, 0x02, cnum, level]))
+        return self.construct_message(bytearray([0xAA, 0x2A, 0x02, cnum, direction]))
 
-    def construct_color_change(
-        self, channel: UNILEDChannel, red: int, green: int, blue: int, level: int
-    ) -> bytearray | None:
-        """The bytes to send for a color change."""
+    def construct_input_gain_change(
+        self, channel: UNILEDChannel, gain: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a gain/sensitivity change"""
         cnum = 0x02 if not channel.number else channel.number - 1
-        return self.construct_message(
-            bytearray([0xAA, 0x29, 0x05, cnum, red, green, blue, 0xFF])
-        )
+        return self.construct_message(bytearray([0xAA, 0x2B, 0x02, cnum, gain]))
 
     ##
     ## Device Informational
@@ -283,9 +341,33 @@ class _BANLANX1(UNILEDBLEModel):
     ##
     ## Channel Informational
     ##
+    def listof_channel_modes(self, channel: UNILEDChannel) -> list | None:
+        """List of available channel modes"""
+        return list(BANLANX1_MODES.values())
+
+    def codeof_channel_mode(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named mode"""
+        if name is None:
+            return channel.status.mode
+        return [k for k in BANLANX1_MODES.items() if k[1] == name][0][0]
+
+    def nameof_channel_mode(
+        self, channel: UNILEDChannel, mode: int | None = None
+    ) -> str | None:
+        """Name a mode."""
+        if mode is None:
+            mode = channel.status.mode
+        if mode in BANLANX1_MODES:
+            return BANLANX1_MODES[mode]
+        return None
+
     def listof_channel_effects(self, channel: UNILEDChannel) -> list | None:
         """List of available channel effects"""
-        return list(BANLANX1_EFFECTS.values())
+        if channel.number:
+            return list(BANLANX1_EFFECTS.values())
+        return list(BANLANX1_SCENES.values())
 
     def codeof_channel_effect(
         self, channel: UNILEDChannel, name: str | None = None
@@ -293,7 +375,9 @@ class _BANLANX1(UNILEDBLEModel):
         """Code of named channel effect"""
         if name is None:
             return channel.status.effect
-        return [k for k in BANLANX1_EFFECTS.items() if k[1] == name][0][0]
+        if channel.number:
+            return [k for k in BANLANX1_EFFECTS.items() if k[1] == name][0][0]
+        return [k for k in BANLANX1_SCENES.items() if k[1] == name][0][0]
 
     def nameof_channel_effect(
         self, channel: UNILEDChannel, effect: int | None = None
@@ -301,33 +385,62 @@ class _BANLANX1(UNILEDBLEModel):
         """Name an effect."""
         if effect is None:
             effect = channel.status.effect
-        if effect in BANLANX1_EFFECTS:
+        if not channel.number:
+            if effect in BANLANX1_SCENES:
+                return BANLANX1_SCENES[effect]
+        elif effect in BANLANX1_EFFECTS:
             return BANLANX1_EFFECTS[effect]
         return None
+
+    def codeof_channel_effect_type(
+        self, channel: UNILEDChannel, effect: int | None = None
+    ) -> int | None:
+        """Code of channel effect type from effect code"""
+        if not channel.number:
+            return None
+        if effect is None:
+            effect = channel.status.effect
+        if effect < BANLANX1_EFFECT_SOLID:
+            return _FXType.PATTERN.value
+        elif effect >= BANLANX1_EFFECT_SOUND:
+            return _FXType.SOUND.value
+        return _FXType.STATIC.value
 
     def nameof_channel_effect_type(
         self, channel: UNILEDChannel, fxtype: int | None = None
     ) -> str | None:
         """Name an effects type."""
+        if not channel.number:
+            return None
         if fxtype is None:
             fxtype = channel.status.fxtype
-        if fxtype == BANLANX1_TYPE_SOLID:
-            return UNILEDEffectType.STATIC
-        if fxtype >= BANLANX1_TYPE_SOUND:
-            return UNILEDEffectType.SOUND
-        return UNILEDEffectType.PATTERN
+        if fxtype in BANLANX1_EFFECT_TYPES:
+            return BANLANX1_EFFECT_TYPES[fxtype]
+        return f"{UNKNOWN} ({fxtype})"
 
     def rangeof_channel_effect_speed(
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
         """Range of effect speed (min,max,step)."""
-        return (1, 10, 1)
+        if channel.number:
+            return (1, 10, 1)
+        return None
 
     def rangeof_channel_effect_length(
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
         """Range of effect length (min,max,step)."""
-        return (1, 150, 1)
+        if channel.number:
+            return (1, 150, 1)
+        return None
+
+    def rangeof_channel_input_gain(
+        self, channel: UNILEDChannel
+    ) -> tuple(int, int, int) | None:
+        """Range of input gain (min,max,step)."""
+        if channel.number:
+            return (1, 16, 1)
+        return None
 
 
 ##
@@ -343,7 +456,7 @@ SP601E = _BANLANX1(
     manufacturer_data=b"\x01\x02\x01\xb6",
     resolve_protocol=False,
     channels=2,
-    extra_data={},
+    needs_on=True,
     service_uuids=[BANLANX1_UUID_FORMAT.format(part) for part in ["ffe0", "ffb0"]],
     write_uuids=[BANLANX1_UUID_FORMAT.format(part) for part in ["ffe1"]],
     read_uuids=[],
