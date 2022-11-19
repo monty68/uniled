@@ -1,4 +1,5 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![hacs][hacsbadge]][hacs]
+[![Project Maintenance][maintenance-shield]][user_profile]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
@@ -25,6 +26,8 @@ HAVE FUN! 😎
 
 ---
 
+
+{% if not installed %}
 ## Installation
 
 ### HACS Automated Installation
@@ -33,7 +36,7 @@ You can install this component through [HACS](https://hacs.xyz/) to easily recei
 
 After installing HACS, visit the HACS _Integrations_ pane and add `https://github.com/monty68/uniled` as an `Integration` by following [these instructions](https://hacs.xyz/docs/faq/custom_repositories/). You'll then be able to install it through the _Integrations_ pane.
 
-### Manual Installation
+## Manual Installation
 
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 2. If you do not have a `custom_components` directory (folder) there, you need to create it.
@@ -43,22 +46,26 @@ After installing HACS, visit the HACS _Integrations_ pane and add `https://githu
 6. Restart Home Assistant
 7. In the HA UI go to "Settings" -> "Devices & Services" -> "Integrations" click "+" and search for "Universal Light Controller"
 
+{% endif %}
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
 
-***
 
-[uniled]: https://github.com/monty68/uniled
+<!---->
+
+***
 [ha-logo]: docs/img/ha-logo-32x32.png
 [SP107E]: docs/sp107e.md
 [SP601E]: docs/sp601e.md
 [SP61xE]: docs/sp61Xe.md
-[Info]: info.md
+[uniled]: https://github.com/monty68/uniled
 [user_profile]: https://github.com/monty68
-[maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
 [buymecoffee]: https://www.buymeacoffee.com/monty68
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
+[maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
+[hacs]: https://hacs.xyz
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/v/release/monty68/uniled?display_name=release&include_prereleases&style=for-the-badge
 [releases]: https://github.com/monty68/uniled/releases
@@ -66,3 +73,4 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 [commits]: https://github.com/monty68/uniled/commits/main
 [license]: https://github.com/monty68/uniled/blob/main/LICENSE
 [license-shield]: https://img.shields.io/github/license/monty68/uniled.svg?style=for-the-badge
+
