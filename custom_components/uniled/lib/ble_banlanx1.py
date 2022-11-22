@@ -26,9 +26,9 @@ BANLANX1_MANUFACTURER_ID: Final = 20563
 BANLANX1_MANUFACTURER: Final = "SPLED (BanlanX)"
 
 BANLANX1_MODE_OFF: Final = 0xFF
-BANLANX1_SCENE_OFF: Final = 0xFF
+BANLANX1_SCENE_NONE: Final = 0xFF
 BANLANX1_EFFECT_PATTERN: Final = 0x01
-BANLANX1_EFFECT_SOLID: Final = 0x25
+BANLANX1_EFFECT_SOLID: Final = 0x19
 BANLANX1_EFFECT_SOUND: Final = 0x65
 
 BANLANX1_INPUTS: Final = {
@@ -100,6 +100,7 @@ BANLANX1_EFFECTS: Final = {
 }
 
 BANLANX1_SCENES: Final = {
+    BANLANX1_SCENE_NONE: "None",
     0x00: "Scene 1",
     0x01: "Scene 2",
     0x02: "Scene 3",
@@ -224,7 +225,7 @@ class _BANLANX1(UNILEDBLEModel):
             return UNILEDStatus(
                 power=master_power,
                 mode=data[23] if master_power else BANLANX1_MODE_OFF,
-                effect=BANLANX1_SCENE_OFF,
+                effect=BANLANX1_SCENE_NONE,
                 level=cast(int, (data[3] + data[14]) / 2),
                 extra={
                     "unknown": data[22],
