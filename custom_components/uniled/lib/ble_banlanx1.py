@@ -200,7 +200,7 @@ class _BANLANX1(UNILEDBLEModel):
                     direction=data[6],
                     rgb=(data[7], data[8], data[9]),
                     gain=data[10],
-                    chip_order=data[2]
+                    chip_order=data[2],
                 )
             )
 
@@ -217,7 +217,7 @@ class _BANLANX1(UNILEDBLEModel):
                     direction=data[17],
                     rgb=(data[18], data[19], data[20]),
                     gain=data[21],
-                    chip_order=data[13]
+                    chip_order=data[13],
                 )
             )
 

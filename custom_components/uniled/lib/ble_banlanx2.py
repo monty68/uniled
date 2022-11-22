@@ -4,12 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-from .artifacts import (
-    UNILEDModelType,
-    UNILEDInput,
-    UNILEDEffectType,
-    UNILEDEffects
-)
+from .artifacts import UNILEDModelType, UNILEDInput, UNILEDEffectType, UNILEDEffects
 from .states import UNILEDStatus
 from .classes import UNILEDDevice, UNILEDChannel
 from .ble_model import UNILEDBLEModel
@@ -275,7 +270,7 @@ class _BANLANX2(UNILEDBLEModel):
                     level=data[9],
                     rgb=(data[12], data[13], data[14]),
                     gain=data[16],
-                    input=data[15]
+                    input=data[15],
                 )
 
             # Status Response #2

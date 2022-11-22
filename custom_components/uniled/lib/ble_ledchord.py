@@ -1,4 +1,4 @@
-"""UniLED BLE Devices - SP107E from SPLED (LedChord)"""
+"""UniLED BLE Devices - SP107E from SPLED (LEDChord)"""
 from __future__ import annotations
 
 import functools
@@ -27,7 +27,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 LEDCHORD_MANUFACTURER_ID: Final = 0
-LEDCHORD_MANUFACTURER: Final = "SPLED (LedChord)"
+LEDCHORD_MANUFACTURER: Final = "SPLED (LEDChord)"
 LEDCHORD_MODEL_NUMBER_SP107E: Final = 0x107E
 LEDCHORD_MODEL_NAME_SP107E: Final = "SP107E"
 LEDCHORD_LOCAL_NAME_SP107E: Final = LEDCHORD_MODEL_NAME_SP107E
@@ -107,7 +107,7 @@ LEDCHORD_EFFECTS: Final = dict(functools.reduce(operator.or_, LEDCHORD_EFFECT_GR
 
 @dataclass(frozen=True)
 class _LEDCHORD(UNILEDBLEModel):
-    """LedChord Protocol Implementation"""
+    """LED Chord Protocol Implementation"""
 
     ##
     ## Device Control
@@ -151,8 +151,8 @@ class _LEDCHORD(UNILEDBLEModel):
             # 4  = LEDs
             # 5  = Effect
             # 6  = Auto Effects
-            # 7  = Auto Strip Music
-            # 8  = Auto Matrix Music
+            # 7  = Strip Music Auto
+            # 8  = Screen/Matrix Music Auto
             # 9  = Speed
             # 10 = Brightness Level
             # 11 = White Level
@@ -160,15 +160,15 @@ class _LEDCHORD(UNILEDBLEModel):
             # 13 = Static Red
             # 14 = Static Green
             # 15 = Static Blue
-            # 16 = Music Red
-            # 17 = Music Green
-            # 18 = Music Blue
-            # 19 = Matrix Column Red
-            # 20 = Matrix Column Green
-            # 21 = Matrix Column Blue
-            # 22 = Matrix Dot Red
-            # 23 = Matrix Dot Green
-            # 24 = Matrix Dot Blue
+            # 16 = Strip Music Red
+            # 17 = Strip Music Green
+            # 18 = Strip Music Blue
+            # 19 = Screen/Matrix Column Red
+            # 20 = Screen/Matrix Column Green
+            # 21 = Screen/Matrix Column Blue
+            # 22 = Screen/Matrix Dot Red
+            # 23 = Screen/Matrix Dot Green
+            # 24 = Screen/Matrix Dot Blue
             # 25 = Input Gain
             #
             chip = data[2]
@@ -177,6 +177,7 @@ class _LEDCHORD(UNILEDBLEModel):
                 white = None
 
             rgb = (data[13], data[14], data[15])
+            rgb2 = None
             fxtype = _FXType.STATIC.value
             mode = _FXMode.SINGULAR.value
             effect = data[5]
@@ -192,7 +193,8 @@ class _LEDCHORD(UNILEDBLEModel):
             elif effect >= _FXGroup.SOUND_MATRIX:
                 mode = _FXMode.AUTO_MATRIX.value if data[8] else mode
                 fxtype = _FXType.SOUND_MATRIX.value
-                rgb = (data[19], data[20], data[21])
+                rgb = (data[22], data[23], data[24])
+                rgb2 = (data[19], data[20], data[21])
 
             return UNILEDStatus(
                 power=power,
@@ -204,7 +206,7 @@ class _LEDCHORD(UNILEDBLEModel):
                 level=data[10],
                 rgb=rgb,
                 gain=data[25],
-                rgb2=(data[19], data[20], data[21]),  # Matrix Column Color - TODO, how to set in the HA UI?
+                rgb2=rgb2,  # Matrix Column Color - TODO, how to set in the HA UI?
                 chip_order=data[1],
                 chip_type=chip,
                 segment_count=data[3],
@@ -245,7 +247,7 @@ class _LEDCHORD(UNILEDBLEModel):
 
         return [
             self.construct_message(bytearray([True, 0x00, 0x00, msg])),
-            self.construct_status_query(channel.device),
+            #self.construct_status_query(channel.device),
         ]
 
     def construct_level_change(
@@ -259,7 +261,7 @@ class _LEDCHORD(UNILEDBLEModel):
     def construct_white_change(
         self, channel: UNILEDChannel, level: int
     ) -> list[bytearray] | None:
-        """The bytes to send for a color level change."""
+        """The bytes to send for a white level change."""
         return self.construct_message(
             bytearray([level, 0x00, 0x00, _Msg.CMD_SET_NO_MUSIC_WHITE_BRIGHTNESS])
         )
@@ -299,6 +301,16 @@ class _LEDCHORD(UNILEDBLEModel):
                 )
             )
         return commands
+
+    def construct_color_two_change(
+        self, channel: UNILEDChannel, red: int, green: int, blue: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a second color change."""
+        if channel.status.rgb2 != (red, green, blue):
+            return self.construct_message(
+                bytearray([red, green, blue, _Msg.CMD_SET_SCREEN_MUSIC_COL_COLOR])
+            )
+        return None
 
     def construct_effect_change(
         self, channel: UNILEDChannel, effect: int
@@ -345,13 +357,31 @@ class _LEDCHORD(UNILEDBLEModel):
         self, channel: UNILEDChannel, count: int
     ) -> list[bytearray] | None:
         """The bytes to send for a segment count change"""
-        return self.construct_message(bytearray([count, channel.status.segment_length, 0x00, _Msg.CMD_SET_LED_PIXELS_COUNT]))
+        return self.construct_message(
+            bytearray(
+                [
+                    count,
+                    channel.status.segment_length,
+                    0x00,
+                    _Msg.CMD_SET_LED_PIXELS_COUNT,
+                ]
+            )
+        )
 
     def construct_segment_length_change(
         self, channel: UNILEDChannel, length: int
     ) -> list[bytearray] | None:
         """The bytes to send for a segment length change"""
-        return self.construct_message(bytearray([channel.status.segment_count, length, 0x00, _Msg.CMD_SET_LED_PIXELS_COUNT]))
+        return self.construct_message(
+            bytearray(
+                [
+                    channel.status.segment_count,
+                    length,
+                    0x00,
+                    _Msg.CMD_SET_LED_PIXELS_COUNT,
+                ]
+            )
+        )
 
     ##
     ## Channel Informational

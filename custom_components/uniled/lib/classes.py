@@ -110,6 +110,12 @@ class UNILEDModel:
         """The bytes to send for a color change."""
         return None
 
+    def construct_color_two_change(
+        self, channel: UNILEDChannel, red: int, green: int, blue: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a second color change."""
+        return None
+
     def construct_effect_change(
         self, channel: UNILEDChannel, effect: int
     ) -> list[bytearray] | None:
@@ -318,6 +324,13 @@ class UNILEDChannel:
         return self._status
 
     @property
+    def is_available(self) -> bool:
+        """Returns if the channel is available"""
+        if self.device.model is not None:
+            return True  # TODO - Query model handler if channle is available
+        return False
+
+    @property
     def needs_on(self) -> bool:
         """Returns if On state needed to change settings"""
         assert self.device.model is not None  # nosec
@@ -372,6 +385,11 @@ class UNILEDChannel:
         if self.rgb is not None:
             red, green, blue = self.rgb
         return (red, green, blue, 0xFF if self.white is None else self.white)
+
+    @property
+    def rgb2(self) -> tuple[int, int, int] | None:
+        """Returns current RGB2 state"""
+        return self._status.rgb2
 
     @property
     def effect(self) -> str | None:
@@ -609,10 +627,23 @@ class UNILEDChannel:
             self._status = replace(self._status, rgb=(red, green, blue), white=white)
             self._fire_callbacks()
 
+    async def async_set_rgb2(self, rgb: tuple[int, int, int]) -> None:
+        """Set channel second RGB levels."""
+        _LOGGER.debug("%s: Set RGB2: %s, Current: %s", self.name, rgb, self.rgb2)
+        if self.rgb2 is None:
+            return
+        for value in rgb:
+            if not 0 <= value <= 255:
+                raise ValueError("Value {} is outside the valid range of 0-255")
+        command = self.device.model.construct_color_two_change(self, *rgb, None)
+        if await self.device.send_command(command):
+            self._status = replace(self._status, rgb2=rgb)
+            self._fire_callbacks()
+
     async def async_set_effect(self, name: str) -> None:
         """Set effect by name."""
+        _LOGGER.debug("%s: Set Effect: %s", self.name, name)
         if self._status.effect is not None:
-            _LOGGER.debug("%s: Set Effect: %s", self.name, name)
             try:
                 code = self.device.model.codeof_channel_effect(self, name)
                 if code is not None:
@@ -638,8 +669,8 @@ class UNILEDChannel:
 
     async def async_set_effect_speed(self, value: int) -> None:
         """Set effect speed."""
+        _LOGGER.debug("%s: Set Effect Speed: %s", self.name, value)
         if self._status.speed is not None:
-            _LOGGER.debug("%s: Set Effect Speed: %s", self.name, value)
             if (rangeof := self.effect_speed_range) is None:
                 return
             if not rangeof[0] <= value <= rangeof[1]:
@@ -652,12 +683,12 @@ class UNILEDChannel:
             ):
                 value = self._status.speed
             self._status = replace(self._status, speed=value)
-        self._fire_callbacks()
+            self._fire_callbacks()
 
     async def async_set_effect_length(self, value: int) -> None:
         """Set effect length."""
+        _LOGGER.debug("%s: Set Effect Length: %s", self.name, value)
         if self._status.length is not None:
-            _LOGGER.debug("%s: Set Effect Length: %s", self.name, value)
             if (rangeof := self.effect_length_range) is None:
                 return
             if not rangeof[0] <= value <= rangeof[1]:
@@ -670,18 +701,18 @@ class UNILEDChannel:
             ):
                 value = self._status.length
             self._status = replace(self._status, length=value)
-        self._fire_callbacks()
+            self._fire_callbacks()
 
     async def async_set_effect_direction(self, value: bool) -> None:
         """Set effect direction."""
+        _LOGGER.debug("%s: Set Effect Direction: %s", self.name, value)
         if self._status.direction is not None:
-            _LOGGER.debug("%s: Set Effect Direction: %s", self.name, value)
             if not await self.device.send_command(
                 self.device.model.construct_effect_direction_change(self, value)
             ):
                 value = self._status.direction
             self._status = replace(self._status, direction=value)
-        self._fire_callbacks()
+            self._fire_callbacks()
 
     async def async_set_input_gain(self, value: int) -> None:
         """Set input gain."""
@@ -702,8 +733,8 @@ class UNILEDChannel:
 
     async def async_set_chip_type(self, value: str) -> None:
         """Set chip type."""
+        _LOGGER.debug("%s: Set Chip Type: %s", self.name, value)
         if self._status.chip_type is not None:
-            _LOGGER.debug("%s: Set Chip Type: %s", self.name, value)
             if not await self.device.send_command(
                 self.device.model.construct_chip_type_change(self, value)
             ):
@@ -713,8 +744,8 @@ class UNILEDChannel:
 
     async def async_set_chip_order(self, value: str) -> None:
         """Set chip order."""
+        _LOGGER.debug("%s: Set Chip Order: %s", self.name, value)
         if self._status.chip_order is not None:
-            _LOGGER.debug("%s: Set Chip Order: %s", self.name, value)
             if not await self.device.send_command(
                 self.device.model.construct_chip_order_change(self, value)
             ):
@@ -724,8 +755,8 @@ class UNILEDChannel:
 
     async def async_set_segment_count(self, value: int) -> None:
         """Set segment count."""
+        _LOGGER.debug("%s: Set Segment Count: %s", self.name, value)
         if self._status.segment_count is not None:
-            _LOGGER.debug("%s: Set Segment Count: %s", self.name, value)
             if (rangeof := self.segment_count_range) is None:
                 return
             if not rangeof[0] <= value <= rangeof[1]:
@@ -742,8 +773,8 @@ class UNILEDChannel:
 
     async def async_set_segment_length(self, value: int) -> None:
         """Set segment length."""
+        _LOGGER.debug("%s: Set Segment Length: %s", self.name, value)
         if self._status.segment_length is not None:
-            _LOGGER.debug("%s: Set Segment Length: %s", self.name, value)
             if (rangeof := self.segment_length_range) is None:
                 return
             if not rangeof[0] <= value <= rangeof[1]:

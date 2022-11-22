@@ -21,7 +21,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, SIGNAL_STATE_UPDATED
+from .const import DOMAIN
 from .coordinator import UNILEDUpdateCoordinator
 from .lib.classes import UNILEDChannel, UNILEDDevice
 from .lib.models_db import UNILED_TRANSPORT_BLE, UNILED_TRANSPORT_NET
@@ -29,6 +29,7 @@ from .lib.models_db import UNILED_TRANSPORT_BLE, UNILED_TRANSPORT_NET
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
     """Representation of a UniLED entity with a coordinator."""
@@ -56,9 +57,11 @@ class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
             self._attr_unique_id = f"_{self._attr_unique_id}_{key}"
         self._attr_device_info = _async_device_info(self._device, coordinator.entry)
 
-    #@property
-    #def force_update(self) -> bool:
-    #    return True
+    @property
+    def available(self) -> bool:
+        if not self.channel.is_available:
+            return False
+        return super().available
 
     @property
     def id(self) -> int:
@@ -93,7 +96,7 @@ class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
         self._async_update_attrs()
         self.async_write_ha_state()
 
-    #@abstractmethod
+    # @abstractmethod
     @callback
     def _async_update_attrs(self) -> None:
         """Update entity attributes"""
@@ -116,6 +119,8 @@ def _async_device_info(
         device_info[ATTR_CONNECTIONS] = {(dr.CONNECTION_BLUETOOTH, device.address)}
     elif device.transport == UNILED_TRANSPORT_NET:
         if entry.unique_id:
-            device_info[ATTR_CONNECTIONS] = {(dr.CONNECTION_NETWORK_MAC, entry.unique_id)}
+            device_info[ATTR_CONNECTIONS] = {
+                (dr.CONNECTION_NETWORK_MAC, entry.unique_id)
+            }
 
     return device_info

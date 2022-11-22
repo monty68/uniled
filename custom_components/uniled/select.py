@@ -22,6 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 1
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -59,32 +60,24 @@ def async_update_channels(
         except IndexError:
             continue
         if channel.mode is not None:
-            new_entities.append(
-                UNILEDModeSelect(coordinator, channel_id)
-            )
+            new_entities.append(UNILEDModeSelect(coordinator, channel_id))
         if channel.chip_type is not None:
-            new_entities.append(
-                UNILEDChipTypeSelect(coordinator, channel_id)
-            )
+            new_entities.append(UNILEDChipTypeSelect(coordinator, channel_id))
         if channel.chip_order is not None:
-            new_entities.append(
-                UNILEDChipOrderSelect(coordinator, channel_id)
-            )
+            new_entities.append(UNILEDChipOrderSelect(coordinator, channel_id))
 
     async_add_entities(new_entities)
+
 
 class UNILEDModeSelect(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SelectEntity
 ):
     """Defines a UniLED mode select control."""
+
     _attr_entity_registry_enabled_default = True
     _attr_entity_category = None
 
-    def __init__(
-        self,
-        coordinator: UNILEDUpdateCoordinator,
-        channel_id: int
-    ) -> None:
+    def __init__(self, coordinator: UNILEDUpdateCoordinator, channel_id: int) -> None:
         """Initialize a UniLED mode control."""
         super().__init__(coordinator, channel_id, "Mode", "mode")
         self._attr_icon = "mdi:refresh-auto"
@@ -93,7 +86,7 @@ class UNILEDModeSelect(
 
     @property
     def available(self) -> bool:
-        #if not self.channel.is_on:
+        # if not self.channel.is_on:
         #    return False
         return super().available
 
@@ -111,14 +104,11 @@ class UNILEDChipTypeSelect(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SelectEntity
 ):
     """Defines a UniLED chip type select control."""
+
     _attr_entity_registry_enabled_default = False
     _attr_entity_category = EntityCategory.CONFIG
 
-    def __init__(
-        self,
-        coordinator: UNILEDUpdateCoordinator,
-        channel_id: int
-    ) -> None:
+    def __init__(self, coordinator: UNILEDUpdateCoordinator, channel_id: int) -> None:
         """Initialize a UniLED chip type control."""
         super().__init__(coordinator, channel_id, "Chip Type", "chip_type")
         self._attr_icon = "mdi:chip"
@@ -139,14 +129,11 @@ class UNILEDChipOrderSelect(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SelectEntity
 ):
     """Defines a UniLED chip color order select control."""
+
     _attr_entity_registry_enabled_default = False
     _attr_entity_category = EntityCategory.CONFIG
 
-    def __init__(
-        self,
-        coordinator: UNILEDUpdateCoordinator,
-        channel_id: int
-    ) -> None:
+    def __init__(self, coordinator: UNILEDUpdateCoordinator, channel_id: int) -> None:
         """Initialize a UniLED chip color order control."""
         super().__init__(coordinator, channel_id, "Chip Color Order", "chip_order")
         self._attr_icon = "mdi:palette"

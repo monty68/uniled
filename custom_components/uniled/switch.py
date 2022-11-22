@@ -62,9 +62,7 @@ def async_update_channels(
 
         if channel.effect is not None:
             if channel.effect_direction is not None:
-                new_entities.append(
-                    UNILEDEffectDirection(coordinator, channel_id)
-                )
+                new_entities.append(UNILEDEffectDirection(coordinator, channel_id))
 
     async_add_entities(new_entities)
 
@@ -73,6 +71,7 @@ class UNILEDEffectDirection(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SwitchEntity
 ):
     """Defines a UniLED effect direction switch control."""
+
     _attr_entity_registry_enabled_default = True
     _attr_entity_category = None
     _attr_device_class = SwitchDeviceClass.SWITCH
@@ -94,7 +93,7 @@ class UNILEDEffectDirection(
 
     @property
     def is_on(self) -> bool:
-        """ Is the switch currently on (forwards) or off (backwards)."""
+        """Is the switch currently on (forwards) or off (backwards)."""
         return self.channel.effect_direction
 
     @callback

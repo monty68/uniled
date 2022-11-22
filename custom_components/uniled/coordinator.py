@@ -1,8 +1,8 @@
 """UniLED Update Coordinator."""
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
-from typing import Final
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -21,8 +21,11 @@ _LOGGER = logging.getLogger(__name__)
 class UNILEDUpdateCoordinator(DataUpdateCoordinator):
     """DataUpdateCoordinator to gather data for a specific UniLED device."""
 
-    def __init__(self, hass: HomeAssistant, device: UNILEDDevice, entry: ConfigEntry) -> None:
+    def __init__(
+        self, hass: HomeAssistant, device: UNILEDDevice, entry: ConfigEntry
+    ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific device."""
+        self.lock = asyncio.Lock()
         self.device = device
         self.title = entry.title
         self.entry = entry
@@ -41,10 +44,11 @@ class UNILEDUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> None:
         """Fetch all device and sensor data from api."""
-        try:
-            if self.entry.state != ConfigEntryState.NOT_LOADED:
-                await self.device.update(force=self.force_next_update)
-        except BLEAK_EXCEPTIONS as ex:
-            raise UpdateFailed(str(ex)) from ex
-        finally:
-            self.force_next_update = False
+        async with self.lock:
+            try:
+                if self.entry.state != ConfigEntryState.NOT_LOADED:
+                    await self.device.update(force=self.force_next_update)
+            except BLEAK_EXCEPTIONS as ex:
+                raise UpdateFailed(str(ex)) from ex
+            finally:
+                self.force_next_update = False

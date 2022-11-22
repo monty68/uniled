@@ -26,9 +26,11 @@ LEDHUE_MODEL_NUMBER_SP110E: Final = 0x110E
 LEDHUE_MODEL_NAME_SP110E: Final = "SP107E"
 LEDHUE_LOCAL_NAME_SP110E: Final = LEDHUE_MODEL_NAME_SP110E
 
+
 @dataclass(frozen=True)
 class _LEDHUE(UNILEDBLEModel):
     """LedHue Protocol Implementation"""
+
 
 ##
 ## SP110E

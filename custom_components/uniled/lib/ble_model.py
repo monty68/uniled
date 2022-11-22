@@ -42,7 +42,10 @@ class UNILEDBLEModel(UNILEDModel):
                 if uuid in advertisement.service_uuids:
                     if self.manufacturer_data is not None:
                         _LOGGER.debug(
-                            "%s : %s in %s", mid, self.manufacturer_data.hex(), data.hex()
+                            "%s : %s in %s",
+                            mid,
+                            self.manufacturer_data.hex(),
+                            data.hex(),
                         )
                         if not data.count(self.manufacturer_data):
                             return False

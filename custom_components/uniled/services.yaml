@@ -1,0 +1,87 @@
+set_state:
+  name: Set State
+  description: Set the state of a UniLED entity.
+  target:
+    entity:
+      integration: uniled
+      domain: light
+  fields:
+    power:
+      name: Power
+      description: Turn the light on or off. Leave out to keep the power as it is.
+      selector:
+        boolean:
+    effect:
+      name: Effect
+      description: Light effect.
+      selector:
+        text:
+    effect_speed:
+      name: Effect Speed
+      description: Set the speed of an effect.
+      selector:
+        number:
+          min: 0
+          max: 255
+    effect_length:
+      name: Effect Length
+      description: Set the length of an effect.
+      selector:
+        number:
+          min: 0
+          max: 255
+    effect_direction:
+      name: Effect Direction
+      description: Set the length of an effect.
+      default: "forwards"
+      selector:
+        select:
+          options:
+            - "backwards"
+            - "forwards"
+    sensitivity:
+      name: Input Sensitivity
+      description: Set the input sensitivity.
+      selector:
+        number:
+          min: 0
+          max: 255
+    rgb_color:
+      name: Primary color
+      description: The primary color for the light (based on RGB - red, green, blue).
+      selector:
+        color_rgb:
+    rgbw_color:
+      name: Primary RGBW-color
+      description: A list containing four integers between 0 and 255 representing the primary RGBW (red, green, blue, white) color for the light.
+      advanced: true
+      example: "[255, 100, 100, 50]"
+      selector:
+        object:
+    rgb2_color:
+      name: Secondary RGB Color
+      description: Secondary Effect color (only supported by some devices in certain modes).
+      example: "[255, 100, 100]"
+      selector:
+        object:
+    white:
+      name: White
+      description:
+        Set the light to white mode and change its brightness, where 0 turns
+        the light off, 1 is the minimum brightness and 255 is the maximum
+        brightness supported by the light.
+      advanced: true
+      selector:
+        number:
+          min: 0
+          max: 255
+    brightness:
+      name: Brightness value
+      description: Number indicating brightness, where 0 turns the light
+        off, 1 is the minimum brightness and 255 is the maximum brightness
+        supported by the light.
+      advanced: true
+      selector:
+        number:
+          min: 0
+          max: 255

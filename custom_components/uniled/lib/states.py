@@ -22,13 +22,14 @@ class UNILEDState(StrEnum):
     WHITE = "white"
     RGB = "rgb"
     RGB2 = "rgb2"
-    #RGBW = "rgbw"
+    # RGBW = "rgbw"
     GAIN = "gain"
     INPUT = "input"
     CHIPTYPE = "chip_type"
     CHIPORDER = "chip_order"
     SEGMENT_COUNT = "segment_count"
     SEGMENT_LENGTH = "segment_length"
+
 
 @dataclass(frozen=True)
 class UNILEDStatus:

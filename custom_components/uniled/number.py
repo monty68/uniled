@@ -257,6 +257,7 @@ class UNILEDSegmentCountNumber(
         """Set the UniLED sensitivity value."""
         await self.channel.async_set_segment_count(int(value))
 
+
 class UNILEDSegmentLengthNumber(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], NumberEntity
 ):
