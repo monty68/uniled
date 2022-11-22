@@ -5,7 +5,7 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
 
-# ![HA][ha-logo] UniLED - The Universal Light Controller
+# UniLED - The Universal Light Controller
 
 
 UniLED Currently supports the following range of cheap BLE addressable LED controllers:
@@ -36,7 +36,7 @@ You can install this component through [HACS](https://hacs.xyz/) to easily recei
 
 After installing HACS, visit the HACS _Integrations_ pane and add `https://github.com/monty68/uniled` as an `Integration` by following [these instructions](https://hacs.xyz/docs/faq/custom_repositories/). You'll then be able to install it through the _Integrations_ pane.
 
-## Manual Installation
+### Manual Installation
 
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 2. If you do not have a `custom_components` directory (folder) there, you need to create it.
@@ -48,6 +48,17 @@ After installing HACS, visit the HACS _Integrations_ pane and add `https://githu
 
 {% endif %}
 
+## Debugging
+
+To debug the integration, add the following to your `configuration.yaml`
+
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.uniled: debug
+```
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
@@ -56,10 +67,10 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 <!---->
 
 ***
-[ha-logo]: docs/img/ha-logo-32x32.png
-[SP107E]: docs/sp107e.md
-[SP601E]: docs/sp601e.md
-[SP61xE]: docs/sp61Xe.md
+[ha-logo]: https://raw.githubusercontent.com/monty68/uniled/main/docs/img/ha-logo-32x32.png
+[SP107E]: https://github.com/monty68/uniled/blob/main/docs/sp107e.md
+[SP601E]: https://github.com/monty68/uniled/blob/main/docs/sp601e.md
+[SP61xE]: https://github.com/monty68/uniled/blob/main/docs/sp61Xe.md
 [uniled]: https://github.com/monty68/uniled
 [user_profile]: https://github.com/monty68
 [buymecoffee]: https://www.buymeacoffee.com/monty68
