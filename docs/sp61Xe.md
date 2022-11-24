@@ -51,15 +51,16 @@ All command messages begin with three bytes:
 | State Packet |#1 |
 | ----------- | ----------- |
 | Length | 20 |
-| Format | `H1 H2 P# FT D# PS SN EN ?? LV ES EL RR GG BB IN IG ?? ?? ??` |
+| Format | `H1 H2 P# M# D# PS ?? EN ?? LV ES EL RR GG BB IN IG ?? ?? ??` |
 | Example | `53 43 01 17 0f 00 00 cd 02 ff 0a 96 ff 00 00 00 10 09 04 0b` |
 **Fields**
 1.  `H1` - Header Byte 1, always `53` (Ascii `S`)
 2.  `H2` - Header Byte 2, always `43` (Ascii `P`)
 3.  `P#` - Packet Number, always `01`
-4.  `FT` - Frame Type, `0x17` = Single, `0x18` = Double, `0x19` = Triple
-5.  `D#` - Data Bytes to follow, should always be 0x0F6.  `PS` - **Power State** (0x00 = Off, 0x01 = On)
-7.  `SN` - **Scene Number** (Note Used, always 0x00)
+4.  `M#` - Total Data Bytes within the message
+5.  `D#` - Data Bytes to follow in this packet  
+6.  `PS` - **Power State** (0x00 = Off, 0x01 = On)
+7.  `??`
 8.  `EN` - **Effect Number** (See Effects List below)
 9.  `??`
 10. `LV` - **Brightness Level** (0x00 - 0xFF)
@@ -77,19 +78,19 @@ All command messages begin with three bytes:
 | State Packet | #2 |
 | ----------- | ----------- |
 | Length | 14 |
-| Format |  `H1 H2 P# FT D# ?? ?? ?? RR GG BB ?? ?? ??` |
+| Format |  `H1 H2 P# M# D# ?? ?? ?? ?? ?? ?? ?? ?? ??` |
 | Example | `53 43 02 18 09 0a 1e 00 00 ff 00 10 00 00` |
 **Fields**
 1.  `H1` - Header Byte 1, always `53` (Ascii `S`)
 2.  `H2` - Header Byte 2, always `43` (Ascii `P`)
 3.  `P#` - Packet Number, always `02`
-4.  `FT` - Frame Type, `0x17` = Single, `0x18` = Double, `0x19` = Triple
-5.  `D#` - Data Bytes to follow, should always be 0x0F6.  `??`
+4.  `M#` - Total Data Bytes within the message
+5.  `D#` - Data Bytes to follow in this packet  
 7.  `??`
 8.  `??`
-9.  `RR` - **Red Level** (0x00 - 0xFF) for Channel 2?
-10. `GG` - **Green Level** (0x00 - 0xFF) for Channel 2?
-11. `BB` - **Blue Level** (0x00 - 0xFF) for Channel 2?
+9.  `??`
+10. `??`
+11. `??`
 12. `??`
 13. `??`
 14. `??`
@@ -223,7 +224,7 @@ All command messages begin with three bytes:
 4.  `RR` - **Red Level** (0x00 - 0xFF)
 5.  `GG` - **Green Level** (0x00 - 0xFF)
 6.  `BB` - **Blue Level** (0x00 - 0xFF)
-7.  `WW` - **White Level** (0x00 - 0xFF) - *Note: Ignored on SP611E as it does not support RGBW LEDs*
+7.  `WW` - **Brightness Level** (0x00 - 0xFF)
 </p>
 </details>
 

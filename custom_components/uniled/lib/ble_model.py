@@ -23,6 +23,7 @@ CONF_UNILEDBLE_WRITE_UUIDS = "write_uuids"
 class UNILEDBLEModel(UNILEDModel):
     """UniLED BLE Model Class"""
 
+    local_names: list[str] | None
     manufacturer_id: int
     manufacturer_data: bytearray | None
     service_uuids: list[str]

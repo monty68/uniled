@@ -3,8 +3,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Final
+from enum import IntEnum
 
-from .artifacts import UNILEDModelType, UNILEDInput, UNILEDEffectType, UNILEDEffects
+from .artifacts import (
+    UNKNOWN,
+    UNILEDModelType,
+    UNILEDInput,
+    UNILEDEffectType,
+    UNILEDEffects,
+)
 from .states import UNILEDStatus
 from .classes import UNILEDDevice, UNILEDChannel
 from .ble_model import UNILEDBLEModel
@@ -18,6 +25,14 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+BANLANX2_MODEL_NUMBER_SP611E: Final = 0x611E
+BANLANX2_MODEL_NAME_SP611E: Final = "SP611E"
+BANLANX2_LOCAL_NAME_SP611E: Final = BANLANX2_MODEL_NAME_SP611E
+
+BANLANX2_MODEL_NUMBER_SP617E: Final = 0x617E
+BANLANX2_MODEL_NAME_SP617E: Final = "SP617E"
+BANLANX2_LOCAL_NAME_SP617E: Final = BANLANX2_MODEL_NAME_SP617E
+
 BANLANX2_TYPE_SOLID: Final = 0xBE
 BANLANX2_TYPE_SOUND: Final = 0xC9
 
@@ -25,6 +40,20 @@ BANLANX2_INPUTS: Final = {
     0x00: UNILEDInput.INTMIC,
     0x01: UNILEDInput.PLAYER,
     0x02: UNILEDInput.EXTMIC,
+}
+
+
+@dataclass(frozen=True)
+class _FXType(IntEnum):
+    STATIC = 0x00
+    PATTERN = 0x01
+    SOUND = 0x02
+
+
+BANLANX2_EFFECT_TYPES: dict(int, str) = {
+    _FXType.STATIC.value: UNILEDEffectType.STATIC,
+    _FXType.PATTERN.value: UNILEDEffectType.PATTERN,
+    _FXType.SOUND.value: UNILEDEffectType.SOUND,
 }
 
 BANLANX2_EFFECTS: Final = {
@@ -192,6 +221,14 @@ BANLANX2_EFFECTS: Final = {
     0xDA: UNILEDEffects.SOUND_PARTY,
 }
 
+_STATUS_FLAG_1 = 0x53
+_STATUS_FLAG_2 = 0x43
+_HEADER_LENGTH = 5
+_PACKET_NUMBER = 2
+_MESSAGE_LENGTH = 3
+_PAYLOAD_LENGTH = 4
+_MESSAGE_LENGTH_SP617E = 25
+
 
 @dataclass(frozen=True)
 class _BANLANX2(UNILEDBLEModel):
@@ -200,109 +237,161 @@ class _BANLANX2(UNILEDBLEModel):
     ##
     ## Device Control
     ##
-    def construct_connect_message(self) -> bytearray | None:
+    def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray]:
         """The bytes to send when first connecting."""
-        return self.construct_message(
-            bytearray([0xA0, 0x60, 0x07, 0x92, 0x9F, 0x00, 0x62, 0xA5, 0x04, 0x00])
-        )
+        return [
+            self.construct_message(bytearray([0xA0, 0x6A, 0x01, 0x01])),
+        ]
+        return None
 
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
         """The bytes to send for a state query."""
         return self.construct_message(bytearray([0xA0, 0x70, 0x00]))
+
+    def construct_input_change(
+        self, device: UNILEDDevice, audio_input: int
+    ) -> bytearray | None:
+        """The bytes to send for an input change"""
+        return None
 
     async def async_decode_notifications(
         self, device: UNILEDDevice, sender: int, data: bytearray
     ) -> UNILEDStatus | None:
         """Handle notification responses."""
 
-        if data[0] == 0x53 and data[1] == 0x43:
-            #
-            # Status Response #1 (SP617E)
-            #
-            # 53 43 01 19 0f 00 00 03 02 ff 01 0e 00 00 ff 00 10 09 04 0b
+        if (
+            (len(data) > _HEADER_LENGTH)
+            and data[0] == _STATUS_FLAG_1
+            and data[1] == _STATUS_FLAG_2
+        ):
+            packet_number = data[_PACKET_NUMBER]
+            message_length = data[_MESSAGE_LENGTH]
+            payload_length = data[_PAYLOAD_LENGTH]
 
-            #
-            # Status Response #1 (SP611E)
-            #
-            # 53 43 01 1e 0f 00 00 be 02 45 09 96 ff 00 00 00 10 09 04 0b # Solid Color (0xbe)
-            # 53 43 01 17 0f 00 00 04 02 45 07 96 ff 00 00 00 10 09 04 0b
-            # 53 43 01 17 0f 01 00 05 02 ff 07 96 40 ff 00 00 10 09 04 0b
-            # 53 43 01 17 0f 01 00 c9 02 ff 0a 96 00 00 ff 00 10 09 04 0b # First Music FX (0xc9) Internal Mic
-            # 53 43 01 17 0f 01 00 be 02 ff 0a 96 ff ff ff 00 10 09 04 0b # White Mode
-            # 53 43 01 17 0f 01 00 be 02 03 0a 96 ff ff ff 00 10 09 04 0b # White, Brightness Lowered
-            # 53 43 01 17 0f 01 00 be 02 03 0a 96 ff 00 00 00 10 09 04 0b # Red, Brightness Lowered
-            # 53 43 01 17 0f 01 00 be 02 03 0a 96 40 ff ff 00 10 09 04 0b
-            # 53 43 01 17 0f 01 00 be 02 38 0a 10 ff ff ff 00 06 09 04 0b
-            # 53 43 01 19 0f 00 00 c9 02 ff 0a 96 ff ff ff 02 10 09 04 0b # SP617E - External Mic
-            # 53 43 01 19 0f 01 00 c9 02 ff 0a 96 ff ff ff 01 10 09 04 0b # Player
-            # -----------------------------------------------------------
-            # 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19
-            # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-            # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Unknown
-            # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Unknown
-            # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Unknown
-            # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Sesnsitivity (0x00 - 0x0F)
-            # |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  Input 0x00 = Internal Mic, 0x01 = Player, 0x02 = External Mic
-            # |  |  |  |  |  |  |  |  |  |  |  |  |  |  Blue Level (0x00 - 0xFF)
-            # |  |  |  |  |  |  |  |  |  |  |  |  |  Green Level (0x00 - 0xFF)
-            # |  |  |  |  |  |  |  |  |  |  |  |  Red Level (0x00 - 0xFF)
-            # |  |  |  |  |  |  |  |  |  |  |  Effect Length (0x00 - 0x96)
-            # |  |  |  |  |  |  |  |  |  |  Speed (0x00 - 0x0A)
-            # |  |  |  |  |  |  |  |  |  Brightness (0x00 - 0xFF)
-            # |  |  |  |  |  |  |  |  Unknown
-            # |  |  |  |  |  |  |  Effect/Mode
-            # |  |  |  |  |  |  Unknown
-            # |  |  |  |  |  Power: 0x00=Off, 0x01=On
-            # |  |  |  |  Unknown
-            # |  |  |  Unknown
-            # |  |  Response Type, always 0x01
-            # |  Header Byte 2, always 0x43
-            # Header Byte 1, always 0x53
-            #
-            if data[2] == 0x01:
-                return UNILEDStatus(
-                    power=data[5] == 0x01,
-                    fxtype=data[7],
-                    effect=data[7],
-                    speed=data[10],
-                    length=data[11],
-                    white=None,
-                    level=data[9],
-                    rgb=(data[12], data[13], data[14]),
-                    gain=data[16],
-                    input=data[15],
+            if packet_number == 1:
+                data = device.save_notification_data(data)
+                if message_length > payload_length:
+                    _LOGGER.debug(
+                        "%s: Packet 1 - payload size: %s, message length: %s",
+                        device.name,
+                        payload_length,
+                        message_length,
+                    )
+                    return None
+                data = data[_HEADER_LENGTH:]
+            else:
+                last = device.last_notification_data
+                payload_so_far = last[_PAYLOAD_LENGTH] + data[_PAYLOAD_LENGTH]
+
+                _LOGGER.debug(
+                    "%s: Packet %s - payload size: %s, payload so far: %s, message length: %s (%s)",
+                    device.name,
+                    packet_number,
+                    payload_length,
+                    payload_so_far,
+                    message_length,
+                    last[_MESSAGE_LENGTH],
                 )
 
-            # Status Response #2
-            #
-            # 53 43 02 19 0a 14 1a 32 37 50 53 73 00 ff ff
-            # 53 43 02 1e 0f 14 1a 32 37 50 53 73 01 00 01 4d 00 7b 0c 01
-            # 53 43 02 17 08 14 1a 32 37 50 53 73 00
-            #
-            # elif data[2] == 0x02:
+                if payload_so_far < last[_MESSAGE_LENGTH]:
+                    last[_PACKET_NUMBER] = packet_number
+                    last[_PAYLOAD_LENGTH] = payload_so_far
+                    device.save_notification_data(last + data[_HEADER_LENGTH:])
+                    return None
 
-            # Status Response #3
-            #
-            #
-            #
-            # elif data[2] == 0x03:
+                if (
+                    payload_so_far > message_length
+                    or message_length != last[_MESSAGE_LENGTH]
+                ):
+                    _LOGGER.debug("%s: Bad Packet!", device.name)
+                    last[_MESSAGE_LENGTH] = 0
+                    return None
+
+                data = last[_HEADER_LENGTH:] + data[_HEADER_LENGTH:]
+
+            if len(data) == message_length:
+                #
+                # 01 00 01 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 03 00 01 7f 00 93 a8 01 01 00 7f 00 93 e4 01 02 01 80 00 94 20 01 1a 1a
+                # 00 00 01 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 01 00 01 6a 00 93 a8 00 1a 1a
+                # 01 00 01 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 02 00 01 6a 00 93 a8 01 01 00 15 01 3c 68 01 1a 1a
+                # 01 00 d9 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 02 00 01 6a 00 93 a8 01 01 00 15 01 3c 68 01 1a 1a
+                # 01 00 d9 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 02 00 01 6a 00 93 a8 01 01 00 15 01 3c 68 01 1a 1a
+                # 00 00 c9 12 0f 05 4a ff ff ff 00 10 09 04 0b 14 1a 32 37 50 53 73 02 00 01 6a 00 93 a8 01 01 00 15 01 3c 68 01 ff ff
+                # 01 66 53 22 0f 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 01 00 00 00 00 00 00 00                      40 40
+                # 01 00 be 08 ff 05 4a ff 00 00 00 10 09 04 0b 14 1a 32 37 50 53 73 00 40 40
+                # 01 00 05 02 32 01 17 ff ff ff 00 10 09 04 0b 14 1a 32 37 50 53 73 00 ff ff
+                # 00 00 5e 02 38 06 48 ff 00 00 00 10 09 04 0b 14 1a 32 37 50 53 73 00 -> more can follow
+                # ---------------------------------------------------------------------------------------
+                # 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 -> more can follow
+                #
+                # 0  = Power: (0x00=Off, 0x01=On)
+                # 1  = ??
+                # 2  = Effect/Mode
+                # 3  = ?? RGB Ordering?
+                # 4  = Brightness (0x00 - 0xFF)
+                # 5  = Speed (0x01 - 0x0A)
+                # 6  = Effect Length (0x01 - 0x96)
+                # 7  = Red Level (0x00 - 0xFF)
+                # 8  = Green Level (0x00 - 0xFF)
+                # 9  = Blue Level (0x00 - 0xFF)
+                # 10 = Input (0x00=Internal Mic, 0x01=Player, 0x02=External Mic)
+                # 11 = Sesnsitivity (0x01 - 0x10)
+                # 12 = ?? - 0x09 - Bytes to follow??
+                # 13 = ?? - 0x04 - 4
+                # 14 = ?? - 0x0b - 11 ( 0x08 on a SP611E?)
+                # 15 = ?? - 0x14 - 20
+                # 16 = ?? - 0x1a - 26
+                # 17 = ?? - 0x32 - 50  - '2'
+                # 18 = ?? - 0x37 - 55  - '7'
+                # 19 = ?? - 0x50 - 80  - 'P'
+                # 20 = ?? - 0x53 - 83  - 'S'
+                # 21 = ?? - 0x73 - 115 - 's'
+                # 22 = Number of timers set?
+                #
+                # For each timer set, there are 7 bytes that follow
+                #
+                # 00 01 6a 00 93 a8 00 - On  @ 10:30 AM - Sun, Tue, Thu, Sat & Disabled
+                # 00 01 6a 00 93 a8 01 - On  @ 10:30 AM - Sun, Tue, Thu, Sat & Enabled
+                # 01 00 15 01 3c 68 01 - Off @ 10:30 PM - Mon, Wed, Fri & Enabled
+                #
+                # 00 01 7f 00 93 a8 01 - On  @ 10:30 AM - Everyday & Enabled
+                # 01 00 7f 00 93 e4 01 - Off @ 10:31 AM - Everyday & Enabled
+                # 02 01 80 00 94 20 01 - On  @ 10:32 AM - Once & Enabled
+                #
+                # SP617E Only - Last two bytes in message are cool and warm white levels.
+                #
+                # xx = Cool White Level
+                # xx = Warm White Level (Not used on SP617E)
+                #
+                _LOGGER.debug("%s: Good Status Message: %s", device.name, data.hex())
+
+                white = None
+                if self.model_num == BANLANX2_MODEL_NUMBER_SP617E:
+                    cool = data[message_length - 2]
+                    warm = data[message_length - 1]
+                    white = cool
+
+                return UNILEDStatus(
+                    power=data[0] == 0x01,
+                    level=data[4],
+                    white=white,
+                    rgb=(data[7], data[8], data[9]),
+                    fxtype=self.codeof_channel_effect_type(device.master, data[2]),
+                    effect=data[2],
+                    speed=data[5],
+                    length=data[6],
+                    input=data[10],
+                    gain=data[11],
+                )
+
+        else:
+            _LOGGER.debug("%s: Unknown Packet!", device.name)
 
         # Getting here means a notification has not changed the state
         # so return None to indicate no changes to the frontend and
         # save unneeded updates.
         #
-        return None
-
-    def construct_gain_change(
-        self, device: UNILEDDevice, gain: int
-    ) -> bytearray | None:
-        """The bytes to send for a gain/sensitivity change"""
-        return self.construct_message(bytearray([0xA0, 0x6B, 0x01, gain]))
-
-    def construct_input_change(
-        self, device: UNILEDDevice, audio_input: int
-    ) -> bytearray | None:
-        """The bytes to send for an input change"""
+        _LOGGER.debug("%s: Fall through!", device.name)
         return None
 
     ##
@@ -315,6 +404,40 @@ class _BANLANX2(UNILEDBLEModel):
         return self.construct_message(
             bytearray([0xA0, 0x62, 0x01, 0x01 if turn_on else 0x00])
         )
+
+    def construct_level_change(
+        self, channel: UNILEDChannel, level: int
+    ) -> bytearray | None:
+        """The bytes to send for a brightness level change"""
+        return self.construct_message(bytearray([0xA0, 0x66, 0x01, level]))
+
+    def construct_white_change(
+        self, channel: UNILEDChannel, level: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a white level change."""
+        # Two level bytes are sent, assuming first is cool white, second is warm, although not supported by SP6117E?
+        cool = level
+        warm = 0x00
+        return self.construct_message(bytearray([0xA0, 0x76, 0x02, cool, warm]))
+
+    def construct_color_change(
+        self, channel: UNILEDChannel, red: int, green: int, blue: int, white: int | None
+    ) -> bytearray | None:
+        """The bytes to send for a color level change"""
+        if channel.status.effect < BANLANX2_TYPE_SOLID:
+            return None
+
+        level = channel.status.level
+        commands = [
+            self.construct_message(
+                bytearray([0xA0, 0x69, 0x04, red, green, blue, level])
+            )
+        ]
+
+        if self.model_num == BANLANX2_MODEL_NUMBER_SP617E and white is not None:
+            commands.append(self.construct_white_change(channel, white))
+
+        return commands
 
     def construct_effect_change(
         self, channel: UNILEDChannel, effect: int
@@ -334,33 +457,11 @@ class _BANLANX2(UNILEDBLEModel):
         """The bytes to send for an efect length change"""
         return self.construct_message(bytearray([0xA0, 0x68, 0x01, length]))
 
-    def construct_white_change(
-        self, channel: UNILEDChannel, level: int
-    ) -> bytearray | None:
-        """The bytes to send for a white level change"""
-        return None
-
-    def construct_level_change(
-        self, channel: UNILEDChannel, level: int
-    ) -> bytearray | None:
-        """The bytes to send for a color level change"""
-        return self.construct_message(bytearray([0xA0, 0x66, 0x01, level]))
-
-    def construct_color_change(
-        self, channel: UNILEDChannel, red: int, green: int, blue: int, white: int | None
-    ) -> bytearray | None:
-        """The bytes to send for a level change"""
-        if channel.status.effect < BANLANX2_TYPE_SOLID:
-            return None
-
-        if self.model_num != 0x6117E:
-            white = 0xFF
-        elif white is None:
-            white = channel.status.white
-
-        return self.construct_message(
-            bytearray([0xA0, 0x69, 0x04, red, green, blue, white])
-        )
+    def construct_input_gain_change(
+        self, channel: UNILEDChannel, gain: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a gain/sensitivity change"""
+        return self.construct_message(bytearray([0xA0, 0x6B, 0x01, gain]))
 
     ##
     ## Device Informational
@@ -392,6 +493,14 @@ class _BANLANX2(UNILEDBLEModel):
         """List of available channel effects"""
         return list(BANLANX2_EFFECTS.values())
 
+    def codeof_channel_effect(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named channel effect"""
+        if name is None:
+            return channel.status.effect
+        return [k for k in BANLANX2_EFFECTS.items() if k[1] == name][0][0]
+
     def nameof_channel_effect(
         self, channel: UNILEDChannel, effect: int | None = None
     ) -> str | None:
@@ -402,17 +511,27 @@ class _BANLANX2(UNILEDBLEModel):
             return BANLANX2_EFFECTS[effect]
         return None
 
+    def codeof_channel_effect_type(
+        self, channel: UNILEDChannel, effect: int | None = None
+    ) -> int | None:
+        """Code of channel effect type from effect code"""
+        if effect is None:
+            effect = channel.status.effect
+        if effect < BANLANX2_TYPE_SOLID:
+            return _FXType.PATTERN.value
+        elif effect >= BANLANX2_TYPE_SOUND:
+            return _FXType.SOUND.value
+        return _FXType.STATIC.value
+
     def nameof_channel_effect_type(
         self, channel: UNILEDChannel, fxtype: int | None = None
     ) -> str | None:
         """Name an effects type."""
         if fxtype is None:
             fxtype = channel.status.fxtype
-        if fxtype == BANLANX2_TYPE_SOLID:
-            return UNILEDEffectType.STATIC
-        if fxtype >= BANLANX2_TYPE_SOUND:
-            return UNILEDEffectType.SOUND
-        return UNILEDEffectType.PATTERN
+        if fxtype in BANLANX2_EFFECT_TYPES:
+            return BANLANX2_EFFECT_TYPES[fxtype]
+        return f"{UNKNOWN} ({fxtype})"
 
     def rangeof_channel_effect_speed(
         self, channel: UNILEDChannel
@@ -431,16 +550,18 @@ class _BANLANX2(UNILEDBLEModel):
 ## SP611E
 ##
 SP611E = _BANLANX2(
-    model_num=0x611E,
-    model_name="SP611E",
+    model_num=BANLANX2_MODEL_NUMBER_SP611E,
+    model_name=BANLANX2_MODEL_NAME_SP611E,
     model_type=UNILEDModelType.STRIP,
     description="BLE Controller (Music) RGB",
     manufacturer=BANLANX2_MANUFACTURER,
     manufacturer_id=BANLANX2_MANUFACTURER_ID,
-    manufacturer_data=b"\x04\x10\xff\x10",
+    manufacturer_data=b"\x04\x10",
     resolve_protocol=False,
     channels=1,
     needs_on=True,
+    sends_status_on_commands=False,
+    local_names=[BANLANX2_LOCAL_NAME_SP611E],
     # service_uuid=BASE_UUID_FORMAT.format("ffe0"),
     service_uuids=["5833ff01-9b8b-5191-6142-22a4536ef123"],
     write_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["ffe1"]],
@@ -451,16 +572,18 @@ SP611E = _BANLANX2(
 ## SP617E
 ##
 SP617E = _BANLANX2(
-    model_num=0x617E,
-    model_name="SP617E",
+    model_num=BANLANX2_MODEL_NUMBER_SP617E,
+    model_name=BANLANX2_MODEL_NAME_SP617E,
     model_type=UNILEDModelType.STRIP,
     description="BLE Controller (Music) RGB&W",
     manufacturer=BANLANX2_MANUFACTURER,
     manufacturer_id=BANLANX2_MANUFACTURER_ID,
-    manufacturer_data=b"\x17\x10!\x06",
+    manufacturer_data=b"\x17\x10",
     resolve_protocol=False,
     channels=1,
     needs_on=True,
+    sends_status_on_commands=False,
+    local_names=[BANLANX2_LOCAL_NAME_SP617E],
     service_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]],
     write_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe1"]],
     read_uuids=[],

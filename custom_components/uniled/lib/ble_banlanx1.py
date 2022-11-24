@@ -1,7 +1,7 @@
 """UniLED BLE Devices - SP601E - SP LED (BanlanX)"""
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Final, cast
 from enum import IntEnum
 
@@ -24,6 +24,9 @@ _LOGGER = logging.getLogger(__name__)
 
 BANLANX1_MANUFACTURER_ID: Final = 20563
 BANLANX1_MANUFACTURER: Final = "SPLED (BanlanX)"
+BANLANX1_MODEL_NUMBER_SP601E: Final = 0x601E
+BANLANX1_MODEL_NAME_SP601E: Final = "SP601E"
+BANLANX1_LOCAL_NAME_SP601E: Final = BANLANX1_MODEL_NAME_SP601E
 
 BANLANX1_MODE_OFF: Final = 0xFF
 BANLANX1_SCENE_NONE: Final = 0xFF
@@ -120,10 +123,6 @@ class _BANLANX1(UNILEDBLEModel):
     ##
     ## Device Control
     ##
-    def construct_connect_message(self) -> bytearray | None:
-        """The bytes to send when first connecting."""
-        return None
-
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
         """The bytes to send for a state query."""
         return self.construct_message(bytearray([0xAA, 0x2F, 0x00]))
@@ -448,16 +447,18 @@ class _BANLANX1(UNILEDBLEModel):
 ## SP601E
 ##
 SP601E = _BANLANX1(
-    model_num=0x601E,
-    model_name="SP601E",
+    model_num=BANLANX1_MODEL_NUMBER_SP601E,
+    model_name=BANLANX1_MODEL_NAME_SP601E,
     model_type=UNILEDModelType.STRIP,
     description="BLE Dual Channel RGB (Music) Controller",
     manufacturer=BANLANX1_MANUFACTURER,
     manufacturer_id=BANLANX1_MANUFACTURER_ID,
-    manufacturer_data=b"\x01\x02\x01\xb6",
+    manufacturer_data=b"\x01\x02",
     resolve_protocol=False,
     channels=2,
     needs_on=True,
+    sends_status_on_commands=False,
+    local_names=[BANLANX1_LOCAL_NAME_SP601E],
     service_uuids=[BANLANX1_UUID_FORMAT.format(part) for part in ["ffe0", "ffb0"]],
     write_uuids=[BANLANX1_UUID_FORMAT.format(part) for part in ["ffe1"]],
     read_uuids=[],

@@ -29,7 +29,7 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-UNILED_COMMAND_SETTLE_DELAY = 0.2
+BLE_MULTI_COMMAND_SETTLE_DELAY = 0.3
 
 
 class CharacteristicMissingError(Exception):
@@ -169,14 +169,14 @@ class UNILEDBLE(UNILEDDevice):
             self._client = client
             self._reset_disconnect_timer()
 
-            if self._read_char:
+            if client and self._read_char:
                 _LOGGER.debug("%s: Subscribe to notifications", self.name)
                 await client.start_notify(self._read_char, self._notification_handler)
                 if not self._model:
                     await self._resolve_protocol()
                 else:
                     # Send any "on connection" message(s)
-                    await self.send_command(self._model.construct_connect_message())
+                    await self.send_command(self._model.construct_connect_message(self))
 
     async def _send_command_while_connected(
         self, commands: list[bytes], retry: int | None = None
@@ -242,7 +242,9 @@ class UNILEDBLE(UNILEDDevice):
 
     async def _execute_command_locked(self, commands: list[bytes]) -> None:
         """Execute command and read response."""
-        assert self._client is not None  # nosec
+        # assert self._client is not None  # nosec
+        if not self._client:
+            raise BleakNotFoundError("No Bleak Client!")
         if not self._write_char:
             raise CharacteristicMissingError("Write characteristic missing")
         if not self._read_char:
@@ -252,7 +254,7 @@ class UNILEDBLE(UNILEDDevice):
             _LOGGER.debug("%s: Sending command: %s ", self.name, command.hex())
             await self._client.write_gatt_char(self._write_char, command, False)
             if to_send > 1:
-                await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
+                await asyncio.sleep(BLE_MULTI_COMMAND_SETTLE_DELAY)
 
     def _reset_disconnect_timer(self) -> None:
         """Reset disconnect timer."""
@@ -265,12 +267,10 @@ class UNILEDBLE(UNILEDDevice):
 
     def _disconnected(self, client: BleakClientWithServiceCache) -> None:
         """Disconnected callback."""
-        if self._expected_disconnect:
-            _LOGGER.debug("%s: Disconnected from device", self.name)
-            return
-        _LOGGER.warning(
-            "%s: Device unexpectedly disconnected; RSSI: %s", self.name, self.rssi
-        )
+        if not self._expected_disconnect:
+            _LOGGER.warning(
+                "%s: Device unexpectedly disconnected; RSSI: %s", self.name, self.rssi
+            )
 
     def _disconnect(self) -> None:
         """Disconnect from device."""
@@ -290,12 +290,15 @@ class UNILEDBLE(UNILEDDevice):
             read_char = self._read_char
             client = self._client
             self._expected_disconnect = True
+
             self._client = None
             self._read_char = None
             self._write_char = None
+
             if client and client.is_connected:
                 await client.stop_notify(read_char)
                 await client.disconnect()
+            _LOGGER.debug("%s: Disconnected from device", self.name)
 
     def _resolve_characteristics(self, services: BleakGATTServiceCollection) -> bool:
         """Resolve characteristics."""

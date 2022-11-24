@@ -32,6 +32,7 @@ class UNILEDModel:
     manufacturer_id: int
     channels: int
     needs_on: bool
+    sends_status_on_commands: bool
 
     ##
     ## Protocol Wrapper
@@ -44,7 +45,7 @@ class UNILEDModel:
     ##
     ## Device Control
     ##
-    def construct_on_connect(self) -> list[bytearray]:
+    def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray]:
         """The bytes to send when first connecting."""
         return None
 
@@ -92,16 +93,16 @@ class UNILEDModel:
         """The bytes to send for a mode change."""
         return None
 
-    def construct_white_change(
-        self, channel: UNILEDChannel, level: int
-    ) -> list[bytearray] | None:
-        """The bytes to send for a white level change."""
-        return None
-
     def construct_level_change(
         self, channel: UNILEDChannel, level: int
     ) -> list[bytearray] | None:
         """The bytes to send for a color level change."""
+        return None
+
+    def construct_white_change(
+        self, channel: UNILEDChannel, level: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a white level change."""
         return None
 
     def construct_color_change(
@@ -329,6 +330,12 @@ class UNILEDChannel:
         if self.device.model is not None:
             return True  # TODO - Query model handler if channle is available
         return False
+
+    @property
+    def sends_status_on_commands(self) -> bool:
+        """Returns if On state needed to change settings"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.sends_status_on_commands
 
     @property
     def needs_on(self) -> bool:
