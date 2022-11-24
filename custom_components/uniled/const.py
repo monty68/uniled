@@ -3,9 +3,10 @@ from typing import Final
 
 DOMAIN: Final = "uniled"
 
-DEVICE_TIMEOUT = 40
-UPDATE_SECONDS = 20
+DEVICE_TIMEOUT: Final = 40
+UPDATE_SECONDS: Final = 30
 REFRESH_DELAY: Final = 2.0
+COMMAND_SETTLE_DELAY: Final = 0.3
 
 ATTR_POWER = "power"
 ATTR_MODE = "mode"
