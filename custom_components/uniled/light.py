@@ -28,6 +28,7 @@ from .entity import UNILEDEntity
 from .lib.artifacts import UNILEDModelType, UNILEDEffectDirection
 from .const import (
     DOMAIN,
+    COMMAND_SETTLE_DELAY,
     ATTR_POWER,
     ATTR_MODE,
     ATTR_RGB2_COLOR,
@@ -40,6 +41,7 @@ from .const import (
 )
 
 import voluptuous as vol
+import asyncio
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -283,7 +285,9 @@ class UNILEDLight(
                 )
                 await self.channel.async_set_input_gain(value)
 
-        await self.coordinator.async_refresh()
+        if not self.channel.sends_status_on_commands:
+            await asyncio.sleep(COMMAND_SETTLE_DELAY)
+            await self.coordinator.async_refresh()
 
     def _clamp_to_rangeof(
         self, value: int, rangeof: tuple(int, int, int) | None
