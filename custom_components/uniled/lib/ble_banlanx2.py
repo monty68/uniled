@@ -239,9 +239,9 @@ class _BANLANX2(UNILEDBLEModel):
     ##
     def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray]:
         """The bytes to send when first connecting."""
-        return [
-            self.construct_message(bytearray([0xA0, 0x6A, 0x01, 0x01])),
-        ]
+        #return [
+        #    self.construct_message(bytearray([0xA0, 0x6A, 0x01, 0x01])),
+        #]
         return None
 
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
@@ -346,7 +346,7 @@ class _BANLANX2(UNILEDBLEModel):
                 # 19 = ?? - 0x50 - 80  - 'P'
                 # 20 = ?? - 0x53 - 83  - 'S'
                 # 21 = ?? - 0x73 - 115 - 's'
-                # 22 = Number of timers set?
+                # 22 = The number of timers set
                 #
                 # For each timer set, there are 7 bytes that follow
                 #
@@ -368,7 +368,7 @@ class _BANLANX2(UNILEDBLEModel):
                 white = None
                 if self.model_num == BANLANX2_MODEL_NUMBER_SP617E:
                     cool = data[message_length - 2]
-                    warm = data[message_length - 1]
+                    _warm = data[message_length - 1] # [unused-variable]
                     white = cool
 
                 return UNILEDStatus(
@@ -562,9 +562,8 @@ SP611E = _BANLANX2(
     needs_on=True,
     sends_status_on_commands=False,
     local_names=[BANLANX2_LOCAL_NAME_SP611E],
-    # service_uuid=BASE_UUID_FORMAT.format("ffe0"),
-    service_uuids=["5833ff01-9b8b-5191-6142-22a4536ef123"],
-    write_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["ffe1"]],
+    service_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]],
+    write_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe1"]],
     read_uuids=[],
 )
 

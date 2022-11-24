@@ -354,8 +354,10 @@ class UNILEDBLE(UNILEDDevice):
     ) -> UNILEDBLEModel:
         """Test if a BLE device is valid"""
 
+        _LOGGER.debug("Match: %s - %s", device.name, advertisement)
+
         for model in UNILED_BLE_MODELS:
-            # _LOGGER.debug("Probing: %s - %s", model.model_name, advertisement)
+            _LOGGER.debug("Probing: %s - %s", model.model_name, advertisement)
             if model.is_device_valid(device, advertisement):
                 _LOGGER.debug(
                     "Identified '%s' as '%s', by '%s'",

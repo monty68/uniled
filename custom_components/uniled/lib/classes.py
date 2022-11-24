@@ -4,7 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from collections.abc import Callable
 from abc import abstractmethod
-from typing import Any
 
 from .artifacts import (
     UNILED_CHIP_ORDERS,
@@ -37,7 +36,6 @@ class UNILEDModel:
     ##
     ## Protocol Wrapper
     ##
-    @abstractmethod
     def construct_message(self, raw_bytes: bytearray) -> bytearray:
         """Base protocol uses no checksum."""
         return raw_bytes
@@ -45,12 +43,12 @@ class UNILEDModel:
     ##
     ## Device Control
     ##
-    def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray]:
+    def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray] | None:
         """The bytes to send when first connecting."""
         return None
 
     @abstractmethod
-    def construct_status_query(self, device: UNILEDDevice) -> list[bytearray]:
+    def construct_status_query(self, device: UNILEDDevice) -> list[bytearray] | None:
         """The bytes to send for a status query."""
 
     @abstractmethod
@@ -84,12 +82,12 @@ class UNILEDModel:
     @abstractmethod
     def construct_power_change(
         self, channel: UNILEDChannel, turn_on: int
-    ) -> list[bytearray]:
+    ) -> list[bytearray] | None:
         """The bytes to send for a power state change."""
 
     def construct_mode_change(
         self, channel: UNILEDChannel, mode: str
-    ) -> list[bytearray]:
+    ) -> list[bytearray] | None:
         """The bytes to send for a mode change."""
         return None
 
@@ -328,12 +326,12 @@ class UNILEDChannel:
     def is_available(self) -> bool:
         """Returns if the channel is available"""
         if self.device.model is not None:
-            return True  # TODO - Query model handler if channle is available
+            return True  # TODO - Query model handler if channel is available
         return False
 
     @property
     def sends_status_on_commands(self) -> bool:
-        """Returns if On state needed to change settings"""
+        """Returns if device sends status report after a command"""
         assert self.device.model is not None  # nosec
         return self.device.model.sends_status_on_commands
 
