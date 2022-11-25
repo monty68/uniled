@@ -12,7 +12,7 @@ from .artifacts import (
     UNKNOWN,
     UNILED_CHIP_TYPES,
     UNILED_CHIP_4COLOR,
-    UNILED_CHIP_ORDERS,
+    UNILED_CHIP_ORDER_3COLOR,
     UNILEDModelType,
     UNILEDMode,
     UNILEDEffectType,
@@ -110,12 +110,8 @@ class _LEDCHORD(UNILEDBLEModel):
     """LED Chord Protocol Implementation"""
 
     ##
-    ## Device Control
+    ## Device State
     ##
-    def construct_connect_message(self) -> bytearray | None:
-        """The bytes to send when first connecting."""
-        return None
-
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
         """The bytes to send for a state query."""
         return self.construct_message(bytearray([0x00, 0x00, 0x00, _Msg.CMD_GET_INFO]))
@@ -350,7 +346,7 @@ class _LEDCHORD(UNILEDBLEModel):
         self, channel: UNILEDChannel, name: str
     ) -> list[bytearray] | None:
         """The bytes to send for a chip order change"""
-        code = [k for k in UNILED_CHIP_ORDERS.items() if k[1] == name][0][0]
+        code = [k for k in UNILED_CHIP_ORDER_3COLOR.items() if k[1] == name][0][0]
         return self.construct_message(bytearray([code, 0x00, 0x00, _Msg.CMD_SET_RGB]))
 
     def construct_segment_count_change(

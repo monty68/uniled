@@ -13,6 +13,7 @@ from bleak_retry_connector import (
     BleakClientWithServiceCache,
     BleakError,
     BleakNotFoundError,
+    BleakConnectionError,
     establish_connection,
 )
 
@@ -30,7 +31,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 BLE_MULTI_COMMAND_SETTLE_DELAY = 0.3
-
+BLE_NOTFICATION_TIMEOUT = 2.0
 
 class CharacteristicMissingError(Exception):
     """Raised when a characteristic is missing."""
@@ -61,6 +62,7 @@ class UNILEDBLE(UNILEDDevice):
         self._expected_disconnect = False
         self.loop = asyncio.get_running_loop()
         self._resolve_protocol_event = asyncio.Event()
+        self._notification_event = asyncio.Event()
         super().__init__()
         _LOGGER.debug("%s: Init BLE Device", self.name)
         self.set_device_and_advertisement(ble_device, advertisement_data)
@@ -85,11 +87,30 @@ class UNILEDBLE(UNILEDDevice):
         """Get the rssi of the device."""
         return self._ble_device.rssi
 
-    async def update(self, force: bool = False):
+    @property
+    def available(self) -> bool:
+        """Return if the UniLED device available."""
+        if (self._model and self._client) and self._client.is_connected:
+            return True
+        return False
+
+    async def update(self) -> bool:
         """Update the UniLED BLE device."""
-        _LOGGER.debug("%s: Update (forced=%s)", self.name, force)
-        await self._ensure_connected()
-        await self.send_command(self.model.construct_status_query(self))
+        _LOGGER.debug("%s: Update", self.name)
+        self._notification_event.clear()
+        if not await self.send_command(self.model.construct_status_query(self)):
+            return False
+
+        # Wait for actual response!
+        _LOGGER.debug("%s: Awaiting status notification", self.name)
+        async with self._operation_lock:
+            try:
+                async with async_timeout.timeout(BLE_NOTFICATION_TIMEOUT):
+                    await self._notification_event.wait()
+                    return True
+            except asyncio.TimeoutError:
+                _LOGGER.debug("%s: Timeout waiting for status notification", self.name)
+        return False
 
     async def stop(self) -> None:
         """Stop the UniLED BLE device."""
@@ -113,7 +134,11 @@ class UNILEDBLE(UNILEDDevice):
         self, commands: list[bytes] | bytes, retry: int | None = None
     ) -> bool:
         """Send command to device and read response."""
-        await self._ensure_connected()
+        try:
+            await self._ensure_connected()
+        except BleakConnectionError:
+            return False
+
         # await self._resolve_protocol()
         if commands:
             if not isinstance(commands, list):
@@ -126,10 +151,13 @@ class UNILEDBLE(UNILEDDevice):
         """Handle notification responses."""
         _LOGGER.debug("%s: Notification received: %s", self.name, data.hex())
         if self._model:
+            self._notification_event.clear()
             new_master_state = await self._model.async_decode_notifications(
                 self, _sender, data
             )
             if new_master_state is not None:
+                self._notification_event.set()
+                self._last_notification_data = ()
                 self.master.set_status(new_master_state)
 
     async def _ensure_connected(self) -> None:
@@ -154,9 +182,10 @@ class UNILEDBLE(UNILEDDevice):
                 self._ble_device,
                 self.name,
                 self._disconnected,
-                use_services_cache=True,
+                use_services_cache=False,   #True,
                 ble_device_callback=lambda: self._ble_device,
             )
+
             _LOGGER.debug("%s: Connected", self.name)
             resolved = self._resolve_characteristics(client.services)
             if not resolved:
@@ -222,7 +251,6 @@ class UNILEDBLE(UNILEDDevice):
             await self._execute_command_locked(commands)
         except BleakDBusError as ex:
             # Disconnect so we can reset state and try again
-            await asyncio.sleep(BLEAK_BACKOFF_TIME)
             _LOGGER.debug(
                 "%s: RSSI: %s; Backing off %ss; Disconnecting due to error: %s",
                 self.name,
@@ -230,6 +258,7 @@ class UNILEDBLE(UNILEDDevice):
                 BLEAK_BACKOFF_TIME,
                 ex,
             )
+            await asyncio.sleep(BLEAK_BACKOFF_TIME)
             await self._execute_disconnect()
             raise
         except BleakError as ex:
@@ -267,10 +296,9 @@ class UNILEDBLE(UNILEDDevice):
 
     def _disconnected(self, client: BleakClientWithServiceCache) -> None:
         """Disconnected callback."""
-        if not self._expected_disconnect:
-            _LOGGER.warning(
-                "%s: Device unexpectedly disconnected; RSSI: %s", self.name, self.rssi
-            )
+        _LOGGER.debug(
+            "%s: Device disconnected (expected: %s); RSSI: %s", self.name, self._expected_disconnect, self.rssi
+        )
 
     def _disconnect(self) -> None:
         """Disconnect from device."""
@@ -327,37 +355,13 @@ class UNILEDBLE(UNILEDDevice):
                 await self._resolve_protocol_event.wait()
 
     @staticmethod
-    async def contactable(
-        device: BLEDevice, advertisement: AdvertisementData | None = None
-    ) -> str:
-        """Test if a BLE device is contactable"""
-        _LOGGER.debug("%s: Contactable", device.name)
-        error = "not_supported"
-
-        if UNILEDBLE.match_valid_device(device, advertisement):
-            instance = UNILEDBLE(device, advertisement)
-            try:
-                await instance.update()
-            except BLEAK_EXCEPTIONS:
-                error = "cannot_connect"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected error")
-                error = "unknown"
-            else:
-                await instance.stop()
-                error = ""
-        return error
-
-    @staticmethod
     def match_valid_device(
         device: BLEDevice, advertisement: AdvertisementData | None = None
     ) -> UNILEDBLEModel:
         """Test if a BLE device is valid"""
 
-        _LOGGER.debug("Match: %s - %s", device.name, advertisement)
-
         for model in UNILED_BLE_MODELS:
-            _LOGGER.debug("Probing: %s - %s", model.model_name, advertisement)
+            #_LOGGER.debug("Probing: %s - %s", model.model_name, advertisement)
             if model.is_device_valid(device, advertisement):
                 _LOGGER.debug(
                     "Identified '%s' as '%s', by '%s'",

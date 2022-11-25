@@ -37,6 +37,7 @@ def retry_bluetooth_connection_error(func: WrapFuncType) -> WrapFuncType:
 
         for attempt in range(attempts):
             try:
+                _LOGGER.debug("%s: Attempt %s", self.name, attempt + 1)
                 return await func(self, *args, **kwargs)
             except BleakNotFoundError:
                 # The lock cannot be found so there is no

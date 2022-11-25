@@ -16,10 +16,9 @@ UniLED Currently supports the following range of cheap BLE addressable LED contr
 
 ## Important Notice
 
-The Home Assistant component and platforms in this repository are an "Alpha" release meaning this component is in the early stages of development,
-will be subject to regular change, may cause issues with Home Assistant, contain bugs or unwanted "features". Use at your own risk!
+The Home Assistant component and platforms in this repository are in "Beta" release meaning this component is in the final stages of development, could be subject to frequent change, may contain bugs or unwanted "features".
 
-This is also my very first Python and Home Assistant component development.
+This is my very first Python and Home Assistant component development.
 
 HAVE FUN! 😎
 

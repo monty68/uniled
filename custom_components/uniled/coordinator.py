@@ -29,7 +29,6 @@ class UNILEDUpdateCoordinator(DataUpdateCoordinator):
         self.device = device
         self.title = entry.title
         self.entry = entry
-        self.force_next_update = False
         super().__init__(
             hass,
             _LOGGER,
@@ -47,8 +46,7 @@ class UNILEDUpdateCoordinator(DataUpdateCoordinator):
         async with self.lock:
             try:
                 if self.entry.state != ConfigEntryState.NOT_LOADED:
-                    await self.device.update(force=self.force_next_update)
+                    if not await self.device.update():
+                        raise UpdateFailed(f"{self.device.name}: Data Update failed")
             except BLEAK_EXCEPTIONS as ex:
                 raise UpdateFailed(str(ex)) from ex
-            finally:
-                self.force_next_update = False

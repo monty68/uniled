@@ -1,4 +1,4 @@
-"""UniLED BLE Devices - SP601E - SP LED (BanlanX)"""
+"""UniLED BLE Devices - SP601E - SP LED (BanlanX v1)"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -118,7 +118,7 @@ BANLANX1_SCENES: Final = {
 
 @dataclass(frozen=True)
 class _BANLANX1(UNILEDBLEModel):
-    """BanlanX v2 Protocol Implementation"""
+    """BanlanX v1 Protocol Implementation"""
 
     ##
     ## Device Control

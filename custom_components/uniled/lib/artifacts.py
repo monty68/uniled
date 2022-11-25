@@ -98,9 +98,20 @@ class UNILEDChipOrder(StrEnum):
     GBR = "GBR"
     BRG = "BRG"
     BGR = "BGR"
+    RGBW = "RGBW"
+    RBGW = "RBGW"
+    GRBW = "GRBW"
+    GBRW = "GBRW"
+    BRGW = "BRGW"
+    BGRW = "BGRW"
+    WRGB = "WRGB"
+    WRBG = "WRBG"
+    WGRB = "WGRB"
+    WGBR = "WGBR"
+    WBRG = "WBRG"
+    WBGR = "WBGR"
 
-
-UNILED_CHIP_ORDERS: Final = {
+UNILED_CHIP_ORDER_3COLOR: Final = {
     0x00: UNILEDChipOrder.RGB,
     0x01: UNILEDChipOrder.RBG,
     0x02: UNILEDChipOrder.GRB,
@@ -109,6 +120,21 @@ UNILED_CHIP_ORDERS: Final = {
     0x05: UNILEDChipOrder.BGR,
 }
 
+UNILED_CHIP_ORDER_4COLOR: Final = {
+    **UNILED_CHIP_ORDER_3COLOR,
+    0x06: UNILEDChipOrder.RGBW,
+    0x07: UNILEDChipOrder.RBGW,
+    0x08: UNILEDChipOrder.GRBW,
+    0x09: UNILEDChipOrder.GBRW,
+    0x0A: UNILEDChipOrder.BRGW,
+    0x0B: UNILEDChipOrder.BGRW,
+    0x0C: UNILEDChipOrder.WRGB,
+    0x0D: UNILEDChipOrder.WRBG,
+    0x0E: UNILEDChipOrder.WGRB,
+    0x0F: UNILEDChipOrder.WGBR,
+    0x10: UNILEDChipOrder.WBRG,
+    0x11: UNILEDChipOrder.WBGR,
+}
 
 class UNILEDMode(StrEnum):
     """Mode Names"""
@@ -117,9 +143,9 @@ class UNILEDMode(StrEnum):
     MANUAL = "Manual"
     SINGULAR = "Single FX"
     AUTO = "Cycle Effects"
-    AUTO_PATTERN = "Cycle Pattern FX's"
+    AUTO_PATTERN = "Cycle Pattern Effects"
     AUTO_SCENE = "Cycle Scenes"
-    AUTO_SOUND = "Cycle Sound FX's"
+    AUTO_SOUND = "Cycle Sound Effects"
 
 
 class UNILEDInput(StrEnum):

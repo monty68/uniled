@@ -6,7 +6,7 @@ from collections.abc import Callable
 from abc import abstractmethod
 
 from .artifacts import (
-    UNILED_CHIP_ORDERS,
+    UNILED_CHIP_ORDER_3COLOR,
     UNILED_CHIP_TYPES,
     UNILEDModelType,
     UNILEDEffectType,
@@ -59,7 +59,7 @@ class UNILEDModel:
 
     def construct_input_change(
         self, device: UNILEDDevice, audio_input: int
-    ) -> bytearray | None:
+    ) -> list[bytearray] | None:
         """The bytes to send for an input change."""
         return None
 
@@ -262,14 +262,14 @@ class UNILEDModel:
         if channel.status.chip_order is not None:
             if order is None:
                 order = channel.status.chip_order
-            if order in UNILED_CHIP_ORDERS:
-                return UNILED_CHIP_ORDERS[order]
+            if order in UNILED_CHIP_ORDER_3COLOR:
+                return UNILED_CHIP_ORDER_3COLOR[order]
         return None
 
     def listof_channel_chip_orders(self, channel: UNILEDChannel) -> list | None:
         """List of available chip orders"""
         if channel.status.chip_order is not None:
-            return list(UNILED_CHIP_ORDERS.values())
+            return list(UNILED_CHIP_ORDER_3COLOR.values())
         return None
 
     def nameof_channel_chip_type(
@@ -325,9 +325,7 @@ class UNILEDChannel:
     @property
     def is_available(self) -> bool:
         """Returns if the channel is available"""
-        if self.device.model is not None:
-            return True  # TODO - Query model handler if channel is available
-        return False
+        return self.device.available
 
     @property
     def sends_status_on_commands(self) -> bool:
@@ -930,6 +928,11 @@ class UNILEDDevice:
     def address(self) -> str:
         """Return the address of the device."""
 
+    @property
+    @abstractmethod
+    def available(self) -> bool:
+        """Return if the UniLED device available."""
+
     @abstractmethod
     async def send_command(
         self, commands: list[bytes] | bytes, retry: int | None = None
@@ -938,7 +941,7 @@ class UNILEDDevice:
         return None
 
     @abstractmethod
-    async def update(self, force: bool = False) -> None:
+    async def update(self) -> None:
         """Update the UniLED device."""
 
     @abstractmethod

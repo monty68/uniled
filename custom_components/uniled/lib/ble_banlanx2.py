@@ -1,4 +1,4 @@
-"""UniLED BLE Devices - SP LED (BanlanX)"""
+"""UniLED BLE Devices - SP LED (BanlanX v2)"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,6 +7,8 @@ from enum import IntEnum
 
 from .artifacts import (
     UNKNOWN,
+    UNILED_CHIP_ORDER_3COLOR,
+    UNILED_CHIP_ORDER_4COLOR,
     UNILEDModelType,
     UNILEDInput,
     UNILEDEffectType,
@@ -14,12 +16,7 @@ from .artifacts import (
 )
 from .states import UNILEDStatus
 from .classes import UNILEDDevice, UNILEDChannel
-from .ble_model import UNILEDBLEModel
-from .ble_banlanx1 import (
-    BANLANX1_MANUFACTURER_ID as BANLANX2_MANUFACTURER_ID,
-    BANLANX1_MANUFACTURER as BANLANX2_MANUFACTURER,
-    BANLANX1_UUID_FORMAT as BANLANX2_UUID_FORMAT,
-)
+from .ble_model import UNILEDBLEModel, BASE_UUID_FORMAT as BANLANX2_UUID_FORMAT
 
 import logging
 
@@ -32,6 +29,12 @@ BANLANX2_LOCAL_NAME_SP611E: Final = BANLANX2_MODEL_NAME_SP611E
 BANLANX2_MODEL_NUMBER_SP617E: Final = 0x617E
 BANLANX2_MODEL_NAME_SP617E: Final = "SP617E"
 BANLANX2_LOCAL_NAME_SP617E: Final = BANLANX2_MODEL_NAME_SP617E
+
+BANLANX2_MANUFACTURER: Final = "SPLED (BanlanX)"
+BANLANX2_MANUFACTURER_ID: Final = 20563
+BANLANX2_UUID_SERVICE = [BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]]
+BANLANX2_UUID_WRITE = [BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe1"]]
+BANLANX2_UUID_READ = []
 
 BANLANX2_TYPE_SOLID: Final = 0xBE
 BANLANX2_TYPE_SOUND: Final = 0xC9
@@ -227,7 +230,6 @@ _HEADER_LENGTH = 5
 _PACKET_NUMBER = 2
 _MESSAGE_LENGTH = 3
 _PAYLOAD_LENGTH = 4
-_MESSAGE_LENGTH_SP617E = 25
 
 
 @dataclass(frozen=True)
@@ -235,24 +237,18 @@ class _BANLANX2(UNILEDBLEModel):
     """BanlanX v2 Protocol Implementation"""
 
     ##
-    ## Device Control
+    ## Device State
     ##
     def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray]:
         """The bytes to send when first connecting."""
-        #return [
+        # return [
         #    self.construct_message(bytearray([0xA0, 0x6A, 0x01, 0x01])),
-        #]
+        # ]
         return None
 
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
         """The bytes to send for a state query."""
         return self.construct_message(bytearray([0xA0, 0x70, 0x00]))
-
-    def construct_input_change(
-        self, device: UNILEDDevice, audio_input: int
-    ) -> bytearray | None:
-        """The bytes to send for an input change"""
-        return None
 
     async def async_decode_notifications(
         self, device: UNILEDDevice, sender: int, data: bytearray
@@ -280,7 +276,14 @@ class _BANLANX2(UNILEDBLEModel):
                     return None
                 data = data[_HEADER_LENGTH:]
             else:
-                last = device.last_notification_data
+
+                if (
+                    len((last := device.last_notification_data)) == 0
+                    or last[_PACKET_NUMBER] != packet_number - 1
+                ):
+                    _LOGGER.debug("%s: Skip out of sequence Packet!", device.name)
+                    return None
+
                 payload_so_far = last[_PAYLOAD_LENGTH] + data[_PAYLOAD_LENGTH]
 
                 _LOGGER.debug(
@@ -321,8 +324,9 @@ class _BANLANX2(UNILEDBLEModel):
                 # 01 00 be 08 ff 05 4a ff 00 00 00 10 09 04 0b 14 1a 32 37 50 53 73 00 40 40
                 # 01 00 05 02 32 01 17 ff ff ff 00 10 09 04 0b 14 1a 32 37 50 53 73 00 ff ff
                 # 00 00 5e 02 38 06 48 ff 00 00 00 10 09 04 0b 14 1a 32 37 50 53 73 00 -> more can follow
+                # 01 00 be 02 ff 0a 48 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 00 - SP611E
                 # ---------------------------------------------------------------------------------------
-                # 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 -> more can follow
+                # 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 -> more can follow
                 #
                 # 0  = Power: (0x00=Off, 0x01=On)
                 # 1  = ??
@@ -368,7 +372,7 @@ class _BANLANX2(UNILEDBLEModel):
                 white = None
                 if self.model_num == BANLANX2_MODEL_NUMBER_SP617E:
                     cool = data[message_length - 2]
-                    _warm = data[message_length - 1] # [unused-variable]
+                    _warm = data[message_length - 1]
                     white = cool
 
                 return UNILEDStatus(
@@ -382,17 +386,39 @@ class _BANLANX2(UNILEDBLEModel):
                     length=data[6],
                     input=data[10],
                     gain=data[11],
+                    chip_order=data[3],
                 )
 
-        else:
-            _LOGGER.debug("%s: Unknown Packet!", device.name)
-
-        # Getting here means a notification has not changed the state
-        # so return None to indicate no changes to the frontend and
-        # save unneeded updates.
-        #
-        _LOGGER.debug("%s: Fall through!", device.name)
+        _LOGGER.debug("%s: Unknown/Invalid Packet!", device.name)
         return None
+
+    ##
+    ## Device Control
+    ##
+    def construct_input_change(
+        self, device: UNILEDDevice, audio_input: int
+    ) -> bytearray | None:
+        """The bytes to send for an input change"""
+        return None
+
+    ##
+    ## Channel Configuration
+    ##
+    def construct_input_gain_change(
+        self, channel: UNILEDChannel, gain: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a gain/sensitivity change"""
+        return self.construct_message(bytearray([0xA0, 0x6B, 0x01, gain]))
+
+    def construct_chip_order_change(
+        self, channel: UNILEDChannel, name: str
+    ) -> list[bytearray] | None:
+        """The bytes to send for a chip order change"""
+        if self.model_num == BANLANX2_MODEL_NUMBER_SP617E:
+            code = [k for k in UNILED_CHIP_ORDER_4COLOR.items() if k[1] == name][0][0]
+        else:
+            code = [k for k in UNILED_CHIP_ORDER_3COLOR.items() if k[1] == name][0][0]
+        return self.construct_message(bytearray([0xA0, 0x64, 0x01, code]))
 
     ##
     ## Channel Control
@@ -428,6 +454,7 @@ class _BANLANX2(UNILEDBLEModel):
             return None
 
         level = channel.status.level
+
         commands = [
             self.construct_message(
                 bytearray([0xA0, 0x69, 0x04, red, green, blue, level])
@@ -457,12 +484,6 @@ class _BANLANX2(UNILEDBLEModel):
         """The bytes to send for an efect length change"""
         return self.construct_message(bytearray([0xA0, 0x68, 0x01, length]))
 
-    def construct_input_gain_change(
-        self, channel: UNILEDChannel, gain: int
-    ) -> list[bytearray] | None:
-        """The bytes to send for a gain/sensitivity change"""
-        return self.construct_message(bytearray([0xA0, 0x6B, 0x01, gain]))
-
     ##
     ## Device Informational
     ##
@@ -479,12 +500,6 @@ class _BANLANX2(UNILEDBLEModel):
     def listof_device_inputs(self, device: UNILEDDevice) -> list | None:
         """List of available device inputs."""
         return list(BANLANX2_INPUTS.values())
-
-    def rangeof_device_input_gain(
-        self, device: UNILEDDevice
-    ) -> tuple(int, int, int) | None:
-        """Range of input gain (min,max,step)."""
-        return (1, 16, 1)
 
     ##
     ## Channel Informational
@@ -545,14 +560,41 @@ class _BANLANX2(UNILEDBLEModel):
         """Range of effect length (min,max,step)."""
         return (1, 150, 1)
 
+    def rangeof_channel_input_gain(
+        self, channel: UNILEDChannel
+    ) -> tuple(int, int, int) | None:
+        """Range of input gain (min,max,step)."""
+        return (1, 16, 1)
+
+    def nameof_channel_chip_order(
+        self, channel: UNILEDChannel, order: int | None = None
+    ) -> str | None:
+        """Name a chip order."""
+        if channel.status.chip_order is not None:
+            if order is None:
+                order = channel.status.chip_order
+            if self.model_num == BANLANX2_MODEL_NUMBER_SP611E:
+                return super().nameof_channel_chip_order(channel, order)
+            if order in UNILED_CHIP_ORDER_4COLOR:
+                return UNILED_CHIP_ORDER_4COLOR[order]
+        return None
+
+    def listof_channel_chip_orders(self, channel: UNILEDChannel) -> list | None:
+        """List of available chip orders"""
+        if channel.status.chip_order is not None:
+            if self.model_num == BANLANX2_MODEL_NUMBER_SP611E:
+                return list(UNILED_CHIP_ORDER_3COLOR.values())
+            return list(UNILED_CHIP_ORDER_4COLOR.values())
+        return None
+
 
 ##
 ## SP611E
 ##
 SP611E = _BANLANX2(
-    model_num=BANLANX2_MODEL_NUMBER_SP611E,
-    model_name=BANLANX2_MODEL_NAME_SP611E,
     model_type=UNILEDModelType.STRIP,
+    model_name=BANLANX2_MODEL_NAME_SP611E,
+    model_num=BANLANX2_MODEL_NUMBER_SP611E,
     description="BLE Controller (Music) RGB",
     manufacturer=BANLANX2_MANUFACTURER,
     manufacturer_id=BANLANX2_MANUFACTURER_ID,
@@ -562,18 +604,18 @@ SP611E = _BANLANX2(
     needs_on=True,
     sends_status_on_commands=False,
     local_names=[BANLANX2_LOCAL_NAME_SP611E],
-    service_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]],
-    write_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe1"]],
-    read_uuids=[],
+    service_uuids=BANLANX2_UUID_SERVICE,
+    write_uuids=BANLANX2_UUID_WRITE,
+    read_uuids=BANLANX2_UUID_READ,
 )
 
 ##
 ## SP617E
 ##
 SP617E = _BANLANX2(
-    model_num=BANLANX2_MODEL_NUMBER_SP617E,
-    model_name=BANLANX2_MODEL_NAME_SP617E,
     model_type=UNILEDModelType.STRIP,
+    model_name=BANLANX2_MODEL_NAME_SP617E,
+    model_num=BANLANX2_MODEL_NUMBER_SP617E,
     description="BLE Controller (Music) RGB&W",
     manufacturer=BANLANX2_MANUFACTURER,
     manufacturer_id=BANLANX2_MANUFACTURER_ID,
@@ -583,7 +625,7 @@ SP617E = _BANLANX2(
     needs_on=True,
     sends_status_on_commands=False,
     local_names=[BANLANX2_LOCAL_NAME_SP617E],
-    service_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]],
-    write_uuids=[BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe1"]],
-    read_uuids=[],
+    service_uuids=BANLANX2_UUID_SERVICE,
+    write_uuids=BANLANX2_UUID_WRITE,
+    read_uuids=BANLANX2_UUID_READ,
 )
