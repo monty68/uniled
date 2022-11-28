@@ -127,7 +127,7 @@ class _BANLANX1(UNILEDBLEModel):
         """The bytes to send for a state query."""
         return self.construct_message(bytearray([0xAA, 0x2F, 0x00]))
 
-    async def async_decode_notifications(
+    def async_decode_notifications(
         self, device: UNILEDDevice, sender: int, data: bytearray
     ) -> UNILEDStatus | None:
         """Handle notification responses."""

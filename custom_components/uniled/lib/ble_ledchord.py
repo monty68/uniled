@@ -116,7 +116,7 @@ class _LEDCHORD(UNILEDBLEModel):
         """The bytes to send for a state query."""
         return self.construct_message(bytearray([0x00, 0x00, 0x00, _Msg.CMD_GET_INFO]))
 
-    async def async_decode_notifications(
+    def async_decode_notifications(
         self, device: UNILEDDevice, sender: int, data: bytearray
     ) -> UNILEDStatus | None:
         """Handle notification responses."""

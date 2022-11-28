@@ -72,8 +72,6 @@ async def async_setup_entry(
     coordinator: UNILEDUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     platform = entity_platform.async_get_current_platform()
 
-    _LOGGER.debug("Setup light entities for %s", coordinator.device.name)
-
     platform.async_register_entity_service(
         UNILED_SERVICE_SET_STATE, UNILED_SET_STATE_SCHEMA, "async_set_state"
     )
@@ -85,7 +83,7 @@ async def async_setup_entry(
         async_add_entities,
     )
 
-    coordinator.async_add_listener(update_channels)
+    entry.async_on_unload(coordinator.async_add_listener(update_channels))
     update_channels()
 
 

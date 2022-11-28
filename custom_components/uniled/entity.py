@@ -57,6 +57,10 @@ class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
             self._attr_unique_id = f"_{self._attr_unique_id}_{key}"
         self._attr_device_info = _async_device_info(self._device, coordinator.entry)
 
+    def __del__(self):
+        """Destroy the class"""
+        _LOGGER.debug("%s: Destroyed", self.name)
+
     @property
     def available(self) -> bool:
         if not self.channel.is_available:
@@ -110,11 +114,11 @@ def _async_device_info(
         ATTR_IDENTIFIERS: {(DOMAIN, entry.entry_id)},
         ATTR_MANUFACTURER: device.manufacturer,
         ATTR_MODEL: device.model_name,
-        ATTR_NAME: entry.data.get(CONF_NAME, entry.title),
+        ATTR_NAME: device.name, # entry.data.get(CONF_NAME, entry.title),
+        ATTR_HW_VERSION: device.description,
         # ATTR_SW_VERSION: hex(device.version),
     }
 
-    # TODO Fix for NET transport!
     if device.transport == UNILED_TRANSPORT_BLE:
         device_info[ATTR_CONNECTIONS] = {(dr.CONNECTION_BLUETOOTH, device.address)}
     elif device.transport == UNILED_TRANSPORT_NET:

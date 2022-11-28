@@ -44,7 +44,7 @@ async def async_setup_entry(
         async_add_entities,
     )
 
-    coordinator.async_add_listener(update_channels)
+    entry.async_on_unload(coordinator.async_add_listener(update_channels))
     update_channels()
 
 

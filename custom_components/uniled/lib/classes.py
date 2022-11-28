@@ -13,6 +13,7 @@ from .artifacts import (
 )
 from .states import UNILEDStatus
 
+import weakref
 import colorsys
 import logging
 
@@ -52,7 +53,7 @@ class UNILEDModel:
         """The bytes to send for a status query."""
 
     @abstractmethod
-    async def async_decode_notifications(
+    def async_decode_notifications(
         self, device: UNILEDDevice, sender: int, data: bytearray
     ) -> UNILEDStatus | None:
         """Handle notification responses."""
@@ -296,9 +297,13 @@ class UNILEDChannel:
     def __init__(self, device: UNILEDDevice, number: int) -> None:
         self._callbacks: list[Callable[[UNILEDChannel], None]] = []
         self._number: int = number
-        self._device: UNILEDDevice = device
+        self._device: weakref.ProxyType(UNILEDDevice) = weakref.proxy(device)
         self._status: UNILEDStatus = UNILEDStatus()
         _LOGGER.debug("%s: Init Channel %s", self.device.name, self._number)
+
+    def __del__(self):
+        """Destroy the class"""
+        _LOGGER.debug("Channel %s Destroyed", self.number)
 
     @property
     def name(self) -> str:
@@ -834,7 +839,7 @@ class UNILEDDevice:
     def __init__(self) -> None:
         """Init the UniLED Base Driver"""
         self._channels: list[UNILEDChannel] = [UNILEDMaster(self, 0)]
-        self._model: UNILEDModel | None = None
+        self._model: weakref.ProxyType(UNILEDModel) | None = None
         self._last_notification_data: bytearray = ()
 
     def _create_channels(self) -> None:

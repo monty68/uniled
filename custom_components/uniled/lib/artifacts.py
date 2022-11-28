@@ -121,19 +121,18 @@ UNILED_CHIP_ORDER_3COLOR: Final = {
 }
 
 UNILED_CHIP_ORDER_4COLOR: Final = {
-    **UNILED_CHIP_ORDER_3COLOR,
-    0x06: UNILEDChipOrder.RGBW,
-    0x07: UNILEDChipOrder.RBGW,
-    0x08: UNILEDChipOrder.GRBW,
-    0x09: UNILEDChipOrder.GBRW,
-    0x0A: UNILEDChipOrder.BRGW,
-    0x0B: UNILEDChipOrder.BGRW,
-    0x0C: UNILEDChipOrder.WRGB,
-    0x0D: UNILEDChipOrder.WRBG,
-    0x0E: UNILEDChipOrder.WGRB,
-    0x0F: UNILEDChipOrder.WGBR,
-    0x10: UNILEDChipOrder.WBRG,
-    0x11: UNILEDChipOrder.WBGR,
+    0x00: UNILEDChipOrder.RGBW, # OK
+    0x01: UNILEDChipOrder.RBGW, # OK
+    0x02: UNILEDChipOrder.GRBW,
+    0x03: UNILEDChipOrder.GBRW,
+    0x04: UNILEDChipOrder.BRGW,
+    0x05: UNILEDChipOrder.BGRW,
+    0x06: UNILEDChipOrder.WRGB,
+    0x07: UNILEDChipOrder.WRBG,
+    0x08: UNILEDChipOrder.WGRB,
+    0x09: UNILEDChipOrder.WGBR,
+    0x0A: UNILEDChipOrder.WBRG,
+    0x0B: UNILEDChipOrder.WBGR,
 }
 
 class UNILEDMode(StrEnum):

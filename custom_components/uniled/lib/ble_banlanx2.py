@@ -241,16 +241,17 @@ class _BANLANX2(UNILEDBLEModel):
     ##
     def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray]:
         """The bytes to send when first connecting."""
-        # return [
-        #    self.construct_message(bytearray([0xA0, 0x6A, 0x01, 0x01])),
-        # ]
+        #return [
+        #    self.construct_message(bytearray([0xA0, 0x60, 0x07, 0x92, 0x9F, 0x00, 0x62, 0xA5, 0x04, 0x00])), # SP611E?
+        #    #self.construct_message(bytearray([0xA0, 0x60, 0x07, 0x27, 0xCF, 0x00, 0x71, 0x35, 0x02, 0x00])), # SP617E?
+        #]
         return None
 
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
         """The bytes to send for a state query."""
         return self.construct_message(bytearray([0xA0, 0x70, 0x00]))
 
-    async def async_decode_notifications(
+    def async_decode_notifications(
         self, device: UNILEDDevice, sender: int, data: bytearray
     ) -> UNILEDStatus | None:
         """Handle notification responses."""
@@ -282,6 +283,7 @@ class _BANLANX2(UNILEDBLEModel):
                     or last[_PACKET_NUMBER] != packet_number - 1
                 ):
                     _LOGGER.debug("%s: Skip out of sequence Packet!", device.name)
+                    device.save_notification_data(())
                     return None
 
                 payload_so_far = last[_PAYLOAD_LENGTH] + data[_PAYLOAD_LENGTH]
@@ -390,6 +392,7 @@ class _BANLANX2(UNILEDBLEModel):
                 )
 
         _LOGGER.debug("%s: Unknown/Invalid Packet!", device.name)
+        device.save_notification_data(())
         return None
 
     ##

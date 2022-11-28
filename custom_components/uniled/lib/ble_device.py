@@ -33,6 +33,7 @@ _LOGGER = logging.getLogger(__name__)
 BLE_MULTI_COMMAND_SETTLE_DELAY = 0.3
 BLE_NOTFICATION_TIMEOUT = 2.0
 
+
 class CharacteristicMissingError(Exception):
     """Raised when a characteristic is missing."""
 
@@ -66,6 +67,10 @@ class UNILEDBLE(UNILEDDevice):
         super().__init__()
         _LOGGER.debug("%s: Init BLE Device", self.name)
         self.set_device_and_advertisement(ble_device, advertisement_data)
+
+    def __del__(self):
+        """Destroy the UniLED BLE Model"""
+        _LOGGER.debug("Device Destroyed")
 
     @property
     def transport(self) -> str:
@@ -115,7 +120,11 @@ class UNILEDBLE(UNILEDDevice):
     async def stop(self) -> None:
         """Stop the UniLED BLE device."""
         _LOGGER.debug("%s: Stop", self.name)
-        await self._execute_disconnect()
+        async with self._operation_lock:
+            try:
+                await self._execute_disconnect()
+            finally:
+                pass
 
     def set_device_and_advertisement(
         self, ble_device: BLEDevice, advertisement: AdvertisementData
@@ -129,6 +138,19 @@ class UNILEDBLE(UNILEDDevice):
             self._model = self.match_valid_device(ble_device, advertisement)
             if self._model is not None:
                 self._create_channels()
+
+    def _notification_handler(self, _sender: int, data: bytearray) -> None:
+        """Handle notification responses."""
+        _LOGGER.debug("%s: Notification received: %s", self.name, data.hex())
+        if self._model:
+            self._notification_event.clear()
+            new_master_state = self._model.async_decode_notifications(
+                self, _sender, data
+            )
+            if new_master_state is not None:
+                self._notification_event.set()
+                self._last_notification_data = ()
+                self.master.set_status(new_master_state)
 
     async def send_command(
         self, commands: list[bytes] | bytes, retry: int | None = None
@@ -146,19 +168,6 @@ class UNILEDBLE(UNILEDDevice):
             await self._send_command_while_connected(commands, retry)
             return True
         return False
-
-    async def _notification_handler(self, _sender: int, data: bytearray) -> None:
-        """Handle notification responses."""
-        _LOGGER.debug("%s: Notification received: %s", self.name, data.hex())
-        if self._model:
-            self._notification_event.clear()
-            new_master_state = await self._model.async_decode_notifications(
-                self, _sender, data
-            )
-            if new_master_state is not None:
-                self._notification_event.set()
-                self._last_notification_data = ()
-                self.master.set_status(new_master_state)
 
     async def _ensure_connected(self) -> None:
         """Ensure connection to device is established."""
@@ -182,7 +191,7 @@ class UNILEDBLE(UNILEDDevice):
                 self._ble_device,
                 self.name,
                 self._disconnected,
-                use_services_cache=False,   #True,
+                use_services_cache=True,
                 ble_device_callback=lambda: self._ble_device,
             )
 
@@ -200,12 +209,17 @@ class UNILEDBLE(UNILEDDevice):
 
             if client and self._read_char:
                 _LOGGER.debug("%s: Subscribe to notifications", self.name)
+                self._last_notification_data = ()
                 await client.start_notify(self._read_char, self._notification_handler)
                 if not self._model:
                     await self._resolve_protocol()
-                else:
-                    # Send any "on connection" message(s)
-                    await self.send_command(self._model.construct_connect_message(self))
+
+        if (client and self._model) and len(
+            on_connect := self._model.construct_connect_message(self)
+        ) != 0:
+            # Send any "on connection" message(s)
+            await self.send_command(on_connect)
+            await asyncio.sleep(BLE_MULTI_COMMAND_SETTLE_DELAY)
 
     async def _send_command_while_connected(
         self, commands: list[bytes], retry: int | None = None
@@ -296,8 +310,12 @@ class UNILEDBLE(UNILEDDevice):
 
     def _disconnected(self, client: BleakClientWithServiceCache) -> None:
         """Disconnected callback."""
+        self._last_notification_data = ()
         _LOGGER.debug(
-            "%s: Device disconnected (expected: %s); RSSI: %s", self.name, self._expected_disconnect, self.rssi
+            "%s: Device disconnected (expected: %s); RSSI: %s",
+            self.name,
+            self._expected_disconnect,
+            self.rssi,
         )
 
     def _disconnect(self) -> None:
@@ -315,18 +333,25 @@ class UNILEDBLE(UNILEDDevice):
     async def _execute_disconnect(self) -> None:
         """Execute disconnection."""
         async with self._connect_lock:
+            _LOGGER.debug("%s: Disconnecting from device", self.name)
+            if self._disconnect_timer:
+                self._disconnect_timer.cancel()
+
+            self._expected_disconnect = True
             read_char = self._read_char
             client = self._client
-            self._expected_disconnect = True
 
             self._client = None
             self._read_char = None
             self._write_char = None
 
-            if client and client.is_connected:
-                await client.stop_notify(read_char)
-                await client.disconnect()
-            _LOGGER.debug("%s: Disconnected from device", self.name)
+            if client:
+                if read_char:
+                    await client.stop_notify(read_char)
+                    _LOGGER.debug("%s: Stopped notifications from device", self.name)
+                if client.is_connected:
+                    await client.disconnect()
+                    _LOGGER.debug("%s: Disconnected from device", self.name)
 
     def _resolve_characteristics(self, services: BleakGATTServiceCollection) -> bool:
         """Resolve characteristics."""
@@ -361,7 +386,7 @@ class UNILEDBLE(UNILEDDevice):
         """Test if a BLE device is valid"""
 
         for model in UNILED_BLE_MODELS:
-            #_LOGGER.debug("Probing: %s - %s", model.model_name, advertisement)
+            # _LOGGER.debug("Probing: %s - %s", model.model_name, advertisement)
             if model.is_device_valid(device, advertisement):
                 _LOGGER.debug(
                     "Identified '%s' as '%s', by '%s'",
