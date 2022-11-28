@@ -214,9 +214,9 @@ class UNILEDBLE(UNILEDDevice):
                 if not self._model:
                     await self._resolve_protocol()
 
-        if (client and self._model) and len(
+        if (client and self._model) and (
             on_connect := self._model.construct_connect_message(self)
-        ) != 0:
+        ) is not None:
             # Send any "on connection" message(s)
             await self.send_command(on_connect)
             await asyncio.sleep(BLE_MULTI_COMMAND_SETTLE_DELAY)
