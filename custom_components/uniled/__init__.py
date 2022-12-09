@@ -22,8 +22,7 @@ from .lib.models_db import (
 )
 from bleak_retry_connector import get_device
 from .lib.ble_device import UNILEDBLE
-
-# from .lib.net_device import UNILEDNET
+from .lib.net_device import UNILEDNET
 from .coordinator import UNILEDUpdateCoordinator
 from .const import DOMAIN, DEVICE_TIMEOUT
 
@@ -99,10 +98,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     finally:
         cancel_first_update()
 
-    # await uniled.stop()
-    # _LOGGER.debug("Refs: %s", gc.get_referrers(uniled))
-    # return True
-
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
@@ -116,7 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     _LOGGER.debug(
-        "***Added device entry for UniLED Device: %s, ID: %s, Unique ID: %s",
+        "*** Added device entry for UniLED Device: %s, ID: %s, Unique ID: %s",
         uniled.name,
         entry.entry_id,
         entry.unique_id,
@@ -139,9 +134,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator: UNILEDUpdateCoordinator = domain_data.pop(entry.entry_id)
         await coordinator.device.stop()
         del coordinator
-
-        # _LOGGER.debug("Refs: %s", gc.get_referrers(device))
-        # del coordinator
         gc.collect()
 
     _LOGGER.debug("Unloaded OK: %s", unload_ok)
