@@ -49,7 +49,10 @@ class UNILEDBLE(UNILEDDevice):
     """UniLED BLE Device Class"""
 
     def __init__(
-        self, ble_device: BLEDevice, advertisement_data: AdvertisementData | None = None
+        self,
+        ble_device: BLEDevice,
+        advertisement_data: AdvertisementData | None = None,
+        model_name: str | None = None,
     ) -> None:
         """Init the UniLED BLE Model"""
         self._ble_device = ble_device
@@ -65,8 +68,19 @@ class UNILEDBLE(UNILEDDevice):
         self._resolve_protocol_event = asyncio.Event()
         self._notification_event = asyncio.Event()
         super().__init__()
-        _LOGGER.debug("%s: Init BLE Device", self.name)
-        self.set_device_and_advertisement(ble_device, advertisement_data)
+
+        _LOGGER.debug("%s: Init BLE Device (Model: %s)", ble_device.name, model_name)
+
+        if model_name is not None:
+            self._set_model(self._lookup_model(model_name))
+
+        if not self._model and (
+            model := self.match_known_device(ble_device, advertisement_data)
+        ):
+            if not model.resolve_protocol:
+                self._set_model(model)
+            else:
+                _LOGGER.warning("%s: Needs model resolving", ble_device.name)
 
     def __del__(self):
         """Destroy the UniLED BLE Model"""
@@ -90,6 +104,8 @@ class UNILEDBLE(UNILEDDevice):
     @property
     def rssi(self) -> int | None:
         """Get the rssi of the device."""
+        if self._advertisement_data:
+            return self._advertisement_data.rssi
         return self._ble_device.rssi
 
     @property
@@ -126,31 +142,69 @@ class UNILEDBLE(UNILEDDevice):
             finally:
                 pass
 
+    async def resolve_model(self, do_disconnect: bool = True) -> UNILEDBLEModel | None:
+        """Resolve device model"""
+        if self._model:
+            return self._model
+        for model in UNILED_BLE_MODELS:
+            if not model.resolve_protocol:
+                continue
+            for uuid in model.service_uuids:
+                if uuid in self._advertisement_data.service_uuids:
+                    _LOGGER.debug(
+                        "%s: Resolve model = %s?", self.name, model.model_name
+                    )
+                    self._model = model
+                    if await self.update():
+                        if do_disconnect:
+                            await self.stop()
+                        return self._model
+        await self.stop()
+        return None
+
     def set_device_and_advertisement(
         self, ble_device: BLEDevice, advertisement: AdvertisementData
     ) -> None:
-        """Set the ble device."""
+        """Update the ble device/advertisement."""
         self._ble_device = ble_device
         self._advertisement_data = advertisement or self._advertisement_data
-        _LOGGER.debug("%s: Set device %s", self.name, advertisement)
+        _LOGGER.debug(
+            "%s: Update device (RSSI: %s) %s",
+            ble_device.name,
+            ble_device.rssi,
+            advertisement,
+        )
 
-        if self._advertisement_data and self._model is None:
-            self._model = self.match_valid_device(ble_device, advertisement)
-            if self._model is not None:
-                self._create_channels()
+    def _lookup_model(self, model_name: str) -> UNILEDBLEModel | None:
+        """Lookup model from name"""
+        for model in UNILED_BLE_MODELS:
+            if model.model_name == model_name:
+                return model
+        return None
 
-    def _notification_handler(self, _sender: int, data: bytearray) -> None:
+    def _set_model(self, model: UNILEDBLEModel) -> None:
+        """Set the device model"""
+        if self._model is None:
+            _LOGGER.debug("%s: Set model %s", self.name, model.model_name)
+            self._model = model
+            self._create_channels()
+
+    def _notification_handler(
+        self, sender: BleakGATTCharacteristic, data: bytearray
+    ) -> None:
         """Handle notification responses."""
-        _LOGGER.debug("%s: Notification received: %s", self.name, data.hex())
+        _LOGGER.debug(
+            "%s: Handle:%s, notification data: %s", self.name, sender.handle, data.hex()
+        )
         if self._model:
             self._notification_event.clear()
             new_master_state = self._model.async_decode_notifications(
-                self, _sender, data
+                self, sender.handle, data
             )
             if new_master_state is not None:
-                self._notification_event.set()
-                self._last_notification_data = ()
                 self.master.set_status(new_master_state)
+                self._last_notification_data = ()
+                self._notification_event.set()
 
     async def send_command(
         self, commands: list[bytes] | bytes, retry: int | None = None
@@ -367,6 +421,8 @@ class UNILEDBLE(UNILEDDevice):
                         break
             if not self._read_char:
                 self._read_char = self._write_char
+        _LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
+        _LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
         return bool(self._read_char and self._write_char)
 
     async def _resolve_protocol(self) -> None:
@@ -380,21 +436,32 @@ class UNILEDBLE(UNILEDDevice):
                 await self._resolve_protocol_event.wait()
 
     @staticmethod
-    def match_valid_device(
+    def match_known_service(
+        device: BLEDevice, advertisement: AdvertisementData
+    ) -> bool:
+        """Test if a BLE device has a known service UUID"""
+        for model in UNILED_BLE_MODELS:
+            for uuid in model.service_uuids:
+                if uuid in advertisement.service_uuids:
+                    return True
+        return False
+
+    @staticmethod
+    def match_known_device(
         device: BLEDevice, advertisement: AdvertisementData | None = None
     ) -> UNILEDBLEModel:
         """Test if a BLE device is valid"""
 
         for model in UNILED_BLE_MODELS:
-            # _LOGGER.debug("Probing: %s - %s", model.model_name, advertisement)
             if model.is_device_valid(device, advertisement):
-                _LOGGER.debug(
-                    "Identified '%s' as '%s', by '%s'",
-                    device.name,
-                    model.model_name,
-                    model.manufacturer,
-                )
-                return model
+                if not model.resolve_protocol:
+                    _LOGGER.debug(
+                        "Identified '%s' as '%s', by '%s'",
+                        device.name,
+                        model.model_name,
+                        model.manufacturer,
+                    )
+                    return model
         return None
 
     @staticmethod

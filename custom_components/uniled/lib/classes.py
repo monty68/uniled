@@ -58,25 +58,6 @@ class UNILEDModel:
     ) -> UNILEDStatus | None:
         """Handle notification responses."""
 
-    def construct_input_change(
-        self, device: UNILEDDevice, audio_input: int
-    ) -> list[bytearray] | None:
-        """The bytes to send for an input change."""
-        return None
-
-    ##
-    ## Device Informational
-    ##
-    def nameof_device_input_type(
-        self, device: UNILEDDevice, audio_input: int | None = None
-    ) -> str | None:
-        """Name a device input type."""
-        return None
-
-    def listof_device_inputs(self, device: UNILEDDevice) -> list | None:
-        """List of available device inputs."""
-        return None
-
     ##
     ## Channel Control
     ##
@@ -143,6 +124,12 @@ class UNILEDModel:
     ##
     ## Channel Configuration
     ##
+    def construct_input_change(
+        self, channel: UNILEDChannel, input_type: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for an input change."""
+        return None
+
     def construct_input_gain_change(
         self, channel: UNILEDChannel, gain: int
     ) -> list[bytearray] | None:
@@ -150,13 +137,13 @@ class UNILEDModel:
         return None
 
     def construct_chip_type_change(
-        self, channel: UNILEDChannel, name: str
+        self, channel: UNILEDChannel, chip_type: int
     ) -> list[bytearray] | None:
         """The bytes to send for a chip type change"""
         return None
 
     def construct_chip_order_change(
-        self, channel: UNILEDChannel, name: str
+        self, channel: UNILEDChannel, chip_order: int
     ) -> list[bytearray] | None:
         """The bytes to send for a chip order change"""
         return None
@@ -196,7 +183,7 @@ class UNILEDModel:
         """List of available channel effects"""
         return None
 
-    def codeof_channel_effects(
+    def codeof_channel_effect(
         self, channel: UNILEDChannel, name: str | None = None
     ) -> int | None:
         """Code of named channel effect"""
@@ -230,6 +217,22 @@ class UNILEDModel:
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
         """Range of effect length (min,max,step)."""
+        return None
+
+    def nameof_channel_input_type(
+        self, channel: UNILEDChannel, audio_input: int | None = None
+    ) -> str | None:
+        """Name a channel input type."""
+        return None
+
+    def codeof_channel_input_type(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named input type"""
+        return None
+
+    def listof_channel_inputs(self, channel: UNILEDChannel) -> list | None:
+        """List of available channel inputs."""
         return None
 
     def rangeof_channel_input_gain(
@@ -267,6 +270,14 @@ class UNILEDModel:
                 return UNILED_CHIP_ORDER_3COLOR[order]
         return None
 
+    def codeof_channel_chip_order(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named chip order"""
+        if name is None:
+            return None
+        return [k for k in UNILED_CHIP_ORDER_3COLOR.items() if k[1] == name][0][0]
+
     def listof_channel_chip_orders(self, channel: UNILEDChannel) -> list | None:
         """List of available chip orders"""
         if channel.status.chip_order is not None:
@@ -283,6 +294,14 @@ class UNILEDModel:
             if chip in UNILED_CHIP_TYPES:
                 return UNILED_CHIP_TYPES[chip]
         return None
+
+    def codeof_channel_chip_type(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named chip type"""
+        if name is None:
+            return None
+        return [k for k in UNILED_CHIP_TYPES.items() if k[1] == name][0][0]
 
     def listof_channel_chip_types(self, channel: UNILEDChannel) -> list | None:
         """List of available chip types"""
@@ -480,6 +499,18 @@ class UNILEDChannel:
     def effect_direction(self) -> bool | None:
         """Name of current effect direction."""
         return self._status.direction
+
+    @property
+    def input(self) -> str:
+        """Returns the current input."""
+        assert self.device.model is not None  # nosec
+        return self.device.model.nameof_channel_input_type(self)
+
+    @property
+    def input_list(self) -> list[str] | None:
+        """Returns a list of available inputs."""
+        assert self.device.model is not None  # nosec
+        return self.device.model.listof_channel_inputs(self)
 
     @property
     def input_gain(self) -> int | None:
@@ -722,6 +753,22 @@ class UNILEDChannel:
             self._status = replace(self._status, direction=value)
             self._fire_callbacks()
 
+    async def async_set_input(self, name: str) -> None:
+        """Set audio input."""
+        _LOGGER.debug("%s: Set Audio Input: %s", self.name, name)
+        if self._status.input is not None:
+            try:
+                code = self.device.model.codeof_channel_input_type(self, name)
+                if code is not None and code != self._status.input:
+                    if not await self.device.send_command(
+                        self.device.model.construct_input_change(self, code)
+                    ):
+                        code = self._status.input
+                    self._status = replace(self._status, input=code)
+                self._fire_callbacks()
+            except IndexError as exc:
+                raise ValueError(f"Input type: {name} is not valid") from exc
+
     async def async_set_input_gain(self, value: int) -> None:
         """Set input gain."""
         _LOGGER.debug("%s: Set Input Gain: %s", self.name, value)
@@ -739,27 +786,37 @@ class UNILEDChannel:
         self._status = replace(self._status, gain=value)
         self._fire_callbacks()
 
-    async def async_set_chip_type(self, value: str) -> None:
+    async def async_set_chip_type(self, name: str) -> None:
         """Set chip type."""
-        _LOGGER.debug("%s: Set Chip Type: %s", self.name, value)
+        _LOGGER.debug("%s: Set Chip Type: %s", self.name, name)
         if self._status.chip_type is not None:
-            if not await self.device.send_command(
-                self.device.model.construct_chip_type_change(self, value)
-            ):
-                value = self._status.chip_type
-            self._status = replace(self._status, direction=value)
-        self._fire_callbacks()
+            try:
+                code = self.device.model.codeof_channel_chip_type(self, name)
+                if code is not None and code != self._status.chip_type:
+                    if not await self.device.send_command(
+                        self.device.model.construct_chip_type_change(self, code)
+                    ):
+                        code = self._status.chip_type
+                    self._status = replace(self._status, chip_type=code)
+                self._fire_callbacks()
+            except IndexError as exc:
+                raise ValueError(f"Chip type: {name} is not valid") from exc
 
-    async def async_set_chip_order(self, value: str) -> None:
+    async def async_set_chip_order(self, name: str) -> None:
         """Set chip order."""
-        _LOGGER.debug("%s: Set Chip Order: %s", self.name, value)
+        _LOGGER.debug("%s: Set Chip Order: %s", self.name, name)
         if self._status.chip_order is not None:
-            if not await self.device.send_command(
-                self.device.model.construct_chip_order_change(self, value)
-            ):
-                value = self._status.chip_order
-            self._status = replace(self._status, direction=value)
-        self._fire_callbacks()
+            try:
+                code = self.device.model.codeof_channel_chip_order(self, name)
+                if code is not None and code != self._status.chip_order:
+                    if not await self.device.send_command(
+                        self.device.model.construct_chip_order_change(self, code)
+                    ):
+                        code = self._status.chip_order
+                    self._status = replace(self._status, chip_order=code)
+                self._fire_callbacks()
+            except IndexError as exc:
+                raise ValueError(f"Chip order: {name} is not valid") from exc
 
     async def async_set_segment_count(self, value: int) -> None:
         """Set segment count."""
@@ -824,14 +881,6 @@ class UNILEDChannel:
 class UNILEDMaster(UNILEDChannel):
     """UniLED Master Channel Class"""
 
-    @property
-    def input(self) -> str:
-        """Returns the current input."""
-
-    @property
-    def input_list(self) -> list[str] | None:
-        """Returns a list of available inputs."""
-
 
 class UNILEDDevice:
     """UniLED Base Device Class"""
@@ -857,9 +906,8 @@ class UNILEDDevice:
         return self.master.register_callback(callback)
 
     @property
-    def model(self) -> int:
-        """Return the device model num."""
-        assert self._model is not None  # nosec
+    def model(self) -> UNILEDModel:
+        """Return the device model."""
         return self._model
 
     @property
@@ -876,7 +924,7 @@ class UNILEDDevice:
 
     @property
     def model_number(self) -> int:
-        """Return the device model num."""
+        """Return the device model number."""
         assert self._model is not None  # nosec
         return self._model.model_num
 
@@ -899,7 +947,7 @@ class UNILEDDevice:
         return self._model.channels or 1
 
     @property
-    def master(self) -> UNILEDChannel | None:
+    def master(self) -> UNILEDMaster | None:
         """Return the master channel"""
         return self._channels[0]
 

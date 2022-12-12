@@ -8,7 +8,7 @@ from enum import IntEnum
 from .artifacts import (
     UNKNOWN,
     UNILEDModelType,
-    #UNILEDChipOrder,
+    # UNILEDChipOrder,
     UNILEDMode,
     UNILEDInput,
     UNILEDEffectType,

@@ -13,6 +13,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.const import (
     CONF_ADDRESS,
     CONF_DEVICE_CLASS,
+    CONF_MODEL,
     EVENT_HOMEASSISTANT_STOP,
     Platform,
 )
@@ -44,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     device_class: str = entry.data[CONF_DEVICE_CLASS]
     address: str = entry.data[CONF_ADDRESS]
+    model_name: str = entry.data.get(CONF_MODEL, None)
 
     if device_class == UNILED_TRANSPORT_BLE:
         ble_device = bluetooth.async_ble_device_from_address(
@@ -54,7 +56,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 f"Could not find BLE device with address {address}"
             )
 
-        _LOGGER.debug("*** Setup UniLED BLE Device: %s (%s)", ble_device, entry.data)
+        _LOGGER.debug(
+            "*** Setup UniLED BLE Device: %s v%s - (%s)",
+            ble_device,
+            entry.version,
+            entry.data,
+        )
 
         service_info = bluetooth.async_last_service_info(
             hass, address, connectable=True
@@ -62,7 +69,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not service_info:
             return False
 
-        uniled = UNILEDBLE(ble_device, service_info.advertisement)
+        uniled = UNILEDBLE(ble_device, service_info.advertisement, model_name)
+
+        if not uniled.model and not uniled.resolve_model():
+            _LOGGER.error("%s: Cannot resolve device model", uniled.name)
+            return False
+
+        if not model_name and uniled.model:
+            new = {**entry.data}
+            new[CONF_MODEL] = uniled.model_name
+            hass.config_entries.async_update_entry(entry, data=new)
 
     elif device_class == UNILED_TRANSPORT_NET:
         raise ConfigEntryNotReady(
@@ -72,6 +88,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(
             f"Unable to communicate with unknown device class: {device_class}"
         )
+
+    if uniled.model is None:
+        raise ConfigEntryNotReady("Failed to identify device model")
 
     startup_event = asyncio.Event()
     cancel_first_update = uniled.register_callback(lambda *_: startup_event.set())
@@ -111,7 +130,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     _LOGGER.debug(
-        "*** Added device entry for UniLED Device: %s, ID: %s, Unique ID: %s",
+        "*** Added UniLED device entry for: %s, ID: %s, Unique ID: %s",
         uniled.name,
         entry.entry_id,
         entry.unique_id,

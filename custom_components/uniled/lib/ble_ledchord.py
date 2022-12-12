@@ -10,9 +10,7 @@ from enum import IntEnum
 
 from .artifacts import (
     UNKNOWN,
-    UNILED_CHIP_TYPES,
     UNILED_CHIP_4COLOR,
-    UNILED_CHIP_ORDER_3COLOR,
     UNILEDModelType,
     UNILEDMode,
     UNILEDEffectType,
@@ -243,7 +241,7 @@ class _LEDCHORD(UNILEDBLEModel):
 
         return [
             self.construct_message(bytearray([True, 0x00, 0x00, msg])),
-            #self.construct_status_query(channel.device),
+            # self.construct_status_query(channel.device),
         ]
 
     def construct_level_change(
@@ -336,18 +334,20 @@ class _LEDCHORD(UNILEDBLEModel):
         )
 
     def construct_chip_type_change(
-        self, channel: UNILEDChannel, name: str
+        self, channel: UNILEDChannel, chip_type: int
     ) -> list[bytearray] | None:
         """The bytes to send for a chip type change"""
-        code = [k for k in UNILED_CHIP_TYPES.items() if k[1] == name][0][0]
-        return self.construct_message(bytearray([code, 0x00, 0x00, _Msg.CMD_SET_IC]))
+        return self.construct_message(
+            bytearray([chip_type, 0x00, 0x00, _Msg.CMD_SET_IC])
+        )
 
     def construct_chip_order_change(
-        self, channel: UNILEDChannel, name: str
+        self, channel: UNILEDChannel, chip_order: int
     ) -> list[bytearray] | None:
         """The bytes to send for a chip order change"""
-        code = [k for k in UNILED_CHIP_ORDER_3COLOR.items() if k[1] == name][0][0]
-        return self.construct_message(bytearray([code, 0x00, 0x00, _Msg.CMD_SET_RGB]))
+        return self.construct_message(
+            bytearray([chip_order, 0x00, 0x00, _Msg.CMD_SET_RGB])
+        )
 
     def construct_segment_count_change(
         self, channel: UNILEDChannel, count: int
@@ -493,7 +493,7 @@ SP107E = _LEDCHORD(
     manufacturer=LEDCHORD_MANUFACTURER,
     manufacturer_id=LEDCHORD_MANUFACTURER_ID,
     manufacturer_data=b"\x00\x00",
-    resolve_protocol=False,
+    resolve_protocol=True,
     channels=1,
     needs_on=True,
     sends_status_on_commands=False,

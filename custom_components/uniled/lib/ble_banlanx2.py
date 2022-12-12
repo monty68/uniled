@@ -33,7 +33,7 @@ BANLANX2_LOCAL_NAME_SP617E: Final = BANLANX2_MODEL_NAME_SP617E
 BANLANX2_MANUFACTURER: Final = "SPLED (BanlanX)"
 BANLANX2_MANUFACTURER_ID: Final = 20563
 BANLANX2_UUID_SERVICE = [BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]]
-BANLANX2_UUID_WRITE = [BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe1"]]
+BANLANX2_UUID_WRITE = [BANLANX2_UUID_FORMAT.format(part) for part in ["ffe1"]]
 BANLANX2_UUID_READ = []
 
 BANLANX2_TYPE_SOLID: Final = 0xBE
@@ -241,10 +241,10 @@ class _BANLANX2(UNILEDBLEModel):
     ##
     def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray]:
         """The bytes to send when first connecting."""
-        #return [
-        #    self.construct_message(bytearray([0xA0, 0x60, 0x07, 0x92, 0x9F, 0x00, 0x62, 0xA5, 0x04, 0x00])), # SP611E?
-        #    #self.construct_message(bytearray([0xA0, 0x60, 0x07, 0x27, 0xCF, 0x00, 0x71, 0x35, 0x02, 0x00])), # SP617E?
-        #]
+        # return [
+        #    self.construct_message(bytearray([0xA0, 0x64, 0x01, 0x11])),
+        #    self.construct_message(bytearray([0xA0, 0x64, 0x01, 0x11])),
+        # ]
         return None
 
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
@@ -327,13 +327,14 @@ class _BANLANX2(UNILEDBLEModel):
                 # 01 00 05 02 32 01 17 ff ff ff 00 10 09 04 0b 14 1a 32 37 50 53 73 00 ff ff
                 # 00 00 5e 02 38 06 48 ff 00 00 00 10 09 04 0b 14 1a 32 37 50 53 73 00 -> more can follow
                 # 01 00 be 02 ff 0a 48 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 00 - SP611E
+                # 00 00 c9 12 0c 0a 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 00 1a 1a
                 # ---------------------------------------------------------------------------------------
                 # 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 -> more can follow
                 #
                 # 0  = Power: (0x00=Off, 0x01=On)
                 # 1  = ??
                 # 2  = Effect/Mode
-                # 3  = ?? RGB Ordering?
+                # 3  = RGB Ordering
                 # 4  = Brightness (0x00 - 0xFF)
                 # 5  = Speed (0x01 - 0x0A)
                 # 6  = Effect Length (0x01 - 0x96)
@@ -396,17 +397,14 @@ class _BANLANX2(UNILEDBLEModel):
         return None
 
     ##
-    ## Device Control
-    ##
-    def construct_input_change(
-        self, device: UNILEDDevice, audio_input: int
-    ) -> bytearray | None:
-        """The bytes to send for an input change"""
-        return None
-
-    ##
     ## Channel Configuration
     ##
+    def construct_input_change(
+        self, channel: UNILEDChannel, input_type: int
+    ) -> bytearray | None:
+        """The bytes to send for an input change"""
+        return self.construct_message(bytearray([0xA0, 0x6C, 0x01, input_type]))
+
     def construct_input_gain_change(
         self, channel: UNILEDChannel, gain: int
     ) -> list[bytearray] | None:
@@ -414,14 +412,10 @@ class _BANLANX2(UNILEDBLEModel):
         return self.construct_message(bytearray([0xA0, 0x6B, 0x01, gain]))
 
     def construct_chip_order_change(
-        self, channel: UNILEDChannel, name: str
+        self, channel: UNILEDChannel, chip_order: str
     ) -> list[bytearray] | None:
         """The bytes to send for a chip order change"""
-        if self.model_num == BANLANX2_MODEL_NUMBER_SP617E:
-            code = [k for k in UNILED_CHIP_ORDER_4COLOR.items() if k[1] == name][0][0]
-        else:
-            code = [k for k in UNILED_CHIP_ORDER_3COLOR.items() if k[1] == name][0][0]
-        return self.construct_message(bytearray([0xA0, 0x64, 0x01, code]))
+        return self.construct_message(bytearray([0xA0, 0x64, 0x01, chip_order]))
 
     ##
     ## Channel Control
@@ -488,23 +482,6 @@ class _BANLANX2(UNILEDBLEModel):
         return self.construct_message(bytearray([0xA0, 0x68, 0x01, length]))
 
     ##
-    ## Device Informational
-    ##
-    def nameof_device_input_type(
-        self, device: UNILEDDevice, audio_input: int | None = None
-    ) -> str | None:
-        """Name a device input type."""
-        if audio_input is None:
-            audio_input = device.input
-        if audio_input in BANLANX2_INPUTS:
-            return BANLANX2_INPUTS[audio_input]
-        return None
-
-    def listof_device_inputs(self, device: UNILEDDevice) -> list | None:
-        """List of available device inputs."""
-        return list(BANLANX2_INPUTS.values())
-
-    ##
     ## Channel Informational
     ##
     def listof_channel_effects(self, channel: UNILEDChannel) -> list | None:
@@ -563,11 +540,43 @@ class _BANLANX2(UNILEDBLEModel):
         """Range of effect length (min,max,step)."""
         return (1, 150, 1)
 
+    def nameof_channel_input_type(
+        self, channel: UNILEDChannel, audio_input: int | None = None
+    ) -> str | None:
+        """Name a channel input type."""
+        if audio_input is None:
+            audio_input = channel.status.input
+        if audio_input in BANLANX2_INPUTS:
+            return BANLANX2_INPUTS[audio_input]
+        return None
+
+    def codeof_channel_input_type(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named input type"""
+        if name is None:
+            return None
+        return [k for k in BANLANX2_INPUTS.items() if k[1] == name][0][0]
+
+    def listof_channel_inputs(self, channel: UNILEDChannel) -> list | None:
+        """List of available channel inputs."""
+        return list(BANLANX2_INPUTS.values())
+
     def rangeof_channel_input_gain(
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
         """Range of input gain (min,max,step)."""
         return (1, 16, 1)
+
+    def codeof_channel_chip_order(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named chip order"""
+        if name is None:
+            return None
+        if self.model_num == BANLANX2_MODEL_NUMBER_SP611E:
+            return super().codeof_channel_chip_order(channel, name)
+        return [k for k in UNILED_CHIP_ORDER_4COLOR.items() if k[1] == name][0][0]
 
     def nameof_channel_chip_order(
         self, channel: UNILEDChannel, order: int | None = None

@@ -6,15 +6,15 @@ import voluptuous as vol
 
 from typing import Any
 
-from homeassistant import config_entries
-from homeassistant.const import CONF_ADDRESS, CONF_DEVICE_CLASS
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant import config_entries
+from homeassistant.const import CONF_ADDRESS, CONF_DEVICE_CLASS, CONF_MODEL
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
-    async_rediscover_address,
+    # async_rediscover_address,
 )
-
+from bleak_retry_connector import BLEAK_RETRY_EXCEPTIONS as BLEAK_EXCEPTIONS
 from .const import DOMAIN
 from .lib.ble_device import UNILEDBLE
 from .lib.models_db import (
@@ -39,21 +39,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> FlowResult:
         """Handle the bluetooth discovery step."""
-
-        _LOGGER.debug("Discovered bluetooth device: %s", discovery_info)
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
-
-        if not UNILEDBLE.match_valid_device(
-            discovery_info.device, discovery_info.advertisement
-        ):
-            _LOGGER.debug(
-                "Discovered bluetooth device: %s is not supported!",
-                discovery_info.address,
-            )
-            async_rediscover_address(self.hass, discovery_info.address)
-            return self.async_abort(reason="not_supported")
-
+        self._discovery_info = discovery_info
         self.context["title_placeholders"] = {
             "name": UNILEDBLE.human_readable_name(
                 None, discovery_info.name, discovery_info.address
@@ -68,42 +56,46 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            _LOGGER.debug("User Input: %s", user_input)
             address = user_input[CONF_ADDRESS]
-            discovery_info = self._discovered_devices[address]
-            local_name = discovery_info.name
+            discovery = self._discovered_devices[address]
+            local_name = discovery.name
 
-            await self.async_set_unique_id(
-                discovery_info.address, raise_on_progress=False
-            )
+            await self.async_set_unique_id(discovery.address, raise_on_progress=False)
             self._abort_if_unique_id_configured()
 
-            if 0:
-                errors["base"] = await UNILEDBLE.contactable(
-                    discovery_info.device, discovery_info.advertisement
-                )
+            uniled = UNILEDBLE(discovery.device, discovery.advertisement, local_name)
 
-                if errors["base"]:
-                    async_rediscover_address(self.hass, discovery_info.address)
-                    return self.async_abort(reason=errors["base"])
-
-            return self.async_create_entry(
-                title=local_name,
-                data={
-                    CONF_DEVICE_CLASS: UNILED_TRANSPORT_BLE,
-                    CONF_ADDRESS: discovery_info.address,
-                    # CONF_UNIQUE_ID: format_mac(discovery_info.address)
-                },
-            )
+            try:
+                model = await uniled.resolve_model(do_disconnect=True)
+            except BLEAK_EXCEPTIONS:
+                errors["base"] = "cannot_connect"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected error")
+                errors["base"] = "unknown"
+            else:
+                if model is not None:
+                    return self.async_create_entry(
+                        title=discovery.name,
+                        data={
+                            CONF_DEVICE_CLASS: UNILED_TRANSPORT_BLE,
+                            CONF_ADDRESS: discovery.address,
+                            CONF_MODEL: model.model_name,
+                        },
+                    )
+                return self.async_abort(reason="not_supported")
 
         if discovery := self._discovery_info:
-            self._discovered_devices[discovery.address] = discovery
+            if UNILEDBLE.match_known_service(discovery.device, discovery.advertisement):
+                _LOGGER.debug("Setting discovery: %s", discovery)
+                self._discovered_devices[discovery.address] = discovery
         else:
             current_addresses = self._async_current_ids()
             for discovery in async_discovered_service_info(self.hass):
                 if (
                     discovery.address in current_addresses
                     or discovery.address in self._discovered_devices
-                    or not UNILEDBLE.match_valid_device(
+                    or not UNILEDBLE.match_known_service(
                         discovery.device, discovery.advertisement
                     )
                 ):

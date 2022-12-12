@@ -98,18 +98,7 @@ class UNILEDChipOrder(StrEnum):
     GBR = "GBR"
     BRG = "BRG"
     BGR = "BGR"
-    RGBW = "RGBW"
-    RBGW = "RBGW"
-    GRBW = "GRBW"
-    GBRW = "GBRW"
-    BRGW = "BRGW"
-    BGRW = "BGRW"
-    WRGB = "WRGB"
-    WRBG = "WRBG"
-    WGRB = "WGRB"
-    WGBR = "WGBR"
-    WBRG = "WBRG"
-    WBGR = "WBGR"
+
 
 UNILED_CHIP_ORDER_3COLOR: Final = {
     0x00: UNILEDChipOrder.RGB,
@@ -121,19 +110,26 @@ UNILED_CHIP_ORDER_3COLOR: Final = {
 }
 
 UNILED_CHIP_ORDER_4COLOR: Final = {
-    0x00: UNILEDChipOrder.RGBW, # OK
-    0x01: UNILEDChipOrder.RBGW, # OK
-    0x02: UNILEDChipOrder.GRBW,
-    0x03: UNILEDChipOrder.GBRW,
-    0x04: UNILEDChipOrder.BRGW,
-    0x05: UNILEDChipOrder.BGRW,
-    0x06: UNILEDChipOrder.WRGB,
-    0x07: UNILEDChipOrder.WRBG,
-    0x08: UNILEDChipOrder.WGRB,
-    0x09: UNILEDChipOrder.WGBR,
-    0x0A: UNILEDChipOrder.WBRG,
-    0x0B: UNILEDChipOrder.WBGR,
+    0x00: "RGBW",
+    0x01: "RBGW",
+    0x02: "GRBW",
+    0x03: "GBRW",
+    0x04: "BRGW",
+    0x05: "BGRW",
+    0x06: "RGWB",
+    0x07: "RBWG",
+    0x08: "RWGB",
+    0x09: "RWBG",
+    0x0A: "GRWB",
+    0x0B: "GBWR",
+    0x0C: "GWRB",
+    0x0D: "GWBR",
+    0x0E: "BRWG",
+    0x0F: "BGWR",
+    0x10: "BWRG",
+    # 0x11: "",
 }
+
 
 class UNILEDMode(StrEnum):
     """Mode Names"""

@@ -10,6 +10,7 @@
 UniLED Currently supports the following range of cheap BLE addressable LED controllers:
 
 - [SP107E][SP107E] 
+- [SP110E][SP110E]
 - [SP601E][SP601E] 
 - [SP611E][SP61xE]
 - [SP617E][SP61xE]
@@ -51,6 +52,7 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 [uniled]: https://github.com/monty68/uniled
 [ha-logo]: docs/img/ha-logo-32x32.png
 [SP107E]: docs/sp107e.md
+[SP110E]: docs/sp110e.md
 [SP601E]: docs/sp601e.md
 [SP61xE]: docs/sp61Xe.md
 [Info]: info.md

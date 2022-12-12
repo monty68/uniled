@@ -80,7 +80,7 @@ class UNILEDUpdateCoordinator(DataUpdateCoordinator):
 
         if self.entry.state == ConfigEntryState.NOT_LOADED:
             if self._listeners:
-                _LOGGER.error("Still have listeners: %s", self._listeners)
+                _LOGGER.warning("Still have listeners: %s", self._listeners)
 
         async with self.lock:
             try:
