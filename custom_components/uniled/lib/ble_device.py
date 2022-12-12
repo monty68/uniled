@@ -144,7 +144,7 @@ class UNILEDBLE(UNILEDDevice):
 
     async def resolve_model(self, do_disconnect: bool = True) -> UNILEDBLEModel | None:
         """Resolve device model"""
-        if self._model:
+        if self._model is not None:
             return self._model
         for model in UNILED_BLE_MODELS:
             if not model.resolve_protocol:

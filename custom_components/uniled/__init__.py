@@ -71,9 +71,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         uniled = UNILEDBLE(ble_device, service_info.advertisement, model_name)
 
-        if not uniled.model and not uniled.resolve_model():
-            _LOGGER.error("%s: Cannot resolve device model", uniled.name)
-            return False
+        if not uniled.model:
+            _LOGGER.debug("*** Resolve Model: %s (%s)", uniled.name, uniled.model)
+            model = await uniled.resolve_model()
+            if model is None:
+                _LOGGER.error("%s: Cannot resolve device model", uniled.name)
+                return False
 
         if not model_name and uniled.model:
             new = {**entry.data}
