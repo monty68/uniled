@@ -65,7 +65,6 @@ class UNILEDBLE(UNILEDDevice):
         self._client: BleakClientWithServiceCache | None = None
         self._expected_disconnect = False
         self.loop = asyncio.get_running_loop()
-        self._resolve_protocol_event = asyncio.Event()
         self._notification_event = asyncio.Event()
         super().__init__()
 
@@ -215,7 +214,6 @@ class UNILEDBLE(UNILEDDevice):
         except BleakConnectionError:
             return False
 
-        # await self._resolve_protocol()
         if commands:
             if not isinstance(commands, list):
                 commands = [commands]
@@ -265,8 +263,6 @@ class UNILEDBLE(UNILEDDevice):
                 _LOGGER.debug("%s: Subscribe to notifications", self.name)
                 self._last_notification_data = ()
                 await client.start_notify(self._read_char, self._notification_handler)
-                if not self._model:
-                    await self._resolve_protocol()
 
         if (client and self._model) and (
             on_connect := self._model.construct_connect_message(self)
@@ -424,16 +420,6 @@ class UNILEDBLE(UNILEDDevice):
         _LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
         _LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
         return bool(self._read_char and self._write_char)
-
-    async def _resolve_protocol(self) -> None:
-        """Resolve protocol."""
-        if self._model.resolve_protocol:
-            if self._resolve_protocol_event.is_set():
-                _LOGGER.debug("%s: resolver in progress", self.name)
-                return
-            await self.send_command(self._model.construct_status_query(self))
-            async with async_timeout.timeout(10):
-                await self._resolve_protocol_event.wait()
 
     @staticmethod
     def match_known_service(
