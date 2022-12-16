@@ -48,7 +48,7 @@ After installing HACS, visit the HACS _Integrations_ pane and add `https://githu
 UniLED does it's best to identify the exact model through a number of different mechanisms, however
 if you are having difficulty adding a device, especially where it fails to identify the model. Then,
 first try using the applicable Android/IOS app and ensure the device name is set to match the devices
-model then attempt adding the device into Home Assistant. If it still fails, enable debbuging (see below) in Home Assistant, re-attempt adding the device, then open an issue attaching the debug log 
+model then attempt adding the device into Home Assistant. If it still fails, enable debugging (see below) in Home Assistant, re-attempt adding the device, then open an issue attaching the debug log 
 output to assist with further invetigation.
 
 ## Debugging
