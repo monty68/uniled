@@ -183,7 +183,7 @@ class UNILEDBLE(UNILEDDevice):
 
     def _set_model(self, model: UNILEDBLEModel) -> None:
         """Set the device model"""
-        if self._model is None:
+        if self._model is None and model is not None:
             _LOGGER.debug("%s: Set model %s", self.name, model.model_name)
             self._model = model
             self._create_channels()
