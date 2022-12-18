@@ -258,13 +258,14 @@ class _BANLANX1(UNILEDBLEModel):
                 )
 
                 master_power = data[0] + data[11]
+                mode = data[message_length - 1]
                 return UNILEDStatus(
                     power=master_power,
-                    mode=data[23] if master_power else BANLANX1_MODE_OFF,
+                    mode=mode if master_power else BANLANX1_MODE_OFF,
                     effect=BANLANX1_SCENE_NONE,
                     level=cast(int, (data[3] + data[14]) / 2),
                     extra={
-                        "unknown": data[22],
+                        "unknown": data[22] if message_length == 24 else None,
                     },
                 )
 
