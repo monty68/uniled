@@ -1,7 +1,7 @@
 """UniLED BLE Devices - SP LED (BanlanX v2)"""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final
 from enum import IntEnum
 
@@ -447,16 +447,25 @@ class _BANLANX2(UNILEDBLEModel):
         self, channel: UNILEDChannel, red: int, green: int, blue: int, white: int | None
     ) -> bytearray | None:
         """The bytes to send for a color level change"""
+        commands = []
+
         if channel.status.effect < BANLANX2_TYPE_SOLID:
-            return None
+            commands.append(self.construct_effect_change(channel, BANLANX2_TYPE_SOLID))
+            channel.set_status(
+                replace(
+                    channel.status,
+                    effect=BANLANX2_TYPE_SOLID,
+                    fxtype=_FXType.STATIC.value,
+                )
+            )
 
         level = channel.status.level
 
-        commands = [
+        commands.append(
             self.construct_message(
                 bytearray([0xA0, 0x69, 0x04, red, green, blue, level])
             )
-        ]
+        )
 
         if self.model_num == BANLANX2_MODEL_NUMBER_SP617E and white is not None:
             commands.append(self.construct_white_change(channel, white))

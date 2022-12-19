@@ -122,6 +122,7 @@ _PACKET_NUMBER = 2
 _MESSAGE_LENGTH = 3
 _PAYLOAD_LENGTH = 4
 
+
 @dataclass(frozen=True)
 class _BANLANX1(UNILEDBLEModel):
     """BanlanX v1 Protocol Implementation"""
@@ -229,7 +230,9 @@ class _BANLANX1(UNILEDBLEModel):
                     UNILEDStatus(
                         power=data[0] == 0x01,
                         effect=data[1],
-                        fxtype=self.codeof_channel_effect_type(device.channels[1], data[1]),
+                        fxtype=self.codeof_channel_effect_type(
+                            device.channels[1], data[1]
+                        ),
                         level=data[3],
                         speed=data[4],
                         length=data[5],
