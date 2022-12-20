@@ -36,8 +36,8 @@ BANLANX2_UUID_SERVICE = [BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", 
 BANLANX2_UUID_WRITE = [BANLANX2_UUID_FORMAT.format(part) for part in ["ffe1"]]
 BANLANX2_UUID_READ = []
 
-BANLANX2_TYPE_SOLID: Final = 0xBE
-BANLANX2_TYPE_SOUND: Final = 0xC9
+BANLANX2_EFFECT_SOLID: Final = 0xBE
+BANLANX2_EFFECT_SOUND: Final = 0xC9
 
 BANLANX2_INPUTS: Final = {
     0x00: UNILEDInput.INTMIC,
@@ -60,7 +60,7 @@ BANLANX2_EFFECT_TYPES: dict(int, str) = {
 }
 
 BANLANX2_EFFECTS: Final = {
-    0xBE: UNILEDEffects.SOLID,
+    BANLANX2_EFFECT_SOLID: UNILEDEffects.SOLID,
     0x01: UNILEDEffects.RAINBOW,
     0x02: UNILEDEffects.RAINBOW_METEOR,
     0x03: UNILEDEffects.RAINBOW_STARS,
@@ -224,6 +224,17 @@ BANLANX2_EFFECTS: Final = {
     0xDA: UNILEDEffects.SOUND_PARTY,
 }
 
+BANLANX2_COLORABLE_EFFECTS: Final = (
+    BANLANX2_EFFECT_SOLID,
+    0xCA,
+    0xCC,
+    0xCE,
+    0xD0,
+    0xD2,
+    0xD4,
+    0xD6,
+)
+
 _STATUS_FLAG_1 = 0x53
 _STATUS_FLAG_2 = 0x43
 _HEADER_LENGTH = 5
@@ -241,10 +252,6 @@ class _BANLANX2(UNILEDBLEModel):
     ##
     def construct_connect_message(self, device: UNILEDDevice) -> list[bytearray]:
         """The bytes to send when first connecting."""
-        # return [
-        #    self.construct_message(bytearray([0xA0, 0x64, 0x01, 0x11])),
-        #    self.construct_message(bytearray([0xA0, 0x64, 0x01, 0x11])),
-        # ]
         return None
 
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
@@ -316,13 +323,6 @@ class _BANLANX2(UNILEDBLEModel):
 
             if len(data) == message_length:
                 #
-                # 01 00 01 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 03 00 01 7f 00 93 a8 01 01 00 7f 00 93 e4 01 02 01 80 00 94 20 01 1a 1a
-                # 00 00 01 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 01 00 01 6a 00 93 a8 00 1a 1a
-                # 01 00 01 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 02 00 01 6a 00 93 a8 01 01 00 15 01 3c 68 01 1a 1a
-                # 01 00 d9 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 02 00 01 6a 00 93 a8 01 01 00 15 01 3c 68 01 1a 1a
-                # 01 00 d9 12 99 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 02 00 01 6a 00 93 a8 01 01 00 15 01 3c 68 01 1a 1a
-                # 00 00 c9 12 0f 05 4a ff ff ff 00 10 09 04 0b 14 1a 32 37 50 53 73 02 00 01 6a 00 93 a8 01 01 00 15 01 3c 68 01 ff ff
-                # 01 66 53 22 0f 05 4a 00 00 ff 00 10 09 04 0b 14 1a 32 37 50 53 73 01 00 00 00 00 00 00 00                      40 40
                 # 01 00 be 08 ff 05 4a ff 00 00 00 10 09 04 0b 14 1a 32 37 50 53 73 00 40 40
                 # 01 00 05 02 32 01 17 ff ff ff 00 10 09 04 0b 14 1a 32 37 50 53 73 00 ff ff
                 # 00 00 5e 02 38 06 48 ff 00 00 00 10 09 04 0b 14 1a 32 37 50 53 73 00 -> more can follow
@@ -372,6 +372,8 @@ class _BANLANX2(UNILEDBLEModel):
                 #
                 _LOGGER.debug("%s: Good Status Message: %s", device.name, data.hex())
 
+                effect=data[2]
+                rgb=(data[7], data[8], data[9])
                 white = None
                 if self.model_num == BANLANX2_MODEL_NUMBER_SP617E:
                     cool = data[message_length - 2]
@@ -382,9 +384,9 @@ class _BANLANX2(UNILEDBLEModel):
                     power=data[0] == 0x01,
                     level=data[4],
                     white=white,
-                    rgb=(data[7], data[8], data[9]),
+                    rgb=rgb,    ## if effect in BANLANX2_COLORABLE_EFFECTS else None,
                     fxtype=self.codeof_channel_effect_type(device.master, data[2]),
-                    effect=data[2],
+                    effect=effect,
                     speed=data[5],
                     length=data[6],
                     input=data[10],
@@ -449,18 +451,19 @@ class _BANLANX2(UNILEDBLEModel):
         """The bytes to send for a color level change"""
         commands = []
 
-        if channel.status.effect < BANLANX2_TYPE_SOLID:
-            commands.append(self.construct_effect_change(channel, BANLANX2_TYPE_SOLID))
+        if channel.status.effect not in BANLANX2_COLORABLE_EFFECTS:
+            commands.append(self.construct_effect_change(channel, BANLANX2_EFFECT_SOLID))
             channel.set_status(
                 replace(
                     channel.status,
-                    effect=BANLANX2_TYPE_SOLID,
+                    effect=BANLANX2_EFFECT_SOLID,
                     fxtype=_FXType.STATIC.value,
+                    white=white if white is not None else channel.status.white,
+                    rgb=(red, green, blue),
                 )
             )
 
         level = channel.status.level
-
         commands.append(
             self.construct_message(
                 bytearray([0xA0, 0x69, 0x04, red, green, blue, level])
@@ -476,6 +479,13 @@ class _BANLANX2(UNILEDBLEModel):
         self, channel: UNILEDChannel, effect: int
     ) -> bytearray | None:
         """The bytes to send for an effect change"""
+        ##if channel.status.effect != effect and effect not in BANLANX2_COLORABLE_EFFECTS:
+        ##    channel.set_status(
+        ##        replace(
+        ##            channel.status,
+        ##            rgb=None,
+        ##        )
+        ##    )
         return self.construct_message(bytearray([0xA0, 0x63, 0x01, effect]))
 
     def construct_effect_speed_change(
@@ -521,9 +531,9 @@ class _BANLANX2(UNILEDBLEModel):
         """Code of channel effect type from effect code"""
         if effect is None:
             effect = channel.status.effect
-        if effect < BANLANX2_TYPE_SOLID:
+        if effect < BANLANX2_EFFECT_SOLID:
             return _FXType.PATTERN.value
-        elif effect >= BANLANX2_TYPE_SOUND:
+        elif effect >= BANLANX2_EFFECT_SOUND:
             return _FXType.SOUND.value
         return _FXType.STATIC.value
 

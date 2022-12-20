@@ -278,6 +278,8 @@ class _LEDCHORD(UNILEDBLEModel):
                     channel.status,
                     effect=_FXGroup.SOLID.value,
                     mode=_FXMode.SINGULAR.value,
+                    white=white if white is not None else channel.status.white,
+                    rgb=(red, green, blue),
                 )
             )
 
