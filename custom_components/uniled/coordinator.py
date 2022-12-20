@@ -72,12 +72,6 @@ class UNILEDUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update(self) -> None:
         """Fetch all device and sensor data from api."""
 
-        _LOGGER.debug(
-            "%s: Update, entry state: %s",
-            self.device.name,
-            self.entry.state,
-        )
-
         if self.entry.state == ConfigEntryState.NOT_LOADED:
             if self._listeners:
                 _LOGGER.warning("Still have listeners: %s", self._listeners)
