@@ -167,12 +167,12 @@ class UNILEDBLE(UNILEDDevice):
         """Update the ble device/advertisement."""
         self._ble_device = ble_device
         self._advertisement_data = advertisement or self._advertisement_data
-        _LOGGER.debug(
-            "%s: Update device (RSSI: %s) %s",
-            ble_device.name,
-            ble_device.rssi,
-            advertisement,
-        )
+        ##_LOGGER.debug(
+        ##    "%s: Update device (RSSI: %s) %s",
+        ##    ble_device.name,
+        ##    ble_device.rssi,
+        ##    advertisement,
+        ##)
 
     def _lookup_model(self, model_name: str) -> UNILEDBLEModel | None:
         """Lookup model from name"""
@@ -211,7 +211,14 @@ class UNILEDBLE(UNILEDDevice):
         """Send command to device and read response."""
         try:
             await self._ensure_connected()
-        except BleakConnectionError:
+        except BleakConnectionError as ex:
+            _LOGGER.debug(
+                "%s: connection failed: %s; RSSI: %s",
+                self.name,
+                ex,
+                self.rssi,
+                exc_info=True,
+            )
             return False
 
         if commands:

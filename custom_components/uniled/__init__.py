@@ -51,23 +51,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ble_device = bluetooth.async_ble_device_from_address(
             hass, address.upper(), True
         ) or await get_device(address)
+
         if not ble_device:
             raise ConfigEntryNotReady(
                 f"Could not find BLE device with address {address}"
             )
 
-        _LOGGER.debug(
-            "*** Setup UniLED BLE Device: %s v%s - (%s)",
-            ble_device,
-            entry.version,
-            entry.data,
-        )
-
         service_info = bluetooth.async_last_service_info(
             hass, address, connectable=True
         )
+
+        _LOGGER.debug(
+            "*** Setup UniLED BLE Device: %s v%s - (%s), Service: %s",
+            ble_device,
+            entry.version,
+            entry.data,
+            service_info
+        )
+
         if not service_info:
-            return False
+            raise ConfigEntryNotReady(
+                f"Could not find service info for BLE device with address {address}"
+            )
 
         uniled = UNILEDBLE(ble_device, service_info.advertisement, model_name)
 
@@ -76,7 +81,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             model = await uniled.resolve_model()
             if model is None:
                 _LOGGER.error("%s: Cannot resolve device model", uniled.name)
-                return False
+                raise ConfigEntryNotReady(
+                    f"Could not resolve model for BLE device with address {address}"
+                )
 
         if not model_name and uniled.model:
             new = {**entry.data}
