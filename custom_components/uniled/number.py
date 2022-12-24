@@ -91,7 +91,7 @@ class UNILEDEffectSpeedNumber(
 
     _attr_entity_registry_enabled_default = True
     _attr_entity_category = None
-    _attr_mode = NumberMode.SLIDER
+    _attr_mode = NumberMode.AUTO
     _attr_icon = "mdi:speedometer"
 
     def __init__(
@@ -127,7 +127,6 @@ class UNILEDEffectSpeedNumber(
                 "Effect Speed can only be adjusted when an effect is active"
             )
         await self.channel.async_set_effect_speed(new_speed)
-        await self.coordinator.async_request_refresh()
 
 
 class UNILEDEffectLengthNumber(
@@ -137,7 +136,7 @@ class UNILEDEffectLengthNumber(
 
     _attr_entity_registry_enabled_default = True
     _attr_entity_category = None
-    _attr_mode = NumberMode.SLIDER
+    _attr_mode = NumberMode.AUTO
     _attr_icon = "mdi:ruler"
 
     def __init__(
@@ -175,7 +174,6 @@ class UNILEDEffectLengthNumber(
                 "Effect length can only be adjusted when an effect is active"
             )
         await self.channel.async_set_effect_length(new_length)
-        await self.coordinator.async_request_refresh()
 
 
 class UNILEDSensitivityNumber(
@@ -185,7 +183,7 @@ class UNILEDSensitivityNumber(
 
     _attr_entity_registry_enabled_default = True
     _attr_entity_category = EntityCategory.CONFIG
-    _attr_mode = NumberMode.SLIDER
+    _attr_mode = NumberMode.AUTO
     _attr_icon = "mdi:knob"
 
     def __init__(
@@ -223,7 +221,6 @@ class UNILEDSensitivityNumber(
                 "Sensitivity can only be adjusted when a sound activated effect is active"
             )
         await self.channel.async_set_input_gain(new_gain)
-        await self.coordinator.async_request_refresh()
 
 
 class UNILEDSegmentCountNumber(

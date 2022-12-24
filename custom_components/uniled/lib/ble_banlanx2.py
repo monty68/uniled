@@ -372,8 +372,8 @@ class _BANLANX2(UNILEDBLEModel):
                 #
                 _LOGGER.debug("%s: Good Status Message: %s", device.name, data.hex())
 
-                effect=data[2]
-                rgb=(data[7], data[8], data[9])
+                effect = data[2]
+                rgb = (data[7], data[8], data[9])
                 white = None
                 if self.model_num == BANLANX2_MODEL_NUMBER_SP617E:
                     cool = data[message_length - 2]
@@ -384,7 +384,7 @@ class _BANLANX2(UNILEDBLEModel):
                     power=data[0] == 0x01,
                     level=data[4],
                     white=white,
-                    rgb=rgb,    ## if effect in BANLANX2_COLORABLE_EFFECTS else None,
+                    rgb=rgb,  ## if effect in BANLANX2_COLORABLE_EFFECTS else None,
                     fxtype=self.codeof_channel_effect_type(device.master, data[2]),
                     effect=effect,
                     speed=data[5],
@@ -452,7 +452,9 @@ class _BANLANX2(UNILEDBLEModel):
         commands = []
 
         if channel.status.effect not in BANLANX2_COLORABLE_EFFECTS:
-            commands.append(self.construct_effect_change(channel, BANLANX2_EFFECT_SOLID))
+            commands.append(
+                self.construct_effect_change(channel, BANLANX2_EFFECT_SOLID)
+            )
             channel.set_status(
                 replace(
                     channel.status,

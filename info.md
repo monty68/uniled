@@ -16,13 +16,6 @@ UniLED Currently supports the following range of cheap BLE addressable LED contr
 - [SP611E][SP61xE]
 - [SP617E][SP61xE]
 
-## Important Notice
-
-The Home Assistant component and platforms in this repository are in "Beta" release meaning this component is in the final stages of development, could be subject to frequent change, may contain bugs or unwanted "features".
-
-This is my very first Python and Home Assistant component development.
-
-HAVE FUN! 😎
 
 ---
 

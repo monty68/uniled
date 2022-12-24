@@ -129,7 +129,9 @@ class UNILEDBLE(UNILEDDevice):
                     await self._notification_event.wait()
                     return True
             except asyncio.TimeoutError:
-                _LOGGER.debug("%s: Timeout waiting for status notification", self.name)
+                _LOGGER.warning(
+                    "%s: Timeout waiting for status notification", self.name
+                )
         return False
 
     async def stop(self) -> None:
@@ -167,12 +169,6 @@ class UNILEDBLE(UNILEDDevice):
         """Update the ble device/advertisement."""
         self._ble_device = ble_device
         self._advertisement_data = advertisement or self._advertisement_data
-        ##_LOGGER.debug(
-        ##    "%s: Update device (RSSI: %s) %s",
-        ##    ble_device.name,
-        ##    ble_device.rssi,
-        ##    advertisement,
-        ##)
 
     def _lookup_model(self, model_name: str) -> UNILEDBLEModel | None:
         """Lookup model from name"""
