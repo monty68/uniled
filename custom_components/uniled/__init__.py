@@ -17,13 +17,15 @@ from homeassistant.const import (
     EVENT_HOMEASSISTANT_STOP,
     Platform,
 )
-from .lib.models_db import (
+
+from uni_led import (
     UNILED_TRANSPORT_BLE,
+    UNILEDBLE,
     UNILED_TRANSPORT_NET,
+    UNILEDNET,
 )
+
 from bleak_retry_connector import get_device
-from .lib.ble_device import UNILEDBLE
-from .lib.net_device import UNILEDNET
 from .coordinator import UNILEDUpdateCoordinator
 from .const import DOMAIN, DEVICE_TIMEOUT
 
@@ -66,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ble_device,
             entry.version,
             entry.data,
-            service_info
+            service_info,
         )
 
         if not service_info:

@@ -14,13 +14,14 @@ from homeassistant.components.bluetooth import (
     async_discovered_service_info,
     # async_rediscover_address,
 )
+from uni_led import (
+    UNILED_TRANSPORT_BLE,
+    UNILEDBLE,
+    UNILED_TRANSPORT_NET,
+    UNILEDNET,
+)
 from bleak_retry_connector import BLEAK_RETRY_EXCEPTIONS as BLEAK_EXCEPTIONS
 from .const import DOMAIN
-from .lib.ble_device import UNILEDBLE
-from .lib.models_db import (
-    UNILED_TRANSPORT_BLE,
-    # UNILED_TRANSPORT_NET,
-)
 
 _LOGGER = logging.getLogger(__name__)
 

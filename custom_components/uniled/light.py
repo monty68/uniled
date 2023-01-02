@@ -23,9 +23,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
 
+from uni_led import UNILEDModelType, UNILEDEffectDirection
+
 from .coordinator import UNILEDUpdateCoordinator
 from .entity import UNILEDEntity
-from .lib.artifacts import UNILEDModelType, UNILEDEffectDirection
 from .const import (
     DOMAIN,
     COMMAND_SETTLE_DELAY,

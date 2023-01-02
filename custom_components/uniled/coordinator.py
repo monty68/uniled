@@ -12,9 +12,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from homeassistant.components.bluetooth.match import ADDRESS, BluetoothCallbackMatcher
 
+from uni_led import UNILEDDevice, BLEAK_EXCEPTIONS
 from .const import UPDATE_SECONDS, REFRESH_DELAY
-from .lib.classes import UNILEDDevice
-from .lib.ble_device import BLEAK_EXCEPTIONS
 
 import logging
 

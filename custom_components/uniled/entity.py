@@ -21,10 +21,15 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from uni_led import (
+    UNILED_TRANSPORT_BLE,
+    UNILED_TRANSPORT_NET,
+    UNILEDDevice,
+    UNILEDChannel
+)
+
 from .const import DOMAIN
 from .coordinator import UNILEDUpdateCoordinator
-from .lib.classes import UNILEDChannel, UNILEDDevice
-from .lib.models_db import UNILED_TRANSPORT_BLE, UNILED_TRANSPORT_NET
 
 import logging
 
