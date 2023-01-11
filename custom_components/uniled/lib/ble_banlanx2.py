@@ -30,6 +30,10 @@ BANLANX2_MODEL_NUMBER_SP617E: Final = 0x617E
 BANLANX2_MODEL_NAME_SP617E: Final = "SP617E"
 BANLANX2_LOCAL_NAME_SP617E: Final = BANLANX2_MODEL_NAME_SP617E
 
+BANLANX2_MODEL_NUMBER_SP620E: Final = 0x620E
+BANLANX2_MODEL_NAME_SP620E: Final = "SP620E"
+BANLANX2_LOCAL_NAME_SP620E: Final = BANLANX2_MODEL_NAME_SP620E
+
 BANLANX2_MANUFACTURER: Final = "SPLED (BanlanX)"
 BANLANX2_MANUFACTURER_ID: Final = 20563
 BANLANX2_UUID_SERVICE = [BANLANX2_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]]
@@ -658,6 +662,27 @@ SP617E = _BANLANX2(
     needs_on=True,
     sends_status_on_commands=False,
     local_names=[BANLANX2_LOCAL_NAME_SP617E],
+    service_uuids=BANLANX2_UUID_SERVICE,
+    write_uuids=BANLANX2_UUID_WRITE,
+    read_uuids=BANLANX2_UUID_READ,
+)
+
+##
+## SP620E
+##
+SP620E = _BANLANX2(
+    model_type=UNILEDModelType.STRIP,
+    model_name=BANLANX2_MODEL_NAME_SP620E,
+    model_num=BANLANX2_MODEL_NUMBER_SP620E,
+    description="BLE Controller (Music) RGB",
+    manufacturer=BANLANX2_MANUFACTURER,
+    manufacturer_id=BANLANX2_MANUFACTURER_ID,
+    manufacturer_data=b"\x1B\x10",
+    resolve_protocol=False,
+    channels=1,
+    needs_on=True,
+    sends_status_on_commands=False,
+    local_names=[BANLANX2_LOCAL_NAME_SP620E],
     service_uuids=BANLANX2_UUID_SERVICE,
     write_uuids=BANLANX2_UUID_WRITE,
     read_uuids=BANLANX2_UUID_READ,

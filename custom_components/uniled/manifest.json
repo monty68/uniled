@@ -12,10 +12,11 @@
     { "local_name": "sp110e" },
     { "local_name": "sp601e" },
     { "local_name": "sp611e" },
-    { "local_name": "sp617e" }
+    { "local_name": "sp617e" },
+    { "local_name": "sp620e" }
   ],
   "codeowners": ["@monty68"],
   "requirements": [],
   "iot_class": "local_polling",
-  "version": "1.0.0"
+  "version": "1.0.2"
 }
