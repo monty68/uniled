@@ -15,6 +15,7 @@ UniLED Currently supports the following range of cheap BLE addressable LED contr
 - [SP601E][SP601E] 
 - [SP611E][SP61xE]
 - [SP617E][SP61xE]
+- [SP620E][SP620E]
 
 
 ---
@@ -73,6 +74,7 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 [SP110E]: https://github.com/monty68/uniled/blob/main/docs/sp110e.md
 [SP601E]: https://github.com/monty68/uniled/blob/main/docs/sp601e.md
 [SP61xE]: https://github.com/monty68/uniled/blob/main/docs/sp61Xe.md
+[SP620E]: https://github.com/monty68/uniled/blob/main/docs/sp620e.md
 [uniled]: https://github.com/monty68/uniled
 [user_profile]: https://github.com/monty68
 [buymecoffee]: https://www.buymeacoffee.com/monty68
