@@ -58,18 +58,18 @@ logger:
 
 ## Contributions are welcome!
 
-If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
+If you want to contribute to this please read the [Contribution guidelines](https://github.com/monty68/uniled/blob/main/CONTRIBUTING.md)
 
 ***
 
 [uniled]: https://github.com/monty68/uniled
-[ha-logo]: docs/img/ha-logo-32x32.png
-[SP107E]: docs/sp107e.md
-[SP110E]: docs/sp110e.md
-[SP601E]: docs/sp601e.md
-[SP61xE]: docs/sp61Xe.md
-[SP620E]: docs/sp620e.md
-[Info]: info.md
+[ha-logo]: https://raw.githubusercontent.com/monty68/uniled/main/docs/img/ha-logo-32x32.png
+[SP107E]: https://github.com/monty68/uniled/blob/main/docs/sp107e.md
+[SP110E]: https://github.com/monty68/uniled/blob/main/docs/sp110e.md
+[SP601E]: https://github.com/monty68/uniled/blob/main/docs/sp601e.md
+[SP61xE]: https://github.com/monty68/uniled/blob/main/docs/sp61Xe.md
+[SP620E]: https://github.com/monty68/uniled/blob/main/docs/sp620e.md
+[Info]: https://github.com/monty68/uniled/blob/main/info.md
 [user_profile]: https://github.com/monty68
 [maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
 [buymecoffee]: https://www.buymeacoffee.com/monty68
