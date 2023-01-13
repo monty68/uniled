@@ -63,7 +63,7 @@ logger:
 
 ## Contributions are welcome!
 
-If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
+If you want to contribute to this please read the [Contribution guidelines](https://github.com/monty68/uniled/blob/main/CONTRIBUTING.md)
 
 
 <!---->
