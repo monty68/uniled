@@ -8,21 +8,23 @@ from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
 from bleak.backends.service import BleakGATTCharacteristic, BleakGATTServiceCollection
 from bleak.exc import BleakDBusError
+from bleak_retry_connector import BLEAK_RETRY_EXCEPTIONS as BLEAK_EXCEPTIONS
 from bleak_retry_connector import (
-    BLEAK_RETRY_EXCEPTIONS as BLEAK_EXCEPTIONS,
     BleakClientWithServiceCache,
     BleakError,
     BleakNotFoundError,
     BleakConnectionError,
     establish_connection,
+    retry_bluetooth_connection_error,
 )
 
+#from .ble_retry import (
+#    retry_bluetooth_connection_error,
+#    BLEAK_DISCONNECT_DELAY,
+#    BLEAK_BACKOFF_TIME,
+#)
+
 from .ble_model import UNILEDBLEModel
-from .ble_retry import (
-    retry_bluetooth_connection_error,
-    BLEAK_DISCONNECT_DELAY,
-    BLEAK_BACKOFF_TIME,
-)
 from .classes import UNILEDDevice
 from .models_db import UNILED_TRANSPORT_BLE, UNILED_BLE_MODELS
 
@@ -30,13 +32,17 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-BLE_MULTI_COMMAND_SETTLE_DELAY = 0.3
-BLE_NOTFICATION_TIMEOUT = 2.0
+RETRY_BACKOFF_EXCEPTIONS = (BleakDBusError,)
 
+BLE_MULTI_COMMAND_SETTLE_DELAY = 0.5
+BLE_NOTFICATION_TIMEOUT = 5.0
+
+BLE_DEFAULT_ATTEMPTS = 3
+BLE_BLEAK_BACKOFF_TIME = 0.25
+BLE_BLEAK_DISCONNECT_DELAY = 120
 
 class CharacteristicMissingError(Exception):
     """Raised when a characteristic is missing."""
-
 
 class ChannelMissingError(Exception):
     """Raised when a channel is missing."""
@@ -250,29 +256,31 @@ class UNILEDBLE(UNILEDDevice):
                 ble_device_callback=lambda: self._ble_device,
             )
 
-            _LOGGER.debug("%s: Connected", self.name)
-            resolved = self._resolve_characteristics(client.services)
-            if not resolved:
-                # Try to handle services failing to load
-                await asyncio.sleep(BLEAK_BACKOFF_TIME)
-                # services = await client.get_services()
-                services = client.services
-                resolved = self._resolve_characteristics(services)
+            if client and client.is_connected:
+                _LOGGER.debug("%s: Connected", self.name)
+                resolved = self._resolve_characteristics(client.services)
+                if not resolved:
+                    # Try to handle services failing to load
+                    await asyncio.sleep(BLE_BLEAK_BACKOFF_TIME)
+                    # services = await client.get_services()
+                    services = client.services
+                    resolved = self._resolve_characteristics(services)
 
-            self._client = client
-            self._reset_disconnect_timer()
+                self._client = client
+                self._reset_disconnect_timer()
 
-            if client and self._read_char:
-                _LOGGER.debug("%s: Subscribe to notifications", self.name)
-                self._last_notification_data = ()
-                await client.start_notify(self._read_char, self._notification_handler)
+                if client and self._read_char:
+                    _LOGGER.debug("%s: Subscribe to notifications: %s", self.name, self._read_char)
+                    self._last_notification_data = ()
+                    await client.start_notify(self._read_char, self._notification_handler)
 
-        if (client and self._model) and (
-            on_connect := self._model.construct_connect_message(self)
-        ) is not None:
-            # Send any "on connection" message(s)
-            await self.send_command(on_connect)
-            await asyncio.sleep(BLE_MULTI_COMMAND_SETTLE_DELAY)
+                if (client and self._model) and (
+                    on_connect := self._model.construct_connect_message(self)
+                ) is not None:
+                    # Send any "on connection" message(s)
+                    _LOGGER.debug("%s: Sending 'on connection' command", self.name)
+                    await self.send_command(on_connect)
+                    await asyncio.sleep(BLE_MULTI_COMMAND_SETTLE_DELAY)
 
     async def _send_command_while_connected(
         self, commands: list[bytes], retry: int | None = None
@@ -311,21 +319,21 @@ class UNILEDBLE(UNILEDDevice):
 
         raise RuntimeError("Unreachable")
 
-    @retry_bluetooth_connection_error
+    @retry_bluetooth_connection_error(BLE_DEFAULT_ATTEMPTS)
     async def _send_command_locked(self, commands: list[bytes]) -> None:
         """Send command to device and read response."""
         try:
-            await self._execute_command_locked(commands)
+            await self._execute_command_locked(commands)           
         except BleakDBusError as ex:
             # Disconnect so we can reset state and try again
+            await asyncio.sleep(BLE_BLEAK_BACKOFF_TIME)
             _LOGGER.debug(
                 "%s: RSSI: %s; Backing off %ss; Disconnecting due to error: %s",
                 self.name,
                 self.rssi,
-                BLEAK_BACKOFF_TIME,
+                BLE_BLEAK_BACKOFF_TIME,
                 ex,
             )
-            await asyncio.sleep(BLEAK_BACKOFF_TIME)
             await self._execute_disconnect()
             raise
         except BleakError as ex:
@@ -347,8 +355,8 @@ class UNILEDBLE(UNILEDDevice):
             raise CharacteristicMissingError("Read characteristic missing")
         to_send = len(commands)
         for command in commands:
-            _LOGGER.debug("%s: Sending command: %s ", self.name, command.hex())
-            await self._client.write_gatt_char(self._write_char, command, False)
+            _LOGGER.debug("%s: Sending command: [%s] %s", self.name, command.hex(), self._write_char)
+            await self._client.write_gatt_char(self._write_char, command, None)
             if to_send > 1:
                 await asyncio.sleep(BLE_MULTI_COMMAND_SETTLE_DELAY)
 
@@ -358,7 +366,7 @@ class UNILEDBLE(UNILEDDevice):
             self._disconnect_timer.cancel()
         self._expected_disconnect = False
         self._disconnect_timer = self.loop.call_later(
-            BLEAK_DISCONNECT_DELAY, self._disconnect
+            BLE_BLEAK_DISCONNECT_DELAY, self._disconnect
         )
 
     def _disconnected(self, client: BleakClientWithServiceCache) -> None:
@@ -371,6 +379,9 @@ class UNILEDBLE(UNILEDDevice):
             self.rssi,
         )
 
+        if not self._expected_disconnect:
+              raise RuntimeError("Unexpected disconnection!")
+        
     def _disconnect(self) -> None:
         """Disconnect from device."""
         self._disconnect_timer = None
@@ -379,7 +390,7 @@ class UNILEDBLE(UNILEDDevice):
     async def _execute_timed_disconnect(self) -> None:
         """Execute timed disconnection."""
         _LOGGER.debug(
-            "%s: Disconnecting after timeout of %d", self.name, BLEAK_DISCONNECT_DELAY
+            "%s: Disconnecting after timeout of %d", self.name, BLE_BLEAK_DISCONNECT_DELAY
         )
         await self._execute_disconnect()
 
@@ -398,10 +409,16 @@ class UNILEDBLE(UNILEDDevice):
             self._read_char = None
             self._write_char = None
 
-            if client:
+            if client and client.is_connected:
                 if read_char:
-                    await client.stop_notify(read_char)
-                    _LOGGER.debug("%s: Stopped notifications from device", self.name)
+                    try:
+                        await client.stop_notify(read_char)
+                        _LOGGER.debug("%s: Stopped notifications from device", self.name)
+                    except BleakError:
+                        _LOGGER.debug(
+                            "%s: Failed to stop notifications", self.name, exc_info=True
+                        )
+
                 if client.is_connected:
                     await client.disconnect()
                     _LOGGER.debug("%s: Disconnected from device", self.name)
