@@ -129,7 +129,7 @@ class _BANLANX1(UNILEDBLEModel):
 
     ##
     ## Device Control
-    ##
+    ##   
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
         """The bytes to send for a state query."""
         return self.construct_message(bytearray([0xAA, 0x2F, 0x00]))
