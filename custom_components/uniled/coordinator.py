@@ -86,7 +86,7 @@ class UNILEDUpdateCoordinator(DataUpdateCoordinator):
 
                 if self.entry.state in valid_states:
                     if not await self.device.update():
-                        raise UpdateFailed(f"{self.device.name}: Data Update failed")
+                        raise UpdateFailed("Update failed")
                     return
                 if self.device.available:
                     _LOGGER.debug("%s: Forcing stop", self.device.name)
@@ -94,3 +94,4 @@ class UNILEDUpdateCoordinator(DataUpdateCoordinator):
                 raise UpdateFailed(f"{self.device.name}: Invalid entry state!")
             except BLEAK_EXCEPTIONS as ex:
                 raise UpdateFailed(str(ex)) from ex
+    

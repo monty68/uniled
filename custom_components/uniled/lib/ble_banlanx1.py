@@ -8,7 +8,6 @@ from enum import IntEnum
 from .artifacts import (
     UNKNOWN,
     UNILEDModelType,
-    # UNILEDChipOrder,
     UNILEDMode,
     UNILEDInput,
     UNILEDEffectType,
@@ -262,6 +261,7 @@ class _BANLANX1(UNILEDBLEModel):
 
                 master_power = data[0] + data[11]
                 mode = data[message_length - 1]
+
                 return UNILEDStatus(
                     power=master_power,
                     mode=mode if master_power else BANLANX1_MODE_OFF,
@@ -491,13 +491,17 @@ SP601E = _BANLANX1(
     model_num=BANLANX1_MODEL_NUMBER_SP601E,
     model_name=BANLANX1_MODEL_NAME_SP601E,
     model_type=UNILEDModelType.STRIP,
-    description="BLE Dual Channel RGB (Music) Controller",
+    description="BLE Dual Channel RGB (Music) Pixel Controller",
     manufacturer=BANLANX1_MANUFACTURER,
     manufacturer_id=BANLANX1_MANUFACTURER_ID,
     manufacturer_data=b"\x01\x02",
     resolve_protocol=False,
     channels=2,
     needs_on=True,
+    needs_type_reload=False,
+    effects_directional=True,
+    effects_pausable=False,
+    effects_loopable=False,
     sends_status_on_commands=False,
     local_names=[BANLANX1_LOCAL_NAME_SP601E],
     service_uuids=[BANLANX1_UUID_FORMAT.format(part) for part in ["ffe0", "ffb0"]],

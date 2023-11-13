@@ -8,77 +8,36 @@ from .helpers import StrEnum
 
 UNKNOWN: Final = "Uknown"
 
-
-@dataclass(frozen=True)
-class UNILEDModelType(IntEnum):
-    """Model Type"""
-
-    BULB = 0
-    STRIP = 1
-
-
-class UNILEDChipType(StrEnum):
-    """LED Chipset Names"""
-
-    SM16703 = "SM16703"
-    TM1804 = "TM1804"
-    UCS1903 = "UCS1903"
-    WS2811 = "WS2811"
-    WS2801 = "WS2801"
-    SK6812 = "SK6812"
-    LPD6803 = "LPD6803"
-    LPD8806 = "LPD8806"
-    APA102 = "APA102"
-    APA105 = "APA105"
-    DMX512 = "DMX512"
-    TM1914 = "TM1914"
-    TM1913 = "TM1913"
-    P9813 = "P9813"
-    INK1003 = "INK1003"
-    P943S = "P943S"
-    P9411 = "P9411"
-    P9413 = "P9413"
-    TX1812 = "TX1812"
-    TX1813 = "TX1813"
-    GS8206 = "GS8206"
-    GS8208 = "GS8208"
-    SK9822 = "SK9822"
-    TM1814 = "TM1814"
-    SK6812_RGBW = "SK6812_RGBW"
-    P9414 = "P9414"
-    P9412 = "P9412"
-
-
 UNILED_CHIP_TYPES: Final = {
     # 3 Color - RGB
-    0x00: UNILEDChipType.SM16703,
-    0x01: UNILEDChipType.TM1804,
-    0x02: UNILEDChipType.UCS1903,
-    0x03: UNILEDChipType.WS2811,
-    0x04: UNILEDChipType.WS2801,
-    0x05: UNILEDChipType.SK6812,
-    0x06: UNILEDChipType.LPD6803,
-    0x07: UNILEDChipType.LPD8806,
-    0x08: UNILEDChipType.APA102,
-    0x09: UNILEDChipType.APA105,
-    0x0A: UNILEDChipType.DMX512,
-    0x0B: UNILEDChipType.TM1914,
-    0x0C: UNILEDChipType.TM1913,
-    0x0D: UNILEDChipType.P9813,
-    0x0E: UNILEDChipType.INK1003,
-    0x0F: UNILEDChipType.P943S,
-    0x10: UNILEDChipType.P9411,
-    0x11: UNILEDChipType.P9413,
-    0x12: UNILEDChipType.TX1812,
-    0x13: UNILEDChipType.TX1813,
-    0x14: UNILEDChipType.GS8206,
-    0x15: UNILEDChipType.GS8208,
-    0x16: UNILEDChipType.SK9822,
+    0x00: "SM16703",
+    0x01: "TM1804",
+    0x02: "UCS1903",
+    0x03: "WS2811",
+    0x04: "WS2801",
+    0x05: "SK6812",
+    0x06: "LPD6803",
+    0x07: "LPD8806",
+    0x08: "APA102",
+    0x09: "APA105",
+    0x0A: "DMX512",
+    0x0B: "TM1914",
+    0x0C: "TM1913",
+    0x0D: "P9813",
+    0x0E: "INK1003",
+    0x0F: "P943S",
+    0x10: "P9411",
+    0x11: "P9413",
+    0x12: "TX1812",
+    0x13: "TX1813",
+    0x14: "GS8206",
+    0x15: "GS8208",
+    0x16: "SK9822",
     # 4 Color - RGBW
-    0x17: UNILEDChipType.TM1814,
-    0x18: UNILEDChipType.SK6812_RGBW,
-    0x19: UNILEDChipType.P9414,
-    0x1A: UNILEDChipType.P9412,
+    0x17: "TM1814",
+    0x18: "SK6812_RGBW",
+    0x19: "P9414",
+    0x1A: "P9412",
 }
 
 UNILED_CHIP_4COLOR: Final = [
@@ -88,25 +47,13 @@ UNILED_CHIP_4COLOR: Final = [
     0x1A,  # P9412
 ]
 
-
-class UNILEDChipOrder(StrEnum):
-    """LED Ordering Names"""
-
-    RGB = "RGB"
-    RBG = "RBG"
-    GRB = "GRB"
-    GBR = "GBR"
-    BRG = "BRG"
-    BGR = "BGR"
-
-
 UNILED_CHIP_ORDER_3COLOR: Final = {
-    0x00: UNILEDChipOrder.RGB,
-    0x01: UNILEDChipOrder.RBG,
-    0x02: UNILEDChipOrder.GRB,
-    0x03: UNILEDChipOrder.GBR,
-    0x04: UNILEDChipOrder.BRG,
-    0x05: UNILEDChipOrder.BGR,
+    0x00: "RGB",
+    0x01: "RBG",
+    0x02: "GRB",
+    0x03: "GBR",
+    0x04: "BRG",
+    0x05: "BGR",
 }
 
 UNILED_CHIP_ORDER_4COLOR: Final = {
@@ -129,6 +76,14 @@ UNILED_CHIP_ORDER_4COLOR: Final = {
     0x10: "BWRG",
     # 0x11: "",
 }
+
+
+@dataclass(frozen=True)
+class UNILEDModelType(IntEnum):
+    """Model Type"""
+
+    BULB = 0
+    STRIP = 1
 
 
 class UNILEDMode(StrEnum):
@@ -155,6 +110,7 @@ class UNILEDInput(StrEnum):
 class UNILEDEffectType(StrEnum):
     """Effect Mode/Type Names"""
 
+    DYNAMIC = "Dynamic"
     PATTERN = "Pattern"
     STATIC = "Static"
     SOUND = "Sound"
@@ -170,20 +126,30 @@ class UNILEDEffectDirection(StrEnum):
 class UNILEDEffects(StrEnum):
     """Effect/Pattern Names"""
 
-    SOLID = "Solid"
+    BACKGROUND_STARS = "Background Stars"
+    BACKGROUND_STARS_RED = "Red Background Stars"
+    BACKGROUND_STARS_GREEN = "Green Background Stars"
+    BACKGROUND_STARS_BLUE = "Blue Background Stars"
+    BACKGROUND_STARS_YELLOW = "Yellow Background Stars"
+    BACKGROUND_STARS_CYAN = "Cyan Background Stars"
+    BACKGROUND_STARS_PURPLE = "Purple Background Stars"
+    BACKGROUND_STARS_RED_WHITE = "Red/White Background Stars"
+    BACKGROUND_STARS_GREEN_WHITE = "Green/White Background Stars"
+    BACKGROUND_STARS_BLUE_WHITE = "Blue/White Background Stars"
+    BACKGROUND_STARS_YELLOW_WHITE = "Yellow/White Background Stars"
+    BACKGROUND_STARS_CYAN_WHITE = "Cyan/White Background Stars"
+    BACKGROUND_STARS_PURPLE_WHITE = "Purple/White Background Stars"
+    BACKGROUND_STARS_WHITE_WHITE = "White/White Background Stars"
 
-    RAINBOW = "Rainbow"
-    RAINBOW_METEOR = "Rainbow Metor"
-    RAINBOW_STARS = "Rainbow Stars"
-    RAINBOW_SPIN = "Rainbow Spin"
-
-    FIRE = "Fire"
-    FIRE_RED_YELLOW = "Red/Yellow Fire"
-    FIRE_RED_PURPLE = "Red/Purple Fire"
-    FIRE_GREEN_YELLOW = "Green/Yellow Fire"
-    FIRE_GREEN_CYAN = "Green/Cyan Fire"
-    FIRE_BLUE_PURPLE = "Blue/Purple Fire"
-    FIRE_BLUE_CYAN = "Blue/Cyan Fire"
+    BREATH = "Breath"
+    BREATH_RED = "Red Breath"
+    BREATH_GREEN = "Green Breath"
+    BREATH_BLUE = "Blue Breath"
+    BREATH_YELLOW = "Yellow Breath"
+    BREATH_CYAN = "Cyan Breath"
+    BREATH_PURPLE = "Purple Breath"
+    BREATH_WHITE = "White Breath"
+    BREATH_SEVEN_COLOR = "Seven Color Breath"
 
     COMET = "Comet"
     COMET_RED = "Red Comet"
@@ -194,14 +160,42 @@ class UNILEDEffects(StrEnum):
     COMET_PURPLE = "Purple Comet"
     COMET_WHITE = "White Comet"
 
-    METEOR = "Meteor"
-    METEOR_RED = "Red Meteor"
-    METEOR_GREEN = "Green Meteor"
-    METEOR_BLUE = "Blue Meteor"
-    METEOR_YELLOW = "Yellow Meteor"
-    METEOR_CYAN = "Cyan Meteor"
-    METEOR_PURPLE = "Purple Meteor"
-    METEOR_WHITE = "White Meteor"
+    COMET_SPIN = "Comet Spin"
+    COMET_SPIN_RED = "Red Comet Spin"
+    COMET_SPIN_GREEN = "Green Comet Spin"
+    COMET_SPIN_BLUE = "Blue Comet Spin"
+    COMET_SPIN_YELLOW = "Yellow Comet Spin"
+    COMET_SPIN_CYAN = "Cyan Comet Spin"
+    COMET_SPIN_PURPLE = "Purple Comet Spin"
+    COMET_SPIN_WHITE = "White Comet Spin"
+
+    CUSTOM = "Custom"
+
+    DOT_SPIN = "Dot Spin"
+    DOT_SPIN_RED = "Red Dot Spin"
+    DOT_SPIN_GREEN = "Green Dot Spin"
+    DOT_SPIN_BLUE = "Blue Dot Spin"
+    DOT_SPIN_YELLOW = "Yellow Dot Spin"
+    DOT_SPIN_CYAN = "Cyan Dot Spin"
+    DOT_SPIN_PURPLE = "Purple Dot Spin"
+    DOT_SPIN_WHITE = "White Dot Spin"
+
+    FADE = "Fade"
+
+    FIRE = "Fire"
+    FIRE_RED_YELLOW = "Red/Yellow Fire"
+    FIRE_RED_PURPLE = "Red/Purple Fire"
+    FIRE_GREEN_YELLOW = "Green/Yellow Fire"
+    FIRE_GREEN_CYAN = "Green/Cyan Fire"
+    FIRE_BLUE_PURPLE = "Blue/Purple Fire"
+    FIRE_BLUE_CYAN = "Blue/Cyan Fire"
+
+    FLOW = "Flow"
+    FLOW_FORWARD = "Flow Forward"
+    FLOW_BACKWARD = "Flow Backward"
+
+    GRADIENT = "Gradient"
+    GRADIENT_SEVEN_COLOR = "Seven Color Gradient"
 
     GRADUAL_SNAKE = "Gradual Snake"
     GRADUAL_SNAKE_RED_GREEN = "Red/Green Gradual Snake"
@@ -225,6 +219,91 @@ class UNILEDEffects(StrEnum):
     GRADUAL_SNAKE_CYAN_PURPLE = "Cyan/Purple Gradual Snake"
     GRADUAL_SNAKE_CYAN_WHITE = "Cyan/White Gradual Snake"
     GRADUAL_SNAKE_PURPLE_WHITE = "Purple/White Gradual Snake"
+
+    HEARTBEAT = "Heart Beat"
+    HEARTBEAT_SEVEN_COLOR = "Seven Color Heart Beat"
+
+    JUMP = "Jump"
+    JUMP_SEVEN_COLOR = "Seven Color Jump"
+
+    METEOR = "Meteor"
+    METEOR_RED = "Red Meteor"
+    METEOR_GREEN = "Green Meteor"
+    METEOR_BLUE = "Blue Meteor"
+    METEOR_YELLOW = "Yellow Meteor"
+    METEOR_CYAN = "Cyan Meteor"
+    METEOR_PURPLE = "Purple Meteor"
+    METEOR_WHITE = "White Meteor"
+
+    RAINBOW = "Rainbow"
+    RAINBOW_METEOR = "Rainbow Metor"
+    RAINBOW_STARS = "Rainbow Stars"
+    RAINBOW_SPIN = "Rainbow Spin"
+    RAINBOW_COMET = "Rainbow Comet"
+    RAINBOW_SEGMENT = "Rainbow Segment"
+    RAINBOW_WAVE = "Rainbow Wave"
+    RAINBOW_JUMP = "Rainbow Jump"
+
+    SEGMENT_SPIN = "Segment Spin"
+    SEGMENT_SPIN_RED = "Red Segment Spin"
+    SEGMENT_SPIN_GREEN = "Green Segment Spin"
+    SEGMENT_SPIN_BLUE = "Blue Segment Spin"
+    SEGMENT_SPIN_YELLOW = "Yellow Segment Spin"
+    SEGMENT_SPIN_CYAN = "Cyan Segment Spin"
+    SEGMENT_SPIN_PURPLE = "Purple Segment Spin"
+    SEGMENT_SPIN_WHITE = "White Segment Spin"
+
+    SNAKE = "Snake"
+    SNAKE_RED_BLUE_WHITE = "Red/Blue/White Snake"
+    SNAKE_GREEN_YELLOW_WHITE = "Green/Yellow/White Snake"
+    SNAKE_RED_GREEN_WHITE = "Red/Green/White Snake"
+    SNAKE_RED_YELLOW = "Red/Yellow Snake"
+    SNAKE_RED_WHITE = "Red/White Snake"
+    SNAKE_GREEN_WHITE = "Green/White Snake"
+
+    SOLID = "Solid"
+    SOLID_COLOR = "Solid Color"
+    SOLID_WHITE = "Solid White"
+
+    STACK = "Stack"
+    STACK_FULL_COLOR = "Full Color Stack"
+    STACK_RED_GREEN = "Red to Green Stack"
+    STACK_GREEN_BLUE = "Green to Blue Stack"
+    STACK_BLUE_YELLOW = "Blue to Yellow Stack"
+    STACK_YELLOW_CYAN = "Yellow to Cyan Stack"
+    STACK_CYAN_PURPLE = "Cyan to Purple Stack"
+    STACK_PURPLE_WHITE = "Purple to White Stack"
+
+    STACKING = "Stacking"
+    STACKING_RED = "Red Stacking"
+    STACKING_GREEN = "Green Stacking"
+    STACKING_BLUE = "Blue Stacking"
+    STACKING_YELLOW = "Yellow Stacking"
+    STACKING_CYAN = "Cyan Stacking"
+    STACKING_PRUPLE = "Purple Stacking"
+    STACKING_WHITE = "White Stacking"
+
+    STARS = "Stars"
+    STARS_TWINKLE = "Twinkle Stars"
+    STARS_RED = "Red Stars"
+    STARS_GREEN = "Green Stars"
+    STARS_BLUE = "Blue Stars"
+    STARS_YELLOW = "Yellow Stars"
+    STARS_CYAN = "Cyan Stars"
+    STARS_PURPLE = "Purple Stars"
+    STARS_WHITE = "White Stars"
+
+    STROBE = "Strobe"
+    STROBE_RED = "Red Strobe"
+    STROBE_GREEN = "Green Strobe"
+    STROBE_BLUE = "Blue Strobe"
+    STROBE_YELLOW = "Yellow Strobe"
+    STROBE_CYAN = "Cyan Strobe"
+    STROBE_PURPLE = "Purple Strobe"
+    STROBE_WHITE = "White Strobe"
+    STROBE_SEVEN_COLOR = "Seven Color Strobe"
+
+    STATIC = "Static"
 
     WAVE = "Wave"
     WAVE_RED = "Red Wave"
@@ -256,95 +335,6 @@ class UNILEDEffects(StrEnum):
     WAVE_CYAN_WHITE = "Cyan/White Wave"
     WAVE_PURPLE_WHITE = "Purple/White Wave"
 
-    STARS = "Stars"
-    STARS_TWINKLE = "Twinkle Stars"
-    STARS_RED = "Red Stars"
-    STARS_GREEN = "Green Stars"
-    STARS_BLUE = "Blue Stars"
-    STARS_YELLOW = "Yellow Stars"
-    STARS_CYAN = "Cyan Stars"
-    STARS_PURPLE = "Purple Stars"
-    STARS_WHITE = "White Stars"
-
-    BACKGROUND_STARS = "Background Stars"
-    BACKGROUND_STARS_RED = "Red Background Stars"
-    BACKGROUND_STARS_GREEN = "Green Background Stars"
-    BACKGROUND_STARS_BLUE = "Blue Background Stars"
-    BACKGROUND_STARS_YELLOW = "Yellow Background Stars"
-    BACKGROUND_STARS_CYAN = "Cyan Background Stars"
-    BACKGROUND_STARS_PURPLE = "Purple Background Stars"
-    BACKGROUND_STARS_RED_WHITE = "Red/White Background Stars"
-    BACKGROUND_STARS_GREEN_WHITE = "Green/White Background Stars"
-    BACKGROUND_STARS_BLUE_WHITE = "Blue/White Background Stars"
-    BACKGROUND_STARS_YELLOW_WHITE = "Yellow/White Background Stars"
-    BACKGROUND_STARS_CYAN_WHITE = "Cyan/White Background Stars"
-    BACKGROUND_STARS_PURPLE_WHITE = "Purple/White Background Stars"
-    BACKGROUND_STARS_WHITE_WHITE = "White/White Background Stars"
-
-    BREATH = "Breath"
-    BREATH_RED = "Red Breath"
-    BREATH_GREEN = "Green Breath"
-    BREATH_BLUE = "Blue Breath"
-    BREATH_YELLOW = "Yellow Breath"
-    BREATH_CYAN = "Cyan Breath"
-    BREATH_PRUPLE = "Purple Breath"
-    BREATH_WHITE = "White Breath"
-
-    STACKING = "Stacking"
-    STACKING_RED = "Red Stacking"
-    STACKING_GREEN = "Green Stacking"
-    STACKING_BLUE = "Blue Stacking"
-    STACKING_YELLOW = "Yellow Stacking"
-    STACKING_CYAN = "Cyan Stacking"
-    STACKING_PRUPLE = "Purple Stacking"
-    STACKING_WHITE = "White Stacking"
-
-    STACK = "Stack"
-    STACK_FULL_COLOR = "Full Color Stack"
-    STACK_RED_GREEN = "Red to Green Stack"
-    STACK_GREEN_BLUE = "Green to Blue Stack"
-    STACK_BLUE_YELLOW = "Blue to Yellow Stack"
-    STACK_YELLOW_CYAN = "Yellow to Cyan Stack"
-    STACK_CYAN_PURPLE = "Cyan to Purple Stack"
-    STACK_PURPLE_WHITE = "Purple to White Stack"
-
-    SNAKE = "Snake"
-    SNAKE_RED_BLUE_WHITE = "Red/Blue/White Snake"
-    SNAKE_GREEN_YELLOW_WHITE = "Green/Yellow/White Snake"
-    SNAKE_RED_GREEN_WHITE = "Red/Green/White Snake"
-    SNAKE_RED_YELLOW = "Red/Yellow Snake"
-    SNAKE_RED_WHITE = "Red/White Snake"
-    SNAKE_GREEN_WHITE = "Green/White Snake"
-
-    COMET_SPIN = "Comet Spin"
-    COMET_SPIN_RED = "Red Comet Spin"
-    COMET_SPIN_GREEN = "Green Comet Spin"
-    COMET_SPIN_BLUE = "Blue Comet Spin"
-    COMET_SPIN_YELLOW = "Yellow Comet Spin"
-    COMET_SPIN_CYAN = "Cyan Comet Spin"
-    COMET_SPIN_PURPLE = "Purple Comet Spin"
-    COMET_SPIN_WHITE = "White Comet Spin"
-
-    DOT_SPIN = "Dot Spin"
-    DOT_SPIN_RED = "Red Dot Spin"
-    DOT_SPIN_GREEN = "Green Dot Spin"
-    DOT_SPIN_BLUE = "Blue Dot Spin"
-    DOT_SPIN_YELLOW = "Yellow Dot Spin"
-    DOT_SPIN_CYAN = "Cyan Dot Spin"
-    DOT_SPIN_PURPLE = "Purple Dot Spin"
-    DOT_SPIN_WHITE = "White Dot Spin"
-
-    SEGMENT_SPIN = "Segment Spin"
-    SEGMENT_SPIN_RED = "Red Segment Spin"
-    SEGMENT_SPIN_GREEN = "Green Segment Spin"
-    SEGMENT_SPIN_BLUE = "Blue Segment Spin"
-    SEGMENT_SPIN_YELLOW = "Yellow Segment Spin"
-    SEGMENT_SPIN_CYAN = "Cyan Segment Spin"
-    SEGMENT_SPIN_PURPLE = "Purple Segment Spin"
-    SEGMENT_SPIN_WHITE = "White Segment Spin"
-
-    GRADIENT = "Gradient"
-
     # Sound Activated
     SOUND_RHYTHM_SPECTRUM_FULL = "Sound - Full Color Rhythm Spectrum"
     SOUND_RHYTHM_SPECTRUM_SINGLE = "Sound - Single Color Rhythm Spectrum"
@@ -364,3 +354,7 @@ class UNILEDEffects(StrEnum):
     SOUND_CHRISTMAS = "Sound - Christmas"
     SOUND_HEARTBEAT = "Sound - Heartbeat"
     SOUND_PARTY = "Sound - Party"
+
+    SOUND_MUSIC_BREATH = "Sound - Music Breath"
+    SOUND_MUSIC_JUMP = "Sound - Music Jump"
+    SOUND_MUSIC_MONO_BREATH = "Sound - Monochrome Music Breath"

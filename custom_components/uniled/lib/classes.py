@@ -10,6 +10,7 @@ from .artifacts import (
     UNILED_CHIP_TYPES,
     UNILEDModelType,
     UNILEDEffectType,
+    UNKNOWN,
 )
 from .states import UNILEDStatus
 
@@ -32,7 +33,18 @@ class UNILEDModel:
     manufacturer_id: int
     channels: int
     needs_on: bool
+    needs_type_reload: bool
+    effects_directional: bool
+    effects_pausable: bool
+    effects_loopable: bool
     sends_status_on_commands: bool
+
+    ##
+    ## Firmware Version
+    ##
+    def firmware(self, channel: UNILEDChannel) -> str:
+        """Returns the firmware version."""
+        return None
 
     ##
     ## Protocol Wrapper
@@ -73,22 +85,40 @@ class UNILEDModel:
         """The bytes to send for a mode change."""
         return None
 
-    def construct_level_change(
-        self, channel: UNILEDChannel, level: int
-    ) -> list[bytearray] | None:
-        """The bytes to send for a color level change."""
-        return None
-
     def construct_white_change(
         self, channel: UNILEDChannel, level: int
     ) -> list[bytearray] | None:
         """The bytes to send for a white level change."""
         return None
 
+    def construct_cct_change(
+        self, channel: UNILEDChannel, kelvin: int, cool: int, warm: int, level: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a white temperature change."""
+        return self.construct_rgbww_change(channel, 0, 0, 0, cool, warm)
+
+    def construct_level_change(
+        self, channel: UNILEDChannel, level: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a color level change."""
+        return None
+
     def construct_color_change(
         self, channel: UNILEDChannel, red: int, green: int, blue: int, white: int | None
     ) -> list[bytearray] | None:
         """The bytes to send for a color change."""
+        return None
+
+    def construct_rgbww_change(
+        self,
+        channel: UNILEDChannel,
+        red: int,
+        green: int,
+        blue: int,
+        cool: int,
+        warm: int,
+    ) -> list[bytearray] | None:
+        """The bytes to send for an RGBWW color change."""
         return None
 
     def construct_color_two_change(
@@ -161,40 +191,82 @@ class UNILEDModel:
         return None
 
     ##
-    ## Channel Informational
+    ## Channel Informational - Modes
     ##
+    def dictof_channel_modes(self, channel: UNILEDChannel) -> dict | None:
+        """Channel mode dictionary"""
+        return None
+
     def listof_channel_modes(self, channel: UNILEDChannel) -> list | None:
         """List of available channel modes"""
+        modes = self.dictof_channel_modes(channel)
+        if modes is not None and channel.status.mode is not None:
+            return list(modes.values())
         return None
 
     def codeof_channel_mode(
         self, channel: UNILEDChannel, name: str | None = None
     ) -> int | None:
         """Code of named mode"""
-        return None
+        if name is not None:
+            modes = self.dictof_channel_modes(channel)
+            if modes is not None:
+                return [k for k in modes.items() if k[1] == name][0][0]
+        return channel.status.mode
 
     def nameof_channel_mode(
         self, channel: UNILEDChannel, mode: int | None = None
     ) -> str | None:
         """Name a mode."""
+        if mode is None:
+            mode = channel.status.mode
+        modes = self.dictof_channel_modes(channel)
+        if modes is not None and mode is not None:
+            if mode in modes:
+                return modes[mode]
+            return f"{UNKNOWN} ({mode})"
+        return None
+
+    ##
+    ## Channel Informational - Effects
+    ##
+    def dictof_channel_effects(self, channel: UNILEDChannel) -> dict | None:
+        """Channel effects dictionary"""
         return None
 
     def listof_channel_effects(self, channel: UNILEDChannel) -> list | None:
         """List of available channel effects"""
+        effects = self.dictof_channel_effects(channel)
+        if effects is not None and channel.status.effect is not None:
+            return list(effects.values())
         return None
 
     def codeof_channel_effect(
         self, channel: UNILEDChannel, name: str | None = None
     ) -> int | None:
         """Code of named channel effect"""
-        return None
+        if name is not None:
+            effects = self.dictof_channel_effects(channel)
+            if effects is not None:
+                return [k for k in effects.items() if k[1] == name][0][0]
+        return channel.status.effect
 
     def nameof_channel_effect(
         self, channel: UNILEDChannel, effect: int | None = None
     ) -> str | None:
         """Name an effect."""
+        if effect is None:
+            effect = channel.status.effect
+        effects = self.dictof_channel_effects(channel)
+        if effects is not None and effect is not None:
+            if effect in effects:
+                return effects[effect]
+            return f"{UNKNOWN} ({effect})"
         return None
 
+    ##
+    ## Channel Informational - Effect Types
+    ##
     def codeof_channel_effect_type(
         self, channel: UNILEDChannel, effect: int | None = None
     ) -> int | None:
@@ -207,6 +279,9 @@ class UNILEDModel:
         """Name an effects type."""
         return None
 
+    ##
+    ## Channel Informational - Effect Ranges
+    ##
     def rangeof_channel_effect_speed(
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
@@ -219,28 +294,57 @@ class UNILEDModel:
         """Range of effect length (min,max,step)."""
         return None
 
-    def nameof_channel_input_type(
-        self, channel: UNILEDChannel, audio_input: int | None = None
-    ) -> str | None:
-        """Name a channel input type."""
-        return None
-
-    def codeof_channel_input_type(
-        self, channel: UNILEDChannel, name: str | None = None
-    ) -> int | None:
-        """Code of named input type"""
-        return None
-
-    def listof_channel_inputs(self, channel: UNILEDChannel) -> list | None:
-        """List of available channel inputs."""
-        return None
-
+    ##
+    ## Channel Informational - Input Gain
+    ##
     def rangeof_channel_input_gain(
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
         """Range of input gain (min,max,step)."""
         return None
 
+    ##
+    ## Channel Informational - Input Type
+    ##
+    def dictof_channel_inputs(self, channel: UNILEDChannel) -> dict | None:
+        """Inputs type dictionary"""
+        return None
+
+    def listof_channel_inputs(self, channel: UNILEDChannel) -> list | None:
+        """List of available channel inputs."""
+        if channel.status.input is not None:
+            inputs = self.dictof_channel_inputs(channel)
+            if inputs is not None:
+                return list(inputs.values())
+        return None
+
+    def codeof_channel_input_type(
+        self, channel: UNILEDChannel, name: str | None = None
+    ) -> int | None:
+        """Code of named input type"""
+        if name is None:
+            return None
+        inputs = self.dictof_channel_inputs(channel)
+        if inputs is not None:
+            return [k for k in inputs.items() if k[1] == name][0][0]
+        return channel.status.input
+
+    def nameof_channel_input_type(
+        self, channel: UNILEDChannel, audio_input: int | None = None
+    ) -> str | None:
+        """Name a channel input type."""
+        if audio_input is None:
+            audio_input = channel.status.input
+        inputs = self.dictof_channel_inputs(channel)
+        if inputs is not None and audio_input is not None:
+            if audio_input in inputs:
+                return inputs[audio_input]
+            return f"{UNKNOWN} ({audio_input})"
+        return None
+
+    ##
+    ## Channel Informational - Segments/Pixel Ranges
+    ##
     def rangeof_channel_segment_count(
         self, channel: UNILEDChannel
     ) -> tuple(int, int, int) | None:
@@ -259,15 +363,19 @@ class UNILEDModel:
         """Range of total LEDs (min,max,step)."""
         return None
 
-    def nameof_channel_chip_order(
-        self, channel: UNILEDChannel, order: int | None = None
-    ) -> str | None:
-        """Name a chip order."""
+    ##
+    ## Channel Informational - Chip Ordering
+    ##
+    def dictof_channel_chip_orders(self, channel: UNILEDChannel) -> dict | None:
+        """Chip order dictionary"""
+        return UNILED_CHIP_ORDER_3COLOR
+
+    def listof_channel_chip_orders(self, channel: UNILEDChannel) -> list | None:
+        """List of available chip orders"""
         if channel.status.chip_order is not None:
-            if order is None:
-                order = channel.status.chip_order
-            if order in UNILED_CHIP_ORDER_3COLOR:
-                return UNILED_CHIP_ORDER_3COLOR[order]
+            orders = self.dictof_channel_chip_orders(channel)
+            if orders is not None:
+                return list(orders.values())
         return None
 
     def codeof_channel_chip_order(
@@ -276,23 +384,38 @@ class UNILEDModel:
         """Code of named chip order"""
         if name is None:
             return None
-        return [k for k in UNILED_CHIP_ORDER_3COLOR.items() if k[1] == name][0][0]
+        orders = self.dictof_channel_chip_orders(channel)
+        if orders is not None:
+            return [k for k in orders.items() if k[1] == name][0][0]
+        return channel.status.chip_order
 
-    def listof_channel_chip_orders(self, channel: UNILEDChannel) -> list | None:
-        """List of available chip orders"""
+    def nameof_channel_chip_order(
+        self, channel: UNILEDChannel, order: int | None = None
+    ) -> str | None:
+        """Name a chip order."""
         if channel.status.chip_order is not None:
-            return list(UNILED_CHIP_ORDER_3COLOR.values())
+            if order is None:
+                order = channel.status.chip_order
+            orders = self.dictof_channel_chip_orders(channel)
+            if orders is not None:
+                if order in orders:
+                    return orders[order]
+            return f"{UNKNOWN} ({order})"
         return None
 
-    def nameof_channel_chip_type(
-        self, channel: UNILEDChannel, chip: int | None = None
-    ) -> str | None:
-        """Name a chip type."""
+    ##
+    ## Channel Informational - Chip Types
+    ##
+    def dictof_channel_chip_types(self, channel: UNILEDChannel) -> dict | None:
+        """Chip type dictionary"""
+        return UNILED_CHIP_TYPES
+
+    def listof_channel_chip_types(self, channel: UNILEDChannel) -> list | None:
+        """List of available chip types"""
         if channel.status.chip_type is not None:
-            if chip is None:
-                chip = channel.status.chip_type
-            if chip in UNILED_CHIP_TYPES:
-                return UNILED_CHIP_TYPES[chip]
+            types = self.dictof_channel_chip_types(channel)
+            if types is not None:
+                return list(types.values())
         return None
 
     def codeof_channel_chip_type(
@@ -301,12 +424,23 @@ class UNILEDModel:
         """Code of named chip type"""
         if name is None:
             return None
-        return [k for k in UNILED_CHIP_TYPES.items() if k[1] == name][0][0]
+        types = self.dictof_channel_chip_types(channel)
+        if types is not None:
+            return [k for k in types.items() if k[1] == name][0][0]
+        return channel.status.chip_type
 
-    def listof_channel_chip_types(self, channel: UNILEDChannel) -> list | None:
-        """List of available chip types"""
+    def nameof_channel_chip_type(
+        self, channel: UNILEDChannel, chip: int | None = None
+    ) -> str | None:
+        """Name a chip type."""
         if channel.status.chip_type is not None:
-            return list(UNILED_CHIP_TYPES.values())
+            if chip is None:
+                chip = channel.status.chip_type
+            types = self.dictof_channel_chip_types(channel)
+            if types is not None:
+                if chip in types:
+                    return types[chip]
+            return f"{UNKNOWN} ({chip})"
         return None
 
 
@@ -364,6 +498,30 @@ class UNILEDChannel:
         return self.device.model.needs_on
 
     @property
+    def needs_type_reload(self) -> bool:
+        """Returns if On state needed to change settings"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.needs_type_reload
+
+    @property
+    def effects_directional(self) -> bool:
+        """Returns if directional effects supported"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.effects_directional
+
+    @property
+    def effects_pausable(self) -> bool:
+        """Returns if pausable effects supported"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.effects_pausable
+
+    @property
+    def effects_loopable(self) -> bool:
+        """Returns if pausable effects supported"""
+        assert self.device.model is not None  # nosec
+        return self.device.model.effects_loopable
+
+    @property
     def is_on(self) -> bool | None:
         """Returns current power status"""
         return self._status.power
@@ -379,6 +537,26 @@ class UNILEDChannel:
         """List of modes"""
         assert self.device.model is not None  # nosec
         return self.device.model.listof_channel_modes(self)
+
+    @property
+    def min_kelvin(self) -> int | None:
+        """Min kelvin supported by light"""
+        return self._status.extra.get("min_kelvin", 1900)
+
+    @property
+    def max_kelvin(self) -> int | None:
+        """Max kelvin supported by light"""
+        return self._status.extra.get("max_kelvin", 6600)
+
+    @property
+    def cool(self) -> int | None:
+        """Returns current cool white level 0-255."""
+        return self._status.cool
+
+    @property
+    def warm(self) -> int | None:
+        """Returns current warm white level 0-255."""
+        return self._status.warm
 
     @property
     def white(self) -> int | None:
@@ -407,11 +585,21 @@ class UNILEDChannel:
 
     @property
     def rgbw(self) -> tuple[int, int, int, int] | None:
-        """Return the unscaled RGB."""
+        """Return the unscaled RGBW"""
         red, green, blue = (0, 0, 0)
         if self.rgb is not None:
             red, green, blue = self.rgb
         return (red, green, blue, 0xFF if self.white is None else self.white)
+
+    @property
+    def rgbww(self) -> tuple[int, int, int, int, int] | None:
+        """Return the unscaled RGBWW"""
+        red, green, blue = (0, 0, 0)
+        if self.rgb is not None:
+            red, green, blue = self.rgb
+        cool = self.cool if self.cool is not None else 0x00
+        warm = self.warm if self.warm is not None else 0xFF
+        return (red, green, blue, cool, warm)
 
     @property
     def rgb2(self) -> tuple[int, int, int] | None:
@@ -453,14 +641,7 @@ class UNILEDChannel:
         """Test if effec type is sound activated"""
         if self._status.fxtype is None:
             return False
-        return self._status.fxtype == UNILEDEffectType.STATIC
-
-    @property
-    def effect_type_is_pattern(self) -> bool:
-        """Test if effec type is sound activated"""
-        if self._status.fxtype is None:
-            return False
-        return self._status.fxtype == UNILEDEffectType.PATTERN
+        return self.effect_type.startswith(UNILEDEffectType.STATIC)
 
     @property
     def effect_type_is_sound(self) -> bool:
@@ -468,6 +649,13 @@ class UNILEDChannel:
         if self._status.fxtype is None:
             return False
         return self.effect_type.startswith(UNILEDEffectType.SOUND)
+
+    @property
+    def effect_type_is_pattern(self) -> bool:
+        """Test if effec type is sound activated"""
+        if self._status.fxtype is None:
+            return False
+        return not self.effect_type_is_sound and not self.effect_type_is_static
 
     @property
     def effect_speed(self) -> int | None:
@@ -616,11 +804,31 @@ class UNILEDChannel:
         _LOGGER.debug("%s: Set White Level: %s", self.name, level)
         if self.white is None:
             return
-        if not 0 <= level <= 255:
-            raise ValueError("Value {} is outside the valid range of 0-255")
+        if level is None or not 0 <= level <= 255:
+            raise ValueError("White value {} is outside the valid range of 0-255")
         command = self.device.model.construct_white_change(self, level)
         if await self.device.send_command(command):
             self._status = replace(self._status, level=level)
+            self._fire_callbacks()
+
+    async def async_set_cct(
+        self, kelvin: int, cool: int, warm: int, level: int
+    ) -> None:
+        """Set channel CCT levels."""
+        _LOGGER.debug(
+            "%s: Set CCT: %sk, %s/%s/%s", self.name, kelvin, cool, warm, level
+        )
+        if not 0 <= cool <= 255:
+            raise ValueError("Cool value {} is outside the valid range of 0-255")
+        if not 0 <= warm <= 255:
+            raise ValueError("Warm value {} is outside the valid range of 0-255")
+        if not 0 <= level <= 255:
+            raise ValueError("Level value {} is outside the valid range of 0-255")
+        command = self.device.model.construct_cct_change(
+            self, kelvin, cool, warm, level
+        )
+        if await self.device.send_command(command):
+            self._status = replace(self._status, cool=cool, warm=warm, white=level)
             self._fire_callbacks()
 
     async def async_set_level(self, level: int) -> None:
@@ -629,7 +837,7 @@ class UNILEDChannel:
         if self.level is None:
             return
         if not 0 <= level <= 255:
-            raise ValueError("Value {} is outside the valid range of 0-255")
+            raise ValueError("Level value {} is outside the valid range of 0-255")
         command = self.device.model.construct_level_change(self, level)
         if await self.device.send_command(command):
             self._status = replace(self._status, level=level)
@@ -642,7 +850,7 @@ class UNILEDChannel:
             return
         for value in rgb:
             if not 0 <= value <= 255:
-                raise ValueError("Value {} is outside the valid range of 0-255")
+                raise ValueError("RGB value {} is outside the valid range of 0-255")
         command = self.device.model.construct_color_change(self, *rgb, None)
         if await self.device.send_command(command):
             self._status = replace(self._status, rgb=rgb)
@@ -655,7 +863,7 @@ class UNILEDChannel:
             return
         for value in rgbw:
             if not 0 <= value <= 255:
-                raise ValueError("Value {} is outside the valid range of 0-255")
+                raise ValueError("RGBW value {} is outside the valid range of 0-255")
 
         red, green, blue, white = rgbw
         command = self.device.model.construct_color_change(
@@ -666,6 +874,26 @@ class UNILEDChannel:
             self._status = replace(self._status, rgb=(red, green, blue), white=white)
             self._fire_callbacks()
 
+    async def async_set_rgbww(self, rgbww: tuple[int, int, int, int, int]) -> None:
+        """Set channel RGBWW levels."""
+        _LOGGER.debug("%s: Set RGBWW: %s, Current: %s", self.name, rgbww, self.rgbww)
+        if self.rgbww is None:
+            return
+        for value in rgbww:
+            if not 0 <= value <= 255:
+                raise ValueError("RGBWW value {} is outside the valid range of 0-255")
+
+        red, green, blue, cool, warm = rgbww
+        command = self.device.model.construct_rgbww_change(
+            self, red, green, blue, cool, warm
+        )
+
+        if await self.device.send_command(command):
+            self._status = replace(
+                self._status, rgb=(red, green, blue), cool=cool, warm=warm
+            )
+            self._fire_callbacks()
+
     async def async_set_rgb2(self, rgb: tuple[int, int, int]) -> None:
         """Set channel second RGB levels."""
         _LOGGER.debug("%s: Set RGB2: %s, Current: %s", self.name, rgb, self.rgb2)
@@ -673,7 +901,7 @@ class UNILEDChannel:
             return
         for value in rgb:
             if not 0 <= value <= 255:
-                raise ValueError("Value {} is outside the valid range of 0-255")
+                raise ValueError("RGB 2 value {} is outside the valid range of 0-255")
         command = self.device.model.construct_color_two_change(self, *rgb, None)
         if await self.device.send_command(command):
             self._status = replace(self._status, rgb2=rgb)
@@ -694,13 +922,14 @@ class UNILEDChannel:
         """Set effect by id code."""
         if self.device.model.nameof_channel_effect(self, code) is not None:
             if code != self.effect:
-                await self.device.send_command(
-                    self.device.model.construct_effect_change(self, code)
-                )
                 self._status = replace(
                     self._status,
-                    effect=code,
+                    fxlast=self._status.effect,
                     fxtype=self.device.model.codeof_channel_effect_type(self, code),
+                    effect=code,
+                )
+                await self.device.send_command(
+                    self.device.model.construct_effect_change(self, code)
                 )
                 self._fire_callbacks()
             return
@@ -714,7 +943,7 @@ class UNILEDChannel:
                 return
             if not rangeof[0] <= value <= rangeof[1]:
                 raise ValueError(
-                    "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                    "FX speed value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
                 )
 
             if not await self.device.send_command(
@@ -732,7 +961,7 @@ class UNILEDChannel:
                 return
             if not rangeof[0] <= value <= rangeof[1]:
                 raise ValueError(
-                    "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                    "FX length value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
                 )
 
             if not await self.device.send_command(
@@ -776,7 +1005,7 @@ class UNILEDChannel:
             return
         if not rangeof[0] <= value <= rangeof[1]:
             raise ValueError(
-                "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                "Input gain value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
             )
 
         if not await self.device.send_command(
@@ -826,7 +1055,7 @@ class UNILEDChannel:
                 return
             if not rangeof[0] <= value <= rangeof[1]:
                 raise ValueError(
-                    "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                    "Segment count {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
                 )
 
             if not await self.device.send_command(
@@ -844,7 +1073,7 @@ class UNILEDChannel:
                 return
             if not rangeof[0] <= value <= rangeof[1]:
                 raise ValueError(
-                    "Value {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
+                    "Segment length {} is outside the valid range of {rangeof[0]}-{rangeof[1]}"
                 )
 
             if not await self.device.send_command(
@@ -856,7 +1085,7 @@ class UNILEDChannel:
 
     def set_status(self, status: UNILEDStatus, force_update: bool = True) -> None:
         """Set status of channel"""
-        _LOGGER.debug("%s: Set Status: %s", self.name, status)
+        _LOGGER.debug("%s: Set Status (force: %s): %s", self.name, force_update, status)
         self._status = status
         if force_update:
             self._fire_callbacks()
@@ -939,6 +1168,12 @@ class UNILEDDevice:
         """Return the device description."""
         assert self._model is not None  # nosec
         return self._model.description
+
+    @property
+    def firmware(self) -> str:
+        """Return the device firmware version."""
+        assert self._model is not None  # nosec
+        return self._model.firmware(self.master)
 
     @property
     def outputs(self) -> int:

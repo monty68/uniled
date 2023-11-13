@@ -26,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for BTF Bluetooth Controller."""
+    """Handle a config flow for Bluetooth Controller."""
 
     VERSION = 1
 

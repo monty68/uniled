@@ -56,7 +56,7 @@ class UNILEDEntity(CoordinatorEntity[UNILEDUpdateCoordinator]):
         if key is not None:
             self._attr_unique_id = f"_{self._attr_unique_id}_{key}"
         self._attr_device_info = _async_device_info(self._device, coordinator.entry)
-
+   
     @property
     def available(self) -> bool:
         if not self.channel.is_available:
@@ -112,7 +112,7 @@ def _async_device_info(
         ATTR_MODEL: device.model_name,
         ATTR_NAME: device.name,  # entry.data.get(CONF_NAME, entry.title),
         ATTR_HW_VERSION: device.description,
-        # ATTR_SW_VERSION: hex(device.version),
+        ATTR_SW_VERSION: device.firmware,
     }
 
     if device.transport == UNILED_TRANSPORT_BLE:

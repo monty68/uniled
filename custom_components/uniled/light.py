@@ -6,10 +6,13 @@ from typing import Any
 
 from homeassistant.components.light import (
     LIGHT_TURN_ON_SCHEMA,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_COLOR_TEMP,
     ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
     ATTR_RGBW_COLOR,
+    ATTR_RGBWW_COLOR,
     ATTR_WHITE,
     LightEntity,
     LightEntityFeature,
@@ -21,6 +24,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers import entity_platform
+from homeassistant.util.color import (
+    color_temperature_to_rgbww,
+    rgbww_to_color_temperature,
+    color_temperature_kelvin_to_mired,
+    color_temperature_mired_to_kelvin,
+)
+
 import homeassistant.helpers.config_validation as cv
 
 from .coordinator import UNILEDUpdateCoordinator
@@ -32,6 +42,8 @@ from .const import (
     ATTR_POWER,
     ATTR_MODE,
     ATTR_RGB2_COLOR,
+    ATTR_EFFECT_LOOP,
+    ATTR_EFFECT_PLAY,
     ATTR_EFFECT_NUMBER,
     ATTR_EFFECT_TYPE,
     ATTR_EFFECT_SPEED,
@@ -54,7 +66,10 @@ UNILED_EFFECT_DIRECTIONS = {UNILED_EFFECT_BACKWARDS, UNILED_EFFECT_FORWARDS}
 UNILED_SERVICE_SET_STATE = "set_state"
 UNILED_SET_STATE_SCHEMA = {
     **LIGHT_TURN_ON_SCHEMA,
+    ATTR_MODE: vol.All(vol.Coerce(int), vol.Clamp(min=1, max=255)),
     ATTR_RGB2_COLOR: vol.All(vol.Coerce(tuple), vol.ExactSequence((cv.byte,) * 3)),
+    ATTR_EFFECT_LOOP: cv.boolean,
+    ATTR_EFFECT_PLAY: cv.boolean,
     ATTR_EFFECT_SPEED: vol.All(vol.Coerce(int), vol.Clamp(min=1, max=255)),
     ATTR_EFFECT_LENGTH: vol.All(vol.Coerce(int), vol.Clamp(min=1, max=255)),
     ATTR_EFFECT_DIRECTION: vol.All(vol.Coerce(str), vol.In(UNILED_EFFECT_DIRECTIONS)),
@@ -62,6 +77,7 @@ UNILED_SET_STATE_SCHEMA = {
     ATTR_POWER: cv.boolean,
 }
 
+PARALLEL_UPDATES = 1
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -116,7 +132,15 @@ class UNILEDLight(
         """Initialize a UniLED light."""
         super().__init__(coordinator, channel_id, "Light", "strip")
         self._attr_icon = self.icon
+        self._attr_min_mireds = color_temperature_kelvin_to_mired(self.channel.max_kelvin)
+        self._attr_max_mireds = color_temperature_kelvin_to_mired(self.channel.min_kelvin)
         self._async_update_attrs()
+
+    @property
+    def available(self) -> bool:
+        if self.channel.status.power is None:
+            return False
+        return super().available
 
     @property
     def icon(self) -> str:
@@ -128,6 +152,21 @@ class UNILEDLight(
     def is_on(self) -> bool:
         """Return the state of the light."""
         return self.channel.is_on
+
+    @property
+    def color_temp(self) -> int:
+        """Return the kelvin value of this light in mired."""
+        kelvin, level = rgbww_to_color_temperature(
+            (0, 0, 0, self.channel.cool, self.channel.warm),
+            self.channel.min_kelvin,
+            self.channel.max_kelvin
+        )
+        return color_temperature_kelvin_to_mired(kelvin)
+
+    @property
+    def white(self) -> int | None:
+        """Return the white level of this light between 1..255."""
+        return self.channel.white
 
     @property
     def brightness(self) -> int | None:
@@ -143,6 +182,11 @@ class UNILEDLight(
     def rgbw_color(self) -> tuple[int, int, int, int] | None:
         """Return the color value."""
         return self.channel.rgbw
+
+    @property
+    def rgbww_color(self) -> tuple[int, int, int, int, int]:
+        """Return the rgbww aka rgbcw color value."""
+        return self.channel.rgbww
 
     @property
     def effect(self) -> str | None:
@@ -167,6 +211,12 @@ class UNILEDLight(
 
             if self.channel.effect_type is not None:
                 extra[ATTR_EFFECT_TYPE] = self.channel.effect_type
+
+            if self.channel.status.fxloop is not None:
+                extra[ATTR_EFFECT_LOOP] = self.channel.status.fxloop
+
+            if self.channel.status.fxplay is not None:
+                extra[ATTR_EFFECT_PLAY] = self.channel.status.fxplay
 
             if not self.channel.effect_type_is_static:
                 if (rangeof := self.channel.effect_speed_range) is not None:
@@ -195,10 +245,18 @@ class UNILEDLight(
             self._attr_supported_color_modes = {ColorMode.RGB}
             self._attr_color_mode = ColorMode.RGB
             self._attr_rgb_color = self.channel.rgb  # rgb_unscaled
-            if self.channel.white is not None:
+
+            if self.channel.white is not None and self.channel.warm is not None:
+                self._attr_supported_color_modes = {ColorMode.RGBWW}
+                self._attr_color_mode = ColorMode.RGBWW
+                self._attr_rgbww_color = self.channel.rgbww
+            elif self.channel.white is not None:
                 self._attr_supported_color_modes = {ColorMode.RGBW}
                 self._attr_color_mode = ColorMode.RGBW
                 self._attr_rgbw_color = self.channel.rgbw
+
+        elif self.channel.white is not None and self.channel.warm is not None:
+            self._attr_supported_color_modes = {ColorMode.COLOR_TEMP}
         elif self.channel.level is not None:
             self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
         else:
@@ -236,6 +294,13 @@ class UNILEDLight(
                     if power or (kwargs and self.channel.needs_on):
                         await self.channel.async_turn_on()
 
+            # Must set mode before we set any effects as some devices use
+            # the same effect numbering for different effects
+            #
+            if ATTR_MODE in kwargs:
+                mode = kwargs.get(ATTR_MODE, self.channel.status.mode)
+                # TODO!
+
             # Must set effect before we set any colors as some devices use
             # different commands depending on what effect is in use!
             #
@@ -243,14 +308,24 @@ class UNILEDLight(
                 if effect := kwargs.get(ATTR_EFFECT, self.effect):
                     await self.channel.async_set_effect(effect)
 
+            if color_temp_mired := kwargs.get(ATTR_COLOR_TEMP):
+                kelvin = color_temperature_mired_to_kelvin(color_temp_mired)
+                level = self.channel.white
+                _, _, _, cold, warm = color_temperature_to_rgbww(
+                     kelvin, level, self.channel.min_kelvin, self.channel.max_kelvin
+                )
+                await self.channel.async_set_cct(kelvin, cold, warm, level)
+
+            if ATTR_WHITE in kwargs:
+                await self.channel.async_set_white(kwargs[ATTR_WHITE])
             if ATTR_RGB_COLOR in kwargs:
                 await self.channel.async_set_rgb(kwargs[ATTR_RGB_COLOR])
             if ATTR_RGBW_COLOR in kwargs:
                 await self.channel.async_set_rgbw(kwargs[ATTR_RGBW_COLOR])
+            if ATTR_RGBWW_COLOR in kwargs:
+                await self.channel.async_set_rgbww(kwargs[ATTR_RGBWW_COLOR])
             if ATTR_BRIGHTNESS in kwargs:
                 await self.channel.async_set_level(kwargs[ATTR_BRIGHTNESS])
-            if ATTR_WHITE in kwargs:
-                await self.channel.async_set_white(kwargs[ATTR_WHITE])
 
             # Some extra settings available through service calls
             #

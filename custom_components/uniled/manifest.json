@@ -3,12 +3,16 @@
   "name": "Universal Light Controller",
   "bluetooth": [
     { "manufacturer_id": 20563 },
-    { "local_name": "sp107e" },
-    { "local_name": "sp110e" },
-    { "local_name": "sp601e" },
-    { "local_name": "sp611e" },
-    { "local_name": "sp617e" },
-    { "local_name": "sp620e" }
+    { "local_name": "SP107E" },
+    { "local_name": "SP110E" },
+    { "local_name": "SP601E" },
+    { "local_name": "SP611E" },
+    { "local_name": "SP613E" },
+    { "local_name": "SP614E" },
+    { "local_name": "SP617E" },
+    { "local_name": "SP620E" },
+    { "local_name": "SP630E" },
+    { "local_name": "SP648E" }
   ],
   "codeowners": ["@monty68"],
   "config_flow": true,
@@ -18,5 +22,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/monty68/uniled/issues",
   "requirements": [],
-  "version": "1.0.4"
+  "version": "2.0.0"
 }

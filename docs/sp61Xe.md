@@ -6,13 +6,17 @@ The **SP61xE** are a range of small and cheap BLE controllers for addressable LE
 
 ## SP611E LED Controller
 
-The SP611E supports 3 color RGB chipsets: WS2811, WS2812B, WS2813, WS2815, LC8808B, GS8208, SK6812, SM16703 and UCS1903.
+The SP611E supports 3 color (RGB) chipsets: WS2811, WS2812B, WS2813, WS2815, LC8808B, GS8208, SK6812, SM16703 and UCS1903.
 
 ## SP617E LED Controller
 
-The SP617E supports 4 color RGBW chipsets: SK6812, SM16704, UCS2904, WS2814 and TM1824
+The SP617E supports 4 color (RGBW) chipsets: SK6812, SM16704, UCS2904, WS2814 and TM1824
 
-## BLE configuration
+## SP613E and SP614E LED Controller
+
+The SP613E supports 3 color (RGB) PWM strips and the SP614E supports 4 color (RGBW) PWM strips
+
+## SP611E and SP617E BLE configuration
 
 The service can be found with UUID `ffe0`. Under this is (at least) the , `0000ffe1-0000-1000-8000-00805f9b34fb` 
 characteristic used to send commands and receive any responses.

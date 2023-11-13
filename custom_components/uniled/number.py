@@ -58,6 +58,7 @@ def async_update_channels(
             channel = coordinator.device.channels[channel_id]
         except IndexError:
             continue
+
         if channel.effect is not None:
             if (rangeof := channel.effect_speed_range) is not None:
                 new_entities.append(
@@ -106,9 +107,19 @@ class UNILEDEffectSpeedNumber(
         self._attr_native_max_value = rangeof[1]
         self._attr_native_step = rangeof[2]
 
+    @callback
+    def _async_update_attrs(self) -> None:
+        """Handle updating _attr values."""
+        ## Note: need this callback to ensure availability updates correctly
+        ##       when an effect and/or mode change occurs
+
     @property
     def available(self) -> bool:
-        if not self.channel.is_on or self.channel.effect_type_is_static:
+        if (
+            not self.channel.is_on
+            or self.channel.effect_type_is_static
+            or self.channel.effect_speed is None
+        ):
             return False
         return super().available
 
@@ -151,9 +162,19 @@ class UNILEDEffectLengthNumber(
         self._attr_native_max_value = rangeof[1]
         self._attr_native_step = rangeof[2]
 
+    @callback
+    def _async_update_attrs(self) -> None:
+        """Handle updating _attr values."""
+        ## Note: need this callback to ensure availability updates correctly
+        ##       when an effect and/or mode change occurs
+
     @property
     def available(self) -> bool:
-        if not self.channel.is_on or self.channel.effect_type_is_static:
+        if (
+            not self.channel.is_on
+            or self.channel.effect_type_is_static
+            or self.channel.effect_length is None
+        ):
             return False
         return super().available
 
@@ -198,9 +219,19 @@ class UNILEDSensitivityNumber(
         self._attr_native_max_value = rangeof[1]
         self._attr_native_step = rangeof[2]
 
+    @callback
+    def _async_update_attrs(self) -> None:
+        """Handle updating _attr values."""
+        ## Note: need this callback to ensure availability updates correctly
+        ##       when an effect and/or mode change occurs
+
     @property
     def available(self) -> bool:
-        if not self.channel.is_on or not self.channel.effect_type_is_sound:
+        if (
+            not self.channel.is_on
+            or not self.channel.effect_type_is_sound
+            or self.channel.input_gain is None
+        ):
             return False
         return super().available
 

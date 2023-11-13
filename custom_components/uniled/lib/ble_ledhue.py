@@ -294,7 +294,6 @@ class _LEDHUE(UNILEDBLEModel):
         """Range of input gain (min,max,step)."""
         return (1, 1024, 0)
 
-
 ##
 ## SP110E
 ##
@@ -302,13 +301,17 @@ SP110E = _LEDHUE(
     model_num=LEDHUE_MODEL_NUMBER_SP110E,
     model_name=LEDHUE_MODEL_NAME_SP110E,
     model_type=UNILEDModelType.STRIP,
-    description="BLE RGB(W) Controller",
+    description="BLE RGB(W) Pixel Controller",
     manufacturer=LEDHUE_MANUFACTURER,
     manufacturer_id=LEDHUE_MANUFACTURER_ID,
     manufacturer_data=b"\x00\x00",
     resolve_protocol=True,
     channels=1,
     needs_on=True,
+    needs_type_reload=False,
+    effects_directional=False,
+    effects_pausable=False,
+    effects_loopable=False,
     sends_status_on_commands=False,
     local_names=[LEDHUE_LOCAL_NAME_SP110E],
     service_uuids=[LEDHUE_UUID_FORMAT.format(part) for part in ["ffe0"]],

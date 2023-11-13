@@ -1,18 +1,23 @@
 """Platform for UniLED select integration."""
 from __future__ import annotations
 
+import asyncio
+
+from dataclasses import replace
 from functools import partial
 from typing import cast
 
+from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+#from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.select import SelectEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, STATE_CHANGE_LATENCY, STATE_CHANGE_INTERVAL
+from .lib.states import UNILEDStatus
 from .entity import UNILEDEntity
 from .coordinator import UNILEDUpdateCoordinator
 
@@ -20,8 +25,13 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-PARALLEL_UPDATES = 1
-
+async def _async_delayed_reload(
+    hass: HomeAssistant, entry: config_entries.ConfigEntry
+) -> None:
+    """Reload after making a change that will effect the operation of the device."""
+    await asyncio.sleep(STATE_CHANGE_LATENCY)
+    _LOGGER.warning("Reloading...")
+    hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -59,14 +69,14 @@ def async_update_channels(
             channel = coordinator.device.channels[channel_id]
         except IndexError:
             continue
-        if channel.mode is not None:
-            new_entities.append(UNILEDModeSelect(coordinator, channel_id))
-        if channel.input is not None:
-            new_entities.append(UNILEDInputSelect(coordinator, channel_id))
-        if channel.chip_type is not None:
-            new_entities.append(UNILEDChipTypeSelect(coordinator, channel_id))
-        if channel.chip_order is not None:
+        if channel.chip_order is not None and channel.chip_order_list is not None:
             new_entities.append(UNILEDChipOrderSelect(coordinator, channel_id))
+        if channel.chip_type is not None and channel.chip_type_list is not None:
+            new_entities.append(UNILEDChipTypeSelect(coordinator, channel_id))
+        if channel.input is not None and channel.input_list is not None:
+            new_entities.append(UNILEDInputSelect(coordinator, channel_id))
+        if channel.mode is not None and channel.mode_list is not None:
+            new_entities.append(UNILEDModeSelect(coordinator, channel_id))
 
     async_add_entities(new_entities)
 
@@ -82,13 +92,13 @@ class UNILEDModeSelect(
     def __init__(self, coordinator: UNILEDUpdateCoordinator, channel_id: int) -> None:
         """Initialize a UniLED mode control."""
         super().__init__(coordinator, channel_id, "Mode", "mode")
-        self._attr_icon = "mdi:refresh-auto"
-        self._attr_options = self.channel.mode_list
+        self._attr_icon = "mdi:star-cog"    #"mdi:refresh-auto"
         self._async_update_attrs()
 
     @callback
     def _async_update_attrs(self) -> None:
         """Handle updating _attr values."""
+        self._attr_options = self.channel.mode_list
         self._attr_current_option = self.channel.mode
 
     async def async_select_option(self, option: str) -> None:
@@ -108,12 +118,12 @@ class UNILEDInputSelect(
         """Initialize a UniLED input control."""
         super().__init__(coordinator, channel_id, "Audio Input", "input")
         self._attr_icon = "mdi:microphone"
-        self._attr_options = self.channel.input_list
         self._async_update_attrs()
 
     @callback
     def _async_update_attrs(self) -> None:
         """Handle updating _attr values."""
+        self._attr_options = self.channel.input_list
         self._attr_current_option = self.channel.input
 
     async def async_select_option(self, option: str) -> None:
@@ -133,18 +143,27 @@ class UNILEDChipTypeSelect(
         """Initialize a UniLED chip type control."""
         super().__init__(coordinator, channel_id, "Chip Type", "chip_type")
         self._attr_icon = "mdi:chip"
-        self._attr_options = self.channel.chip_type_list
         self._async_update_attrs()
+
+    @property
+    def available(self) -> bool:
+        #return False    ## For now disable chip type selection!
+        return super().available
 
     @callback
     def _async_update_attrs(self) -> None:
         """Handle updating _attr values."""
+        self._attr_options = self.channel.chip_type_list
+        if self._attr_options is None:
+            self._attr_options = []
         self._attr_current_option = self.channel.chip_type
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
         await self.channel.async_set_chip_type(option)
-
+        if self.channel.needs_type_reload:
+            await self.channel.device.stop()
+            await _async_delayed_reload(self.hass, self.coordinator.entry)
 
 class UNILEDChipOrderSelect(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SelectEntity
@@ -158,12 +177,12 @@ class UNILEDChipOrderSelect(
         """Initialize a UniLED chip color order control."""
         super().__init__(coordinator, channel_id, "Chip Color Order", "chip_order")
         self._attr_icon = "mdi:palette"
-        self._attr_options = self.channel.chip_order_list
         self._async_update_attrs()
 
     @callback
     def _async_update_attrs(self) -> None:
         """Handle updating _attr values."""
+        self._attr_options = self.channel.chip_order_list
         self._attr_current_option = self.channel.chip_order
 
     async def async_select_option(self, option: str) -> None:

@@ -60,9 +60,8 @@ def async_update_channels(
         except IndexError:
             continue
 
-        if channel.effect is not None:
-            if channel.effect_direction is not None:
-                new_entities.append(UNILEDEffectDirection(coordinator, channel_id))
+        if channel.effects_directional:
+            new_entities.append(UNILEDEffectDirection(coordinator, channel_id))
 
     async_add_entities(new_entities)
 
@@ -87,7 +86,11 @@ class UNILEDEffectDirection(
 
     @property
     def available(self) -> bool:
-        if not self.channel.is_on or self.channel.effect_type_is_static:
+        if (
+            not self.channel.is_on
+            or self.channel.effect_type_is_static
+            or self.channel.effect_direction is None
+        ):
             return False
         return super().available
 

@@ -32,11 +32,11 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
-    Platform.SELECT,
-    Platform.NUMBER,
-    Platform.SWITCH,
-    Platform.SENSOR,
     Platform.LIGHT,
+    Platform.NUMBER,
+    Platform.SELECT,
+    Platform.SENSOR,
+    Platform.SWITCH,
 ]
 
 
@@ -77,10 +77,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         uniled = UNILEDBLE(ble_device, service_info.advertisement, model_name)
 
         if not uniled.model:
-            _LOGGER.debug("*** Resolve Model: %s (%s)", uniled.name, uniled.model)
+            _LOGGER.debug("*** Resolve BLE Model: %s (%s)", uniled.name, uniled.model)
             model = await uniled.resolve_model()
             if model is None:
-                _LOGGER.error("%s: Cannot resolve device model", uniled.name)
                 raise ConfigEntryNotReady(
                     f"Could not resolve model for BLE device with address {address}"
                 )
@@ -106,6 +105,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     cancel_first_update = uniled.register_callback(lambda *_: startup_event.set())
     coordinator = UNILEDUpdateCoordinator(hass, uniled, entry)
 
+    _LOGGER.debug("*** Awaiting UniLED Device: %s, response", uniled.name)
+
     try:
         await coordinator.async_config_entry_first_refresh()
     except ConfigEntryNotReady:
@@ -114,8 +115,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if device_class == UNILED_TRANSPORT_BLE:
             bluetooth.async_rediscover_address(hass, address)
         raise
-
-    _LOGGER.debug("*** Awaiting UniLED Device: %s, response", uniled.name)
 
     try:
         async with async_timeout.timeout(DEVICE_TIMEOUT):
