@@ -12,6 +12,7 @@
     { "local_name": "SP617E" },
     { "local_name": "SP620E" },
     { "local_name": "SP630E" },
+    { "local_name": "SP642E" },
     { "local_name": "SP648E" }
   ],
   "codeowners": ["@monty68"],
@@ -22,5 +23,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/monty68/uniled/issues",
   "requirements": [],
-  "version": "2.0.0"
+  "version": "1.2.1"
 }

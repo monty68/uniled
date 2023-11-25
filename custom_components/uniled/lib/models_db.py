@@ -8,7 +8,7 @@ from .ble_ledhue import SP110E
 from .ble_banlanx1 import SP601E
 from .ble_banlanx2 import SP611E, SP617E, SP620E
 from .ble_banlanx3 import SP613E, SP614E
-from .ble_banlanx4 import SP630E, SP648E
+from .ble_banlanx4 import SP630E, SP642E, SP648E
 
 UNILED_TRANSPORT_BLE = "ble"
 UNILED_TRANSPORT_NET = "net"
@@ -26,6 +26,7 @@ UNILED_BLE_MODELS: Final = [
     SP617E,
     SP620E,
     SP630E,
+    SP642E,
     SP648E,
 ]
 

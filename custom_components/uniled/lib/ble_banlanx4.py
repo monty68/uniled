@@ -28,6 +28,10 @@ BANLANX4_MODEL_NUMBER_SP630E: Final = 0x630E
 BANLANX4_MODEL_NAME_SP630E: Final = "SP630E"
 BANLANX4_LOCAL_NAME_SP630E: Final = BANLANX4_MODEL_NAME_SP630E
 
+BANLANX4_MODEL_NUMBER_SP642E: Final = 0x642E
+BANLANX4_MODEL_NAME_SP642E: Final = "SP642E"
+BANLANX4_LOCAL_NAME_SP642E: Final = BANLANX4_MODEL_NAME_SP642E
+
 BANLANX4_MODEL_NUMBER_SP648E: Final = 0x648E
 BANLANX4_MODEL_NAME_SP648E: Final = "SP648E"
 BANLANX4_LOCAL_NAME_SP648E: Final = BANLANX4_MODEL_NAME_SP648E
@@ -450,6 +454,7 @@ class _ATTRIBUTES():
         self.white = bool(False)
         self.order = {0x80: "Mono"}
         self.effects = None
+        self.coexistence = bool(False)
 
     def dictof_mode_effects(self, mode: int | None) -> dict | None:
         """Mode effects dictionary"""
@@ -470,7 +475,7 @@ class _MODEL(UNILEDBLEModel):
     ##
     ## 0000   53 6c 08 01 00 05 17 e8 17 17 17  - ??
     ## 0000   53 08 38 01 00 05 27 25 26 27 2d  - On/Off Mode?
-    ## 0000   53 0a a7 01 00 01 b8 - Coexistance on/off
+    ## 0000   53 0a a7 01 00 01 b8 - coexistence on/off
     ## 0000   53 0b 35 01 00 01 2b              - Power On State?
     ## 0000   53 03 44 01 00 07 08 0b 6d 68 6b 1e 69    - Rename
     ## 0000   53 58 24 01 00 01 3a              - Loop
@@ -537,6 +542,7 @@ class _MODEL(UNILEDBLEModel):
         ## 0000   53 08 38 01 00 05 27 25 26 27 2d  - On/Off Mode?
         #b = 42
         #return self.__encoder(0x08, bytearray([0x01, 0x02, 0x01]) + bytearray(b.to_bytes(2, 'big')))
+        #return self.__encoder(0x53, bytearray([0x01, 0x04]))
         return None
 
     def construct_status_query(self, device: UNILEDDevice) -> bytearray:
@@ -562,9 +568,20 @@ class _MODEL(UNILEDBLEModel):
         #      H1H2      ML        MTV1V2V3V4V5V6V7V8CTOMOSPXLSWCPS      PWLMO2MDFXRNHLWLRRGGBBCWWWSPFLFDGSINR2G2B2CWWWFXCSP1RRGGBBP2RRGGBBP3RRGGBBP4RRGGBBP5RRGGBBP6RRGGBBP7RRGGBB 
         #      530200010061000111003356332e302e3039208c010013000101024b00010002050801ff471e2dffffff0a660010001921ffffbb010706ff00000600ff00060000ff000000000000000000000000000000000a03010302030503070309031e0345035403770392
         #      530200010061000111003356332e302e3039208c030100130101024b00010002050801ff471e2dffffff0a660010001921ffffbb010706ff00000600ff00060000ff000000000000000000000000000000000a03010302030503070309031e0345035403770392
+        #      530200010061000111003356332e302e3039208c0103002a0101024b00010002732601ff99ff0c457b1e0a660010001921ffb34c010706ff00000600ff00060000ff000000000000000000000000000000000a03010302030503070309031e0345035403770392
+        #      530200010061000111003356332e302e3039208c0401002a0002024b00010002010101ffff68ff4923230a66000900ff6e5400f50d0706ff00000600ff00060000ff000000000000000000000000000000000a03010302030503070309031e0345035403770392
 
+        # SP636E
+        #      530200010061000111001e56322e302e333020020103003c0001024b00010078060101ffffff0000ff000a1e011000ff0000ff00010706ff00000600ff00060000ff000000000000000000000000000000000a040104020403040404050406040704080409040a
+       
+        # SP637E
+        #      530200010061000111001e56322e302e33302004040100150001024b00010000060101ffffff0000ff000a1e011000ff0000ff00010706ff00000600ff00060000ff000000000000000000000000000000000a040104020403040404050406040704080409040a
+       
+        # SP642E
+        #      53020001004f000111003056332e302e303620030303003c00010239000000780201010103ff0000ff000a1e011000ff0000ff00010706ff00000600ff00060000ff00000000000000000000000000000000010401
+        #      530100010001b4
+       
         # SP648E
-        #
         #      530200010061000111003156332e302e303720060203000d0002024b00010002010101ffff00ff00ff000a1e011000ff0000ff000f0770ff00000600ff00060000ff5c00ffff0000000000000000000000000a03010302030503070309031e0345035403770392
         
         # 00  = Always 0x53
@@ -577,7 +594,7 @@ class _MODEL(UNILEDBLEModel):
         # 07  = ?? - 0x01
         # 08  = ?? - 0x11 #17
         # 09  = ?? - 0x00
-        # 10  = ?? - SP630E=0x33, SP648E=0x31
+        # 10  = ?? - SP630E=0x33, SP648E=0x31, SP642E=0x30
         # 11  = Version Char #1
         # 12  = Version Char #2
         # 13  = Version Char #3
@@ -680,33 +697,16 @@ class _MODEL(UNILEDBLEModel):
         
         power = 0x01 if data[29] > 0x00 else 0x00
         mode = data[32]
+        coexistence = data[24] if self.attr.coexistence else None
+
+        direction = length = speed = effect = fxtype = fxplay = fxloop = None
+        level = white = cool = warm = rgb = None
         rgb1 = (data[37], data[38], data[39])
         rgb2 = (data[47], data[48], data[49])
 
-        if self.is_white_mode(mode):
-            if self.is_sound_mode(mode):
-                cool = data[50] if self.attr.cct else None
-                warm = data[51] if self.attr.cct else None
-                white = None
-            else:
-                cool = data[40] if self.attr.cct else None
-                warm = data[41] if self.attr.cct else None
-                white = data[36] if self.attr.white else None
-            level = white
-            rgb = None
-        else:
-            white = cool = warm = None
-            if self.is_sound_mode(mode):
-                level = None
-                rgb = None
-            else:
-                level = data[35]
-                rgb = rgb1
-
-        direction = length = speed = effect = fxtype = fxplay = fxloop = None
         if (fxlist := self.attr.dictof_mode_effects(mode)) is not None:
             if (fxattr := None if data[33] not in fxlist else fxlist[data[33]]):
-                _LOGGER.debug("%s: FXATTR: %s", device.name, fxattr)
+                _LOGGER.debug("%s: FXATTR: (%s - %s) %s", device.name, self.attr.name, self.attr.coexistence, fxattr)
                 effect = data[33]
                 fxtype = self.codeof_channel_effect_type(device.master, effect, mode)
                 fxloop = data[30] # Hmmm!
@@ -714,10 +714,27 @@ class _MODEL(UNILEDBLEModel):
                 speed = data[42] if fxattr.speedable else None
                 length = data[43] if fxattr.sizeable else None
                 direction = data[44] if fxattr.directional else None
-                if not fxattr.colorable:
-                    white = cool = warm = rgb = None
-                elif self.is_sound_mode(mode):
-                    rgb = rgb2
+
+                if self.is_sound_mode(mode):
+                    if self.is_color_mode(mode) and fxattr.colorable:
+                        rgb = rgb2
+                    if  self.is_white_mode(mode) and fxattr.colorable:
+                        white = data[36] if self.attr.white else None
+                        cool = data[50] if self.attr.cct else None
+                        warm = data[51] if self.attr.cct else None
+                elif self.is_static_mode(mode) and coexistence:
+                    white = data[36] if self.attr.white else None
+                    cool = data[40] if self.attr.cct else None
+                    warm = data[41] if self.attr.cct else None
+                    rgb = rgb1
+                    level = white if self.is_white_mode(mode) and white else data[35]
+                elif self.is_white_mode(mode) and fxattr.colorable:
+                    cool = data[40 if self.is_static_mode(mode) else 50] if self.attr.cct else None
+                    warm = data[41 if self.is_static_mode(mode) else 51] if self.attr.cct else None
+                    level = white = data[36] if self.attr.white else None
+                elif self.is_color_mode(mode) and fxattr.colorable:
+                    rgb = rgb1 if self.is_static_mode(mode) else rgb2
+                    level = data[35]
 
         return UNILEDStatus(
             power=power,
@@ -738,14 +755,14 @@ class _MODEL(UNILEDBLEModel):
             input=data[46],
             gain=data[45],
             chip_type=chip_type,
-            chip_order=data[31],    # ??????
+            chip_order=data[31],
+            coexistence=coexistence,
             extra={
                 "firmware": data[11:18].decode("utf-8"),
                 "onoff_mode": data[20],
                 "onoff_speed": data[21],
                 "onoff_pixels": int.from_bytes(data[22:24], byteorder="big"), #data[22] + data[23],
                 "power_on_state": data[25],
-                "coexistence": data[24],
                 "diy_mode": data[52],
             },
         )
@@ -840,11 +857,20 @@ class _MODEL(UNILEDBLEModel):
         self, channel: UNILEDChannel, kelvin: int, cool: int, warm: int, level: int
     ) -> list[bytearray] | None:
         """The bytes to send for a temperature color change."""
-        return self.__encoder(0x61, bytearray([cool, warm]))
+        if self.is_static_mode(channel.status.mode):
+            return self.__encoder(0x61, bytearray([cool, warm]))
+        return self.__encoder(0x60, bytearray([cool, warm]))
 
     ##
     ## Device Configuration
-    ##
+    ##   
+    def construct_coexistence_change(
+        self, channel: UNILEDChannel, coexist: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a coexistence change."""
+        ## 53 0a a7 01 00 01 b8
+        return self.__encoder(0x0A, bytearray([coexist]))
+
     def construct_chip_type_change(
         self, channel: UNILEDChannel, chip_type: int
     ) -> list[bytearray] | None:
@@ -1079,6 +1105,7 @@ class _87_ATTRIBUTES(_ATTRIBUTES):
         self.pwm = True
         self.hue = True
         self.white = True
+        self.coexistence = True
         self.order = DICTOF_ORDER_RGBW
         self.effects = {
             MODE_STATIC_COLOR: DICTOF_EFFECTS_STATIC_COLOR,
@@ -1144,6 +1171,7 @@ class _88_ATTRIBUTES(_ATTRIBUTES):
         self.spi = True
         self.hue = True
         self.white = True
+        self.coexistence = True
         self.order = DICTOF_ORDER_RGBW
         self.effects = {
             MODE_STATIC_COLOR: DICTOF_EFFECTS_STATIC_COLOR,
@@ -1160,6 +1188,7 @@ class _8B_ATTRIBUTES(_88_ATTRIBUTES):
         super().__init__()
         self.name = "SPI - RGBCCT (1)"
         self.cct = True
+        self.coexistence = True
         self.order = DICTOF_ORDER_RGBCW
 
 class _8E_ATTRIBUTES(_8B_ATTRIBUTES):
@@ -1175,6 +1204,7 @@ class _89_ATTRIBUTES(_ATTRIBUTES):
         self.spi = True
         self.hue = True
         self.white = True
+        self.coexistence = True
         self.order = DICTOF_ORDER_RGB
         self.effects = {
             MODE_STATIC_COLOR: DICTOF_EFFECTS_STATIC_COLOR,
@@ -1200,7 +1230,7 @@ SP630E = _MODEL(
     model_type=UNILEDModelType.STRIP,
     model_name=BANLANX4_MODEL_NAME_SP630E,
     model_num=BANLANX4_MODEL_NUMBER_SP630E,
-    description="BLE RGB(CW) (Music) Pixel Controller",
+    description="BLE RGB(CW) (Music) Pixel/PWM Controller",
     manufacturer=BANLANX4_MANUFACTURER,
     manufacturer_id=BANLANX4_MANUFACTURER_ID,
     manufacturer_data=b"\x1f\x10",
@@ -1217,21 +1247,49 @@ SP630E = _MODEL(
     write_uuids=BANLANX4_UUID_WRITE,
     read_uuids=BANLANX4_UUID_READ,
     attr_dict = {
-        0x81: _81_ATTRIBUTES(), # 1 CH PWM Single Color - Mono
-        0x83: _83_ATTRIBUTES(), # 2 CH PWM CCT - CW
-        0x85: _85_ATTRIBUTES(), # 3 CH PWM RGB - RGB
-        0x87: _87_ATTRIBUTES(), # 4 CH PWM RGBW - RGBW
-        0x8A: _8A_ATTRIBUTES(), # 5 CH PWM RGBCCT - RGBCW
-        0x82: _82_ATTRIBUTES(), # SPI Single Color - 1st, 2nd, 2rd
-        0x84: _84_ATTRIBUTES(), # SPI CCT (1) - Cold, Warm, Off
-        0x8D: _8D_ATTRIBUTES(), # SPI CCT (2) - CW
-        0x86: _86_ATTRIBUTES(), # SPI RGB
-        0x88: _88_ATTRIBUTES(), # SPI RGBW
-        0x8B: _8B_ATTRIBUTES(), # SPI RGBCW
-        0x8E: _8E_ATTRIBUTES(), # SPI RGBCW
-        0x89: _89_ATTRIBUTES(), # SPI RGB
-        0x8C: _8C_ATTRIBUTES(), # SPI RGBCW
+        0x81: _81_ATTRIBUTES(), # 1 CH PWM Single Color
+        0x83: _83_ATTRIBUTES(), # 2 CH PWM CCT
+        0x85: _85_ATTRIBUTES(), # 3 CH PWM RGB
+        0x87: _87_ATTRIBUTES(), # 4 CH PWM RGBW - Coexist
+        0x8A: _8A_ATTRIBUTES(), # 5 CH PWM RGBCCT - Coexist
+        0x82: _82_ATTRIBUTES(), # SPI - Single Color
+        0x84: _84_ATTRIBUTES(), # SPI - CCT (1)
+        0x8D: _8D_ATTRIBUTES(), # SPI - CCT (2)
+        0x86: _86_ATTRIBUTES(), # SPI - RGB
+        0x88: _88_ATTRIBUTES(), # SPI - RGBW - Coexist
+        0x8B: _8B_ATTRIBUTES(), # SPI - RGBCCT (1) - Coexist
+        0x8E: _8E_ATTRIBUTES(), # SPI - RGBCCT (2) - Coexist
+        0x89: _89_ATTRIBUTES(), # SPI - RGB + 1 CH PWM - Coexist
+        0x8C: _8C_ATTRIBUTES(), # SPI - RGB + 2 CH PWM - Coexist
     }
+)
+
+##
+## SP642E
+##
+SP642E = _MODEL(
+    model_type=UNILEDModelType.STRIP,
+    model_name=BANLANX4_MODEL_NAME_SP642E,
+    model_num=BANLANX4_MODEL_NUMBER_SP642E,
+    description="BLE CCT (Music) PWM Controller",
+    manufacturer=BANLANX4_MANUFACTURER,
+    manufacturer_id=BANLANX4_MANUFACTURER_ID,
+    manufacturer_data=b"\x4a\x10",
+    resolve_protocol=False,
+    channels=1,
+    needs_on=True,
+    needs_type_reload=False,
+    effects_directional=True,
+    effects_pausable=True,
+    effects_loopable=True,
+    sends_status_on_commands=False,
+    local_names=[BANLANX4_LOCAL_NAME_SP648E],
+    service_uuids=BANLANX4_UUID_SERVICE,
+    write_uuids=BANLANX4_UUID_WRITE,
+    read_uuids=BANLANX4_UUID_READ,
+    attr_dict = {
+        0x03: _83_ATTRIBUTES(), # 2 CH PWM CCT
+    },
 )
 
 ##
