@@ -1,6 +1,5 @@
 """UniLED Artifacts"""
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Final
 from enum import IntEnum
@@ -78,12 +77,13 @@ UNILED_CHIP_ORDER_4COLOR: Final = {
 }
 
 
-@dataclass(frozen=True)
-class UNILEDModelType(IntEnum):
-    """Model Type"""
+class UNILEDInput(StrEnum):
+    """Audio Input Names"""
 
-    BULB = 0
-    STRIP = 1
+    AUXIN = "Aux In"
+    INTMIC = "Int. Mic"
+    EXTMIC = "Ext. Mic"
+    PLAYER = "Player"
 
 
 class UNILEDMode(StrEnum):
@@ -96,15 +96,6 @@ class UNILEDMode(StrEnum):
     AUTO_PATTERN = "Cycle Pattern Effects"
     AUTO_SCENE = "Cycle Scenes"
     AUTO_SOUND = "Cycle Sound Effects"
-
-
-class UNILEDInput(StrEnum):
-    """Audio Input Names"""
-
-    AUXIN = "Aux In"
-    INTMIC = "Int. Mic"
-    EXTMIC = "Ext. Mic"
-    PLAYER = "Player"
 
 
 class UNILEDEffectType(StrEnum):

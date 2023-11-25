@@ -1,110 +1,83 @@
 """Config flow for UniLED integration."""
 from __future__ import annotations
-
-import logging
-import voluptuous as vol
-
 from typing import Any
 
+from homeassistant import config_entries as flow
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant import config_entries
-from homeassistant.const import CONF_ADDRESS, CONF_DEVICE_CLASS, CONF_MODEL
+from homeassistant.components import onboarding
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
-    # async_rediscover_address,
 )
-from bleak_retry_connector import BLEAK_RETRY_EXCEPTIONS as BLEAK_EXCEPTIONS
+from homeassistant.const import CONF_DEVICE_CLASS, CONF_DEVICE, CONF_ADDRESS, CONF_MODEL
+
+from .lib.ble.device import UniledBleDevice, UNILED_TRANSPORT_BLE
+from .lib.net.device import UniledNetDevice, UNILED_TRANSPORT_NET
 from .const import DOMAIN
-from .lib.ble_device import UNILEDBLE
-from .lib.models_db import (
-    UNILED_TRANSPORT_BLE,
-    # UNILED_TRANSPORT_NET,
-)
+
+import voluptuous as vol
+import logging
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Bluetooth Controller."""
+class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
+    """Handle a UniLED config flow."""
 
     VERSION = 1
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: flow.ConfigEntry,
+    ) -> UniledOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return UniledOptionsFlowHandler(config_entry)
+
     def __init__(self) -> None:
         """Initialize the config flow."""
-        self._discovery_info: BluetoothServiceInfoBleak | None = None
-        self._discovered_devices: dict[str, BluetoothServiceInfoBleak] = {}
+        self._discovery_ble_info: BluetoothServiceInfoBleak | None = None
+        self._discovered_ble_devices: dict[str, BluetoothServiceInfoBleak] = {}
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> FlowResult:
         """Handle the bluetooth discovery step."""
+
+        if (
+            model := UniledBleDevice.match_known_device(
+                discovery_info.device, discovery_info.advertisement
+            )
+        ) is None:
+            #return self.async_abort(reason="not_supported")
+            pass
+
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
-        self._discovery_info = discovery_info
+
+        self._discovery_ble_info = discovery_info
+
         self.context["title_placeholders"] = {
-            "name": UNILEDBLE.human_readable_name(
+            "name": UniledBleDevice.human_readable_name(
                 None, discovery_info.name, discovery_info.address
             )
         }
-        return await self.async_step_user()
+        self.context[CONF_ADDRESS] = discovery_info.address
+        self.context[CONF_MODEL] = model.model_name if model is not None else None
+
+        return await self.async_step_bluetooth_confirm()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the user step to pick discovered device."""
         errors: dict[str, str] = {}
-
+        
         if user_input is not None:
             _LOGGER.debug("User Input: %s", user_input)
-            address = user_input[CONF_ADDRESS]
-            discovery = self._discovered_devices[address]
-            local_name = discovery.name
-
-            await self.async_set_unique_id(discovery.address, raise_on_progress=False)
-            self._abort_if_unique_id_configured()
-
-            uniled = UNILEDBLE(discovery.device, discovery.advertisement, local_name)
-
-            try:
-                model = await uniled.resolve_model(do_disconnect=True)
-            except BLEAK_EXCEPTIONS:
-                errors["base"] = "cannot_connect"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected error")
-                errors["base"] = "unknown"
-            else:
-                if model is not None:
-                    return self.async_create_entry(
-                        title=discovery.name,
-                        data={
-                            CONF_DEVICE_CLASS: UNILED_TRANSPORT_BLE,
-                            CONF_ADDRESS: discovery.address,
-                            CONF_MODEL: model.model_name,
-                        },
-                    )
-                return self.async_abort(reason="not_supported")
-
-        if discovery := self._discovery_info:
-            if UNILEDBLE.match_known_service(discovery.device, discovery.advertisement):
-                _LOGGER.debug("Setting discovery: %s", discovery)
-                self._discovered_devices[discovery.address] = discovery
-        else:
-            current_addresses = self._async_current_ids()
-            for discovery in async_discovered_service_info(self.hass):
-                if (
-                    discovery.address in current_addresses
-                    or discovery.address in self._discovered_devices
-                    or not UNILEDBLE.match_known_service(
-                        discovery.device, discovery.advertisement
-                    )
-                ):
-                    continue
-                self._discovered_devices[discovery.address] = discovery
-
-        if not self._discovered_devices:
-            return self.async_abort(reason="no_unconfigured_devices")
-
+            return self.async_abort(reason="not_supported")
+        
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_ADDRESS): vol.In(
@@ -115,9 +88,52 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
             }
         )
-
+        
         return self.async_show_form(
             step_id="user",
             data_schema=data_schema,
             errors=errors,
         )
+
+    async def async_step_bluetooth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm discovery."""
+        if user_input is not None or not onboarding.async_is_onboarded(self.hass):
+            return self._async_create_entry()
+
+        self._set_confirm_only()
+        return self.async_show_form(
+            step_id="bluetooth_confirm",
+            description_placeholders=self.context["title_placeholders"],
+        )
+
+    def _async_create_entry(self, model=None):
+        """Get/Create entry"""
+
+        _LOGGER.warning(self.context)
+
+        address = self.context.get(CONF_ADDRESS, "")
+        if self.context.get("source") == "bluetooth":
+            transport = UNILED_TRANSPORT_BLE
+        else:
+            return self.async_abort(reason="not_supported")
+
+        _LOGGER.warning("Address: %s", address)
+
+        return self.async_create_entry(
+            title=self.context["title_placeholders"]["name"],
+            data={
+                CONF_DEVICE_CLASS: transport,
+                CONF_ADDRESS: address,
+                CONF_MODEL: model,
+            },
+        )
+
+
+class UniledOptionsFlowHandler(flow.OptionsFlow):
+    """Handle Uniled options flow."""
+
+    def __init__(self, config_entry: flow.ConfigEntry) -> None:
+        """Initialize UniLED options flow."""
+        self.config_entry = config_entry

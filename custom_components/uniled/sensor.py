@@ -1,28 +1,40 @@
-"""Platform for UniLED sensor integration."""
+"""Platform for UniLED number integration."""
 from __future__ import annotations
-
-from functools import partial
+from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
     SensorEntityDescription,
+    SensorDeviceClass,
     SensorStateClass,
+    SensorEntity,
 )
+
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
 )
 
-from .const import DOMAIN
-from .entity import UNILEDEntity
-from .coordinator import UNILEDUpdateCoordinator
+from .lib.attributes import (
+    UniledAttribute,
+    UniledGroup,
+    UniledSensor,
+)
+
+from .entity import (
+    UNILED_TRANSPORT_BLE,
+    UniledUpdateCoordinator,
+    UniledChannel,
+    UniledEntity,
+    Platform,
+    AddEntitiesCallback,
+    async_uniled_entity_setup,
+)
+
+EXTRA_ATTRIBUTE_MAC_ADDRESS = "mac_address"
 
 import logging
 
@@ -34,54 +46,84 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the sensor platform for UniLED."""
-    coordinator: UNILEDUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-
-    update_channels = partial(
-        async_update_channels,
-        coordinator,
-        set(),
-        async_add_entities,
+    """Set up the UniLED sensor platform."""
+    await async_uniled_entity_setup(
+        hass, entry, async_add_entities, _add_sensor_entity, Platform.SENSOR
     )
 
-    entry.async_on_unload(coordinator.async_add_listener(update_channels))
-    update_channels()
 
+def _add_sensor_entity(
+    coordinator: UniledUpdateCoordinator,
+    channel: UniledChannel,
+    feature: UniledAttribute | None,
+) -> UniledEntity | None:
+    """Create UniLED sensor entity."""
+    if feature:
+        return UniledSensorEntity(coordinator, channel, feature)
+    if channel.number == 0 and coordinator.device.transport == UNILED_TRANSPORT_BLE:
+        return UniledSignalSensor(coordinator, channel)
+    return None
 
-@callback
-def async_update_channels(
-    coordinator: UNILEDUpdateCoordinator,
-    current_ids: set[int],
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Update segments."""
-    channel_ids = {channel.number for channel in coordinator.device.channels}
-    new_entities: list[UNILEDEntity] = []
-
-    # Process new channels, add them to Home Assistant
-    for channel_id in channel_ids - current_ids:
-        current_ids.add(channel_id)
-        if channel_id == 0:
-            new_entities.append(UNILEDConnectivitySensor(coordinator, channel_id))
-
-    async_add_entities(new_entities)
-
-
-class UNILEDConnectivitySensor(
-    UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SensorEntity
+class UniledSensorEntity(
+    UniledEntity, CoordinatorEntity[UniledUpdateCoordinator], SensorEntity
 ):
-    """Representation of a UniLED connectivity sensor."""
+    """Defines a UniLED sensor."""
 
-    _attr_entity_registry_enabled_default = False
-    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
-    _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
-    _attr_icon = "mdi:signal"
+    def __init__(
+        self,
+        coordinator: UniledUpdateCoordinator,
+        channel: UniledChannel,
+        feature: UniledSensor,
+    ) -> None:
+        """Initialize a UniLED sensor."""
+        super().__init__(coordinator, channel, feature)
 
-    def __init__(self, coordinator: UNILEDUpdateCoordinator, channel_id: int) -> None:
-        """Initialize a UniLED light."""
-        super().__init__(coordinator, channel_id, "RSSI", "rssi")
+    @property
+    def native_value(self) -> str:
+        """Return the value reported by the sensor."""
+        return self.device.get_state(self.channel, self.feature.attr)
+
+@dataclass
+class UniledRSSI(UniledSensor):
+    """UniLED RSSI Feature Class"""
+
+    def __init__(self) -> None:
+        super().__init__(
+            UniledGroup.DIAGNOSTIC,
+            False,
+            None,
+            "RSSI",
+            "mdi:signal",
+            "rssi",
+        )
+
+
+class UniledSignalSensor(
+    UniledEntity, CoordinatorEntity[UniledUpdateCoordinator], SensorEntity
+):
+    """Defines a UniLED Signal Sensor control."""
+
+    _unrecorded_attributes = frozenset(
+        {
+            EXTRA_ATTRIBUTE_MAC_ADDRESS,
+        }
+    )
+
+    def __init__(
+        self,
+        coordinator: UniledUpdateCoordinator,
+        channel: UniledChannel,
+    ) -> None:
+        """Initialize a UniLED effect speed control."""
+        super().__init__(coordinator, channel, UniledRSSI())
+
+    @callback
+    def _async_update_attrs(self, first: bool = False) -> None:
+        """Handle updating _attr values."""
+        super()._async_update_attrs()
+        self._attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
 
     @property
     def native_value(self) -> str:
@@ -91,4 +133,4 @@ class UNILEDConnectivitySensor(
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the optional state attributes."""
-        return {"mac_address": self.device.address}
+        return {EXTRA_ATTRIBUTE_MAC_ADDRESS: self.device.address}
