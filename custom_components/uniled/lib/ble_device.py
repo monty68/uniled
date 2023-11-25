@@ -147,6 +147,7 @@ class UNILEDBLE(UNILEDDevice):
                     await self._execute_disconnect()
                 finally:
                     pass
+        _LOGGER.debug("%s: Stopped", self.name)
 
     async def resolve_model(self, do_disconnect: bool = True) -> UNILEDBLEModel | None:
         """Resolve device model"""

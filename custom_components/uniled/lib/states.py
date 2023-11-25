@@ -57,4 +57,5 @@ class UNILEDStatus:
     chip_order: int | None = None
     segment_count: int | None = None
     segment_length: int | None = None
+    coexistence: int | None = None
     extra: dict(str, Any) = field(default_factory=dict)

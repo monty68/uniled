@@ -62,6 +62,8 @@ def async_update_channels(
 
         if channel.effects_directional:
             new_entities.append(UNILEDEffectDirection(coordinator, channel_id))
+        if channel.coexistence is not None:
+            new_entities.append(UNILEDCoexistence(coordinator, channel_id))
 
     async_add_entities(new_entities)
 
@@ -115,3 +117,50 @@ class UNILEDEffectDirection(
     async def async_toggle(self, **kwargs):
         """Toggle the switch"""
         await self.channel.async_set_effect_direction(not self.is_on)
+
+class UNILEDCoexistence(
+    UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SwitchEntity
+):
+    """Defines a UniLED coexistence switch control."""
+
+    _attr_entity_registry_enabled_default = True
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_device_class = SwitchDeviceClass.SWITCH
+
+    def __init__(
+        self,
+        coordinator: UNILEDUpdateCoordinator,
+        channel_id: int,
+    ) -> None:
+        """Initialize a UniLED coexistence control."""
+        super().__init__(coordinator, channel_id, "Color/White Coexistence", "coexistence")
+        self._async_update_attrs()
+
+    @property
+    def available(self) -> bool:
+        if self.channel.coexistence is None:
+            return False
+        return super().available
+
+    @property
+    def is_on(self) -> bool:
+        """Coexistence on or off."""
+        return self.channel.coexistence
+
+    @callback
+    def _async_update_attrs(self) -> None:
+        """Handle updating _attr values."""
+        self._attr_icon = "mdi:cog"    #"mdi:lightbulbmultipleoutline"
+
+    async def async_turn_on(self, **kwargs):
+        """Turn the entity on (forwards)."""
+        await self.channel.async_set_coexistence(True)
+
+    async def async_turn_off(self, **kwargs):
+        """Turn the entity off (backwards)."""
+        await self.channel.async_set_coexistence(False)
+
+    async def async_toggle(self, **kwargs):
+        """Toggle the switch"""
+        await self.channel.async_set_coexistence(not self.is_on)
+

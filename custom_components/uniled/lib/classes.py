@@ -154,6 +154,12 @@ class UNILEDModel:
     ##
     ## Channel Configuration
     ##
+    def construct_coexistence_change(
+        self, channel: UNILEDChannel, coexist: int
+    ) -> list[bytearray] | None:
+        """The bytes to send for a coexistence change."""
+        return None
+
     def construct_input_change(
         self, channel: UNILEDChannel, input_type: int
     ) -> list[bytearray] | None:
@@ -607,6 +613,11 @@ class UNILEDChannel:
         return self._status.rgb2
 
     @property
+    def coexistence(self) -> bool | None:
+        """Returns color and white coexistence state."""
+        return self._status.coexistence
+
+    @property
     def effect(self) -> str | None:
         """Returns effect name."""
         if self.effect_number is None:
@@ -905,6 +916,17 @@ class UNILEDChannel:
         command = self.device.model.construct_color_two_change(self, *rgb, None)
         if await self.device.send_command(command):
             self._status = replace(self._status, rgb2=rgb)
+            self._fire_callbacks()
+
+    async def async_set_coexistence(self, value: bool) -> None:
+        """Set color and white coexistence."""
+        _LOGGER.debug("%s: Set Coexistence: %s", self.name, value)
+        if self._status.coexistence is not None:
+            if not await self.device.send_command(
+                self.device.model.construct_coexistence_change(self, value)
+            ):
+                value = self._status.coexistence
+            self._status = replace(self._status, coexistence=value)
             self._fire_callbacks()
 
     async def async_set_effect(self, name: str) -> None:
