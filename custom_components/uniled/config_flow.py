@@ -50,8 +50,7 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
                 discovery_info.device, discovery_info.advertisement
             )
         ) is None:
-            #return self.async_abort(reason="not_supported")
-            pass
+            return self.async_abort(reason="not_supported")
 
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
