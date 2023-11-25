@@ -521,11 +521,8 @@ class _CONFIG:
 ##
 ## BanlanX type 4 Protocol Implementation
 ##
-@dataclass(frozen=True)
 class BanlanX4(UniledBleModel):
     """BanlanX type 4 Protocol Implementation"""
-
-    configs: dict(int, _CONFIG) | None
 
     _HEADER_LENGTH = 6
     _HEADER_BYTE = 0x53
@@ -533,6 +530,26 @@ class BanlanX4(UniledBleModel):
     _MESSAGE_KEY = 2
     _MESSAGE_LENGTH = 5
     _DEVICE_STATUS = 0x02
+
+    configs: dict(int, _CONFIG) | None
+
+    def __init__(
+        self, id: int, name: str, info: str, data: bytes, conf: dict(int, _CONFIG)
+    ):
+        """Initialise class"""
+        self.configs = conf
+        super().__init__(
+            model_num=id,
+            model_name=name,
+            description=info,
+            manufacturer=BANLANX4_MANUFACTURER,
+            channels=1,
+            ble_manufacturer_id=BANLANX4_MANUFACTURER_ID,
+            ble_service_uuids=BANLANX4_UUID_SERVICE,
+            ble_write_uuids=BANLANX4_UUID_WRITE,
+            ble_read_uuids=BANLANX4_UUID_READ,
+            ble_manufacturer_data=data,
+        )
 
     def __decoder(self, encoded: bytearray) -> bytearray | None:
         """Decode BanlanX v4 Message."""
@@ -850,7 +867,7 @@ class BanlanX4(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, state: bool
     ) -> bytearray | None:
         """Build power on/off state message(s)"""
-        self.__encoder(0x50, bytearray([0x01 if state else 0x00]))
+        return self.__encoder(0x50, bytearray([0x01 if state else 0x00]))
 
     def build_brightness_command(
         self, device: UniledBleDevice, channel: UniledChannel, level: int
@@ -1352,20 +1369,14 @@ class _8C_CONFIG(_89_CONFIG):
 
 
 ##
-## SP630E
+## Device Signatures
 ##
 SP630E = BanlanX4(
-    model_name="SP630E",
-    model_num=BANLANX4_MODEL_NUMBER_SP630E,
-    description="RGB(CW) SPI/PWM (Music) Controller",
-    manufacturer=BANLANX4_MANUFACTURER,
-    channels=1,
-    ble_manufacturer_id=BANLANX4_MANUFACTURER_ID,
-    ble_manufacturer_data=b"\x1f\x10",
-    ble_service_uuids=BANLANX4_UUID_SERVICE,
-    ble_write_uuids=BANLANX4_UUID_WRITE,
-    ble_read_uuids=BANLANX4_UUID_READ,
-    configs={
+    id=BANLANX4_MODEL_NUMBER_SP630E,
+    name="SP630E",
+    info="RGB(CW) SPI/PWM (Music) Controller",
+    data=b"\x1f\x10",
+    conf={
         0x81: _81_CONFIG(),  # 1 CH PWM Single Color
         0x83: _83_CONFIG(),  # 2 CH PWM CCT
         0x85: _85_CONFIG(),  # 3 CH PWM RGB
@@ -1383,79 +1394,42 @@ SP630E = BanlanX4(
     },
 )
 
-
-##
-## SP636E
-##
 SP636E = BanlanX4(
-    model_name="SP636E",
-    model_num=BANLANX4_MODEL_NUMBER_SP636E,
-    description="Single Color SPI (Music) Controller",
-    manufacturer=BANLANX4_MANUFACTURER,
-    channels=1,
-    ble_manufacturer_id=BANLANX4_MANUFACTURER_ID,
-    ble_manufacturer_data=b"\x25\x10",
-    ble_service_uuids=BANLANX4_UUID_SERVICE,
-    ble_write_uuids=BANLANX4_UUID_WRITE,
-    ble_read_uuids=BANLANX4_UUID_READ,
-    configs={
+    id=BANLANX4_MODEL_NUMBER_SP636E,
+    name="SP636E",
+    info="Single Color SPI (Music) Controller",
+    data=b"\x25\x10",
+    conf={
         0x02: _82_CONFIG(),  # SPI - Single Color
     },
 )
 
-##
-## SP637E
-##
 SP637E = BanlanX4(
-    model_name="SP637E",
-    model_num=BANLANX4_MODEL_NUMBER_SP637E,
-    description="CCT SPI (Music) Controller",
-    manufacturer=BANLANX4_MANUFACTURER,
-    channels=1,
-    ble_manufacturer_id=BANLANX4_MANUFACTURER_ID,
-    ble_manufacturer_data=b"\x26\x10",
-    ble_service_uuids=BANLANX4_UUID_SERVICE,
-    ble_write_uuids=BANLANX4_UUID_WRITE,
-    ble_read_uuids=BANLANX4_UUID_READ,
-    configs={
+    id=BANLANX4_MODEL_NUMBER_SP637E,
+    name="SP637E",
+    info="CCT SPI (Music) Controller",
+    data=b"\x26\x10",
+    conf={
         0x04: _84_CONFIG(),  # SPI - CCT (1)
     },
 )
 
-##
-## SP648E
-##
 SP642E = BanlanX4(
-    model_name="SP642E",
-    model_num=BANLANX4_MODEL_NUMBER_SP642E,
-    description="CCT PWM (Music) Controller",
-    manufacturer=BANLANX4_MANUFACTURER,
-    channels=1,
-    ble_manufacturer_id=BANLANX4_MANUFACTURER_ID,
-    ble_manufacturer_data=b"\x4a\x10",
-    ble_service_uuids=BANLANX4_UUID_SERVICE,
-    ble_write_uuids=BANLANX4_UUID_WRITE,
-    ble_read_uuids=BANLANX4_UUID_READ,
-    configs={
+    id=BANLANX4_MODEL_NUMBER_SP642E,
+    name="SP642E",
+    info="CCT PWM (Music) Controller",
+    data=b"\x4a\x10",
+    conf={
         0x03: _83_CONFIG(),  # 2 CH PWM CCT
     },
 )
 
-##
-## SP648E
-##
 SP648E = BanlanX4(
-    model_name="SP648E",
-    model_num=BANLANX4_MODEL_NUMBER_SP648E,
-    description="RGB SPI (Music) Controller",
-    manufacturer=BANLANX4_MANUFACTURER,
-    channels=1,
-    ble_manufacturer_id=BANLANX4_MANUFACTURER_ID,
-    ble_manufacturer_data=b"\x33\x10",
-    ble_service_uuids=BANLANX4_UUID_SERVICE,
-    ble_write_uuids=BANLANX4_UUID_WRITE,
-    ble_read_uuids=BANLANX4_UUID_READ,
-    configs={
+    id=BANLANX4_MODEL_NUMBER_SP648E,
+    name="SP648E",
+    info="RGB SPI (Music) Controller",
+    data=b"\x33\x10",
+    conf={
         0x06: _86_CONFIG(),  # SPI RGB
     },
 )
