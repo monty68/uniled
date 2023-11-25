@@ -69,14 +69,14 @@ def async_update_channels(
             channel = coordinator.device.channels[channel_id]
         except IndexError:
             continue
+        if channel.mode is not None and channel.mode_list is not None:
+            new_entities.append(UNILEDModeSelect(coordinator, channel_id))
+        if channel.input is not None and channel.input_list is not None:
+            new_entities.append(UNILEDInputSelect(coordinator, channel_id))
         if channel.chip_order is not None and channel.chip_order_list is not None:
             new_entities.append(UNILEDChipOrderSelect(coordinator, channel_id))
         if channel.chip_type is not None and channel.chip_type_list is not None:
             new_entities.append(UNILEDChipTypeSelect(coordinator, channel_id))
-        if channel.input is not None and channel.input_list is not None:
-            new_entities.append(UNILEDInputSelect(coordinator, channel_id))
-        if channel.mode is not None and channel.mode_list is not None:
-            new_entities.append(UNILEDModeSelect(coordinator, channel_id))
 
     async_add_entities(new_entities)
 
@@ -147,7 +147,6 @@ class UNILEDChipTypeSelect(
 
     @property
     def available(self) -> bool:
-        #return False    ## For now disable chip type selection!
         return super().available
 
     @callback
@@ -164,6 +163,8 @@ class UNILEDChipTypeSelect(
         if self.channel.needs_type_reload:
             await self.channel.device.stop()
             await _async_delayed_reload(self.hass, self.coordinator.entry)
+        else:
+            await self.coordinator.async_refresh()
 
 class UNILEDChipOrderSelect(
     UNILEDEntity, CoordinatorEntity[UNILEDUpdateCoordinator], SelectEntity

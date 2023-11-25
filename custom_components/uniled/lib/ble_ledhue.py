@@ -1,6 +1,5 @@
 """UniLED BLE Devices - SP110E from SPLED (LedHue)"""
 from __future__ import annotations
-
 import functools
 import operator
 
