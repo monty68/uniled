@@ -1,6 +1,7 @@
 """UniLED BLE Device Handler."""
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import Final
 
 from bleak.exc import BleakDBusError
 from bleak.backends.device import BLEDevice
@@ -36,6 +37,9 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 BASE_UUID_FORMAT = "0000{}-0000-1000-8000-00805f9b34fb"
+
+BANLANX_MANUFACTURER: Final = "SPLED (BanlanX)"
+BANLANX_MANUFACTURER_ID: Final = 20563
 
 UNILED_BLE_ERROR_BACKOFF_TIME = 0.25
 UNILED_BLE_NOTFICATION_TIMEOUT = 2.0
@@ -109,6 +113,8 @@ class UniledBleDevice(UniledDevice):
         from .models import UNILED_BLE_MODELS
 
         for model in UNILED_BLE_MODELS:
+            if hasattr(model, "match_ble_model"):
+                return model.match_ble_model(model_name)
             if model.model_name == model_name:
                 return model
         return None
@@ -142,19 +148,24 @@ class UniledBleDevice(UniledDevice):
 
         found = None
         for model in UNILED_BLE_MODELS:
-            if model.match_ble_device(device, advertisement):
+            match = model.match_ble_device(device, advertisement)
+
+            if match is True:
                 if found is not None:
-                    if (found := UniledBleDevice.match_model_name(device.name)):
-                        _LOGGER.debug("Device '%s' name matches model.", device.name)
+                    if found := UniledBleDevice.match_model_name(device.name):
+                        _LOGGER.debug("Device '%s' name matches model '%s'.", device.name, found.model_name)
                         return found
                     _LOGGER.debug(
                         "Device '%s' (%s) needs protocol resolving!",
                         device.name,
                         device.address,
                     )
-                    return None
+                    return True
                 else:
                     found = model
+            elif isinstance(match, UniledBleModel):
+                _LOGGER.debug("Matched %s == %s", model.model_name, match.model_name)
+                return match
 
         if found is None:
             _LOGGER.debug(
@@ -191,8 +202,14 @@ class UniledBleDevice(UniledDevice):
         retry_count: int = UNILED_BLE_DEVICE_RETRYS,
     ) -> None:
         """Init the UniLED BLE Model"""
-        _LOGGER.debug("%s: Init BLE Device (Model: %s)", ble_device.name, model_name)
-
+        _LOGGER.debug(
+            "%s: [%s] Init BLE Device (Model: %s)",
+            ble_device.name,
+            hex(id(self)),
+            model_name,
+        )
+        super().__init__()
+        self._channels = list()
         self._ble_device = ble_device
         self._advertisement_data = advertisement_data
         self._connect_lock = asyncio.Lock()
@@ -206,7 +223,6 @@ class UniledBleDevice(UniledDevice):
         self._client: BleakClientWithServiceCache | None = None
         self._read_char: BleakGATTCharacteristic | None = None
         self._write_char: BleakGATTCharacteristic | None = None
-        # super().__init__()
 
         if model_name is not None:
             self._set_model(self.match_model_name(model_name))
@@ -250,9 +266,12 @@ class UniledBleDevice(UniledDevice):
     ##
     async def update(self, retry: int | None = None) -> bool:
         """Update the device."""
-        _LOGGER.debug("%s: Update - Send State Query...", self.name)
         self._notification_event.clear()
-        if not await self.send(self.model.build_state_query(self), retry):
+        if not (query := self.model.build_state_query(self)):
+            _LOGGER.warning("%s: Update - Failed, no state query command available!", self.name)
+            return False
+        _LOGGER.debug("%s: Update - Send State Query...", self.name)
+        if not await self.send(query, retry):
             return False
         if not self.available:
             _LOGGER.warning("%s: Update - Failed, device not available.", self.name)
@@ -269,8 +288,14 @@ class UniledBleDevice(UniledDevice):
                         "%s: Update - Failed, notification timeout.", self.name
                     )
                     return False
+
         for channel in self.channel_list:
-            _LOGGER.debug("%s: Status: %s", self.name, channel.status.dump())
+            _LOGGER.debug(
+                "%s: %s, Status: %s",
+                self.name,
+                channel.title,
+                channel.status.dump(),
+            )
         return True
 
     ##
@@ -306,7 +331,7 @@ class UniledBleDevice(UniledDevice):
             if await self._send_command(commands, retry):
                 self._cancel_disconnect_timer()
                 return True
-            _LOGGER.warning("%s: Send command failed!", self.name)
+            _LOGGER.debug("%s: Send command failed!", self.name)
         except Exception as ex:
             _LOGGER.error(
                 "%s: Send command faled due to an exception.",
@@ -354,9 +379,8 @@ class UniledBleDevice(UniledDevice):
                         "%s: Device not found, no longer in range, or poor RSSI: %s",
                         self.name,
                         self.rssi,
-                        exc_info=True,
                     )
-                    raise
+                    return False
                 except CharacteristicMissingError as ex:
                     if attempt == retry:
                         _LOGGER.error(
@@ -375,18 +399,18 @@ class UniledBleDevice(UniledDevice):
                         self.rssi,
                         exc_info=True,
                     )
-                except BLEAK_RETRY_EXCEPTIONS:
+                except BLEAK_RETRY_EXCEPTIONS as ex:
                     if attempt == retry:
                         _LOGGER.error(
-                            "%s: Communication failed; Stopping trying; RSSI: %s",
+                            "%s: Communication failed; Stopping trying; RSSI: %s - %s",
                             self.name,
                             self.rssi,
-                            exc_info=True,
+                            str(ex),
                         )
-                        raise
+                        return False
 
                     _LOGGER.debug(
-                        "%s: Communication failed with:", self.name, exc_info=True
+                        "%s: Communication failed with: %s", self.name, str(ex)
                     )
                 except AttributeError:
                     raise
@@ -515,11 +539,14 @@ class UniledBleDevice(UniledDevice):
                     self._notification_event.set()
                     self._fire_callbacks()
                     return
-            except Exception as ex:
-                _LOGGER.debug(
-                    "%s: Notification parser failed!", self.name, exc_info=True
+            except ParseNotificationError as ex:
+                _LOGGER.warning(
+                    "%s: Notification parser failed! - %s", self.name, str(ex),
                 )
-                raise  ## Hmmm!
+            except Exception as ex:
+                _LOGGER.warning(
+                    "%s: Notification parser exception!", self.name, exc_info=True,
+                )
 
     async def _start_notify(self) -> bool:
         """Start notification."""
@@ -687,25 +714,22 @@ class UniledBleDevice(UniledDevice):
         if self._model is not None:
             return self._model
 
-        _LOGGER.debug("%s: Resolving model...", self.name)
-
         for model in UNILED_BLE_MODELS:
-            if skip_local_name and self.name in model.ble_local_names:
-                continue
-            for uuid in model.ble_service_uuids:
-                if uuid in self._advertisement_data.service_uuids:
-                    self._set_model(model)
-                    if await self.update(retry=0):
-                        if do_disconnect:
-                            await self.stop()
-                        return self._model
+            self._set_model(model)
+            if await self.update(retry=0):
+                if do_disconnect:
+                    await self.stop()
+                return self._model
+            else:
+                self._model = None
+
         await self.stop()
         _LOGGER.error("%s: Failed to resolve device model.", self.name)
         return None
 
     def _set_model(self, model: UniledBleModel) -> None:
         """Set the device model"""
-        if self._model is None and model is not None:
+        if self._model is None and isinstance(model, UniledBleModel):
             _LOGGER.debug(
                 "%s: Set model as '%s' by %s",
                 self.name,

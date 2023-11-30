@@ -205,6 +205,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     domain_data = hass.data[DOMAIN]
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator: UniledUpdateCoordinator = domain_data.pop(entry.entry_id)
+
         await coordinator.device.stop()
         if coordinator.device.transport == UNILED_TRANSPORT_BLE:
             bluetooth.async_rediscover_address(hass, coordinator.device.address)

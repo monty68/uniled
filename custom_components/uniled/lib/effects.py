@@ -1,117 +1,19 @@
-"""UniLED Artifacts"""
+"""UniLED Effects"""
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
-from enum import IntEnum
 from .helpers import StrEnum
 
-UNKNOWN: Final = "Uknown"
-
-UNILED_CHIP_TYPES: Final = {
-    # 3 Color - RGB
-    0x00: "SM16703",
-    0x01: "TM1804",
-    0x02: "UCS1903",
-    0x03: "WS2811",
-    0x04: "WS2801",
-    0x05: "SK6812",
-    0x06: "LPD6803",
-    0x07: "LPD8806",
-    0x08: "APA102",
-    0x09: "APA105",
-    0x0A: "DMX512",
-    0x0B: "TM1914",
-    0x0C: "TM1913",
-    0x0D: "P9813",
-    0x0E: "INK1003",
-    0x0F: "P943S",
-    0x10: "P9411",
-    0x11: "P9413",
-    0x12: "TX1812",
-    0x13: "TX1813",
-    0x14: "GS8206",
-    0x15: "GS8208",
-    0x16: "SK9822",
-    # 4 Color - RGBW
-    0x17: "TM1814",
-    0x18: "SK6812_RGBW",
-    0x19: "P9414",
-    0x1A: "P9412",
-}
-
-UNILED_CHIP_4COLOR: Final = [
-    0x17,  # TM1814
-    0x18,  # SK6812_RGBW
-    0x19,  # P9414
-    0x1A,  # P9412
-]
-
-UNILED_CHIP_ORDER_3COLOR: Final = {
-    0x00: "RGB",
-    0x01: "RBG",
-    0x02: "GRB",
-    0x03: "GBR",
-    0x04: "BRG",
-    0x05: "BGR",
-}
-
-UNILED_CHIP_ORDER_4COLOR: Final = {
-    0x00: "RGBW",
-    0x01: "RBGW",
-    0x02: "GRBW",
-    0x03: "GBRW",
-    0x04: "BRGW",
-    0x05: "BGRW",
-    0x06: "RGWB",
-    0x07: "RBWG",
-    0x08: "RWGB",
-    0x09: "RWBG",
-    0x0A: "GRWB",
-    0x0B: "GBWR",
-    0x0C: "GWRB",
-    0x0D: "GWBR",
-    0x0E: "BRWG",
-    0x0F: "BGWR",
-    0x10: "BWRG",
-    # 0x11: "",
-}
-
-
-class UNILEDInput(StrEnum):
-    """Audio Input Names"""
-
-    AUXIN = "Aux In"
-    INTMIC = "Int. Mic"
-    EXTMIC = "Ext. Mic"
-    PLAYER = "Player"
-
-
-class UNILEDMode(StrEnum):
-    """Mode Names"""
-
-    OFF = "Off"
-    MANUAL = "Manual"
-    SINGULAR = "Single FX"
-    AUTO = "Cycle Effects"
-    AUTO_PATTERN = "Cycle Pattern Effects"
-    AUTO_SCENE = "Cycle Scenes"
-    AUTO_SOUND = "Cycle Sound Effects"
-
+UNILED_EFFECT_TYPE_DYNAMIC: Final = "Dynamic"
+UNILED_EFFECT_TYPE_STATIC: Final = "Static"
+UNILED_EFFECT_TYPE_SOUND: Final = "Sound"
 
 class UNILEDEffectType(StrEnum):
     """Effect Mode/Type Names"""
 
-    DYNAMIC = "Dynamic"
-    PATTERN = "Pattern"
-    STATIC = "Static"
-    SOUND = "Sound"
-
-
-class UNILEDEffectDirection(StrEnum):
-    """Effect Direction Names"""
-
-    BACKWARDS = "Backwards"
-    FORWARDS = "Forwards"
+    DYNAMIC = UNILED_EFFECT_TYPE_DYNAMIC
+    STATIC = UNILED_EFFECT_TYPE_STATIC
+    SOUND = UNILED_EFFECT_TYPE_SOUND
 
 
 class UNILEDEffects(StrEnum):

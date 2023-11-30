@@ -60,6 +60,9 @@ from .lib.const import (
     ATTR_UL_EFFECT_DIRECTION,
     ATTR_UL_LIGHT_MODE,
     ATTR_UL_LIGHT_MODE_NUMBER,
+    ATTR_UL_SEGMENT_COUNT,
+    ATTR_UL_SEGMENT_PIXELS,
+    ATTR_UL_TOTAL_PIXELS,
 )
 
 import asyncio
@@ -117,6 +120,9 @@ class UniledLightEntity(
             ATTR_UL_EFFECT_SPEED,
             ATTR_UL_EFFECT_LENGTH,
             ATTR_UL_EFFECT_DIRECTION,
+            ATTR_UL_SEGMENT_COUNT,
+            ATTR_UL_SEGMENT_PIXELS,
+            ATTR_UL_TOTAL_PIXELS,
         }
     )
 
@@ -271,7 +277,8 @@ class UniledLightEntity(
                     await self.device.async_set_state(
                         self.channel, self.feature.attr, False
                     )
-                    return
+                    kwargs.clear()
+                    #return
                 if not self.is_on:
                     if power or (kwargs and self.channel.status.device_needs_on):
                         await self.device.async_set_state(
@@ -320,7 +327,7 @@ class UniledLightEntity(
             if len(kwargs):
                 await self.device.async_set_multi_state(self.channel, **kwargs)
 
-        if self.channel.status.device_force_refresh:
+        if self.channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False):
             await self.coordinator.async_request_refresh()
 
     ## May not be needed now?

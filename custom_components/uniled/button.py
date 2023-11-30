@@ -70,6 +70,6 @@ class UniledButtonEntity(
 
     async def async_press(self) -> None:
         """Button Pressed!"""
-        await self._async_state_change(
-            value=not bool(self.device.get_state(self.channel, self.feature.attr, True))
-        )
+        value = self.device.get_state(self.channel, self.feature.attr)
+        value = not value if isinstance(self.feature.value, bool) else self.feature.value
+        await self._async_state_change(value)

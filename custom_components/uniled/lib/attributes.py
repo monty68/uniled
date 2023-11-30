@@ -1,6 +1,7 @@
 """UniLED Attributes."""
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import Any
 from enum import IntEnum
 from .const import *
 
@@ -148,6 +149,7 @@ class UniledButton(UniledAttribute):
         name: str,
         icon: str | None = None,
         key: str | None = None,
+        value: Any = True
     ) -> None:
         self._type = "button"
         self._enabled = enabled
@@ -156,6 +158,12 @@ class UniledButton(UniledAttribute):
         self._name = name
         self._icon = icon
         self._key = key
+        self._value = value
+
+    @property
+    def value(self) -> int:
+        return self._value
+
 
 class UniledNumber(UniledAttribute):
     """UniLED Number Feature Class"""

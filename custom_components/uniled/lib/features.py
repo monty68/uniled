@@ -31,6 +31,7 @@ from .attributes import (
     ATTR_UL_COEXISTENCE,
     ATTR_UL_SEGMENT_COUNT,
     ATTR_UL_SEGMENT_PIXELS,
+    ATTR_UL_SCENE_LOOP,
     ATTR_HA_COLOR_TEMP_KELVIN,
 )
 
@@ -137,6 +138,18 @@ class UniledEffectLoop(UniledSwitch):
             "mdi:refresh-auto",
         )
 
+class UniledSceneLoop(UniledSwitch):
+    """UniLED Scene Loop Feature Class"""
+
+    def __init__(self) -> None:
+        super().__init__(
+            UniledGroup.STANDARD,
+            True,
+            ATTR_UL_SCENE_LOOP,
+            "Loop Scenes",
+            "mdi:progress-star",
+            "mdi:refresh-auto",
+        )
 
 class UniledEffectPlay(UniledSwitch):
     """UniLED Effect Play Feature Class"""
@@ -188,7 +201,7 @@ class UniledLightMode(UniledSelect):
 
     def __init__(self) -> None:
         super().__init__(
-            UniledGroup.STANDARD,
+            UniledGroup.NEEDS_ON,
             True,
             ATTR_UL_LIGHT_MODE,
             "Light Mode",

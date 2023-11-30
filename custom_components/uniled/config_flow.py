@@ -12,9 +12,11 @@ from homeassistant.components.bluetooth import (
 )
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_DEVICE, CONF_ADDRESS, CONF_MODEL
 
-from .lib.ble.device import UniledBleDevice, UNILED_TRANSPORT_BLE
-from .lib.net.device import UniledNetDevice, UNILED_TRANSPORT_NET
-from .const import DOMAIN
+from .lib.ble.device import UniledBleDevice, UniledBleModel, UNILED_TRANSPORT_BLE
+from .lib.net.device import UniledNetDevice, UniledNetModel, UNILED_TRANSPORT_NET
+
+# from .lib.zng.device import UniledZngDevice, UNILED_TRANSPORT_ZNG
+from .const import DOMAIN, UNILED_DEVICE_RETRYS, CONF_RETRY_COUNT
 
 import voluptuous as vol
 import logging
@@ -27,13 +29,13 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(
-        config_entry: flow.ConfigEntry,
-    ) -> UniledOptionsFlowHandler:
-        """Get the options flow for this handler."""
-        return UniledOptionsFlowHandler(config_entry)
+    #@staticmethod
+    #@callback
+    #def async_get_options_flow(
+    #    config_entry: flow.ConfigEntry,
+    #) -> UniledOptionsFlowHandler:
+    #    """Get the options flow for this handler."""
+    #    return UniledOptionsFlowHandler(config_entry)
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -44,6 +46,7 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> FlowResult:
         """Handle the bluetooth discovery step."""
+        transport = UNILED_TRANSPORT_BLE
 
         if (
             model := UniledBleDevice.match_known_device(
@@ -63,7 +66,8 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
             )
         }
         self.context[CONF_ADDRESS] = discovery_info.address
-        self.context[CONF_MODEL] = model.model_name if model is not None else None
+        self.context[CONF_MODEL] = model.model_name if isinstance(model, UniledBleModel) else None
+        self.context[CONF_DEVICE_CLASS] = transport
 
         return await self.async_step_bluetooth_confirm()
 
@@ -72,11 +76,11 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle the user step to pick discovered device."""
         errors: dict[str, str] = {}
-        
+
         if user_input is not None:
             _LOGGER.debug("User Input: %s", user_input)
             return self.async_abort(reason="not_supported")
-        
+
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_ADDRESS): vol.In(
@@ -87,7 +91,7 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
                 ),
             }
         )
-        
+
         return self.async_show_form(
             step_id="user",
             data_schema=data_schema,
@@ -109,16 +113,14 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
 
     def _async_create_entry(self, model=None):
         """Get/Create entry"""
-
-        _LOGGER.warning(self.context)
-
-        address = self.context.get(CONF_ADDRESS, "")
-        if self.context.get("source") == "bluetooth":
-            transport = UNILED_TRANSPORT_BLE
-        else:
+        if self.context.get("source") != "bluetooth":
             return self.async_abort(reason="not_supported")
 
+        address = self.context.get(CONF_ADDRESS, "")
+        transport = self.context.get(CONF_DEVICE_CLASS, "")
+
         _LOGGER.warning("Address: %s", address)
+        _LOGGER.warning(self.context)
 
         return self.async_create_entry(
             title=self.context["title_placeholders"]["name"],

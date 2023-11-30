@@ -2,14 +2,14 @@
 from __future__ import annotations
 from dataclasses import dataclass, replace
 from abc import abstractmethod
-from typing import Any
+from typing import Any, Final
 
 from .channel import UniledChannel
 
+import itertools
 import logging
 
 _LOGGER = logging.getLogger(__name__)
-
 
 @dataclass(frozen=True)
 class UniledModel:
@@ -21,6 +21,36 @@ class UniledModel:
     manufacturer: str  # The manufacturers name
     channels: int  # The number of supported channels
 
+    def chip_order_list(self, sequence: str) -> list:
+        """Generate list of chip order combinations"""
+        combos = list()
+        if sequence:
+            for combo in itertools.permutations(sequence, len(sequence)):
+                combos.append("".join(combo))
+        return combos
+
+    def chip_order_name(self, sequence: str, order: int) -> str | None:
+        """Return chip order name from index"""
+        if sequence:
+            if order == 0:
+                return sequence   
+            index = 0
+            for combo in itertools.permutations(sequence, len(sequence)):
+                if index == order:
+                    return "".join(combo)
+                index += 1
+        return None
+
+    def chip_order_index(self, sequence: str, order: str) -> int | None:
+        """Return index from chip order name"""
+        if sequence:
+            index = 0
+            for combo in itertools.permutations(sequence, len(sequence)):
+                if order == "".join(combo):
+                    return index
+                index += 1
+        return None
+        
     @abstractmethod
     def parse_notifications(self, device: Any, sender: int, data: bytearray) -> bool:
         """Parse notification message(s)"""
@@ -39,8 +69,9 @@ class UniledModel:
     ) -> list[bytearray]:
         """Build supported command"""
         _LOGGER.debug(
-            "%s: Command: %s = %s (%s)",
+            "%s: %s, command: %s = %s (%s)",
             self.model_name,
+            channel.name,
             attr,
             value,
             channel.status.get(attr),

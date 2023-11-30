@@ -24,14 +24,15 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    DOMAIN, 
-    UNILED_TRANSPORT_BLE, 
-    UNILED_TRANSPORT_NET, 
+    DOMAIN,
+    UNILED_TRANSPORT_BLE,
+    UNILED_TRANSPORT_NET,
     UNILED_STATE_CHANGE_LATENCY,
     ATTR_UL_INFO_FIRMWARE,
     ATTR_UL_INFO_HARDWARE,
     ATTR_UL_INFO_MODEL_NAME,
     ATTR_UL_INFO_MANUFACTURER,
+    ATTR_UL_DEVICE_FORCE_REFRESH,
 )
 
 from .coordinator import UniledUpdateCoordinator
@@ -132,7 +133,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         self._device: UniledDevice = coordinator.device
         self._channel: UniledChannel = channel
         self._feature: UniledAttribute = feature
-        #self._responding = True
+        # self._responding = True
 
         if self._channel.name:
             self._attr_name = f"{self._channel.name} {feature.name}"
@@ -170,8 +171,12 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             ATTR_IDENTIFIERS: {(DOMAIN, entry.entry_id)},
             ATTR_NAME: device.name,
             ATTR_MODEL: device.master.get(ATTR_UL_INFO_MODEL_NAME, device.model_name),
-            ATTR_MANUFACTURER: device.master.get(ATTR_UL_INFO_MANUFACTURER, device.manufacturer),
-            ATTR_HW_VERSION: device.master.get(ATTR_UL_INFO_HARDWARE, device.description),
+            ATTR_MANUFACTURER: device.master.get(
+                ATTR_UL_INFO_MANUFACTURER, device.manufacturer
+            ),
+            ATTR_HW_VERSION: device.master.get(
+                ATTR_UL_INFO_HARDWARE, device.description
+            ),
             ATTR_SW_VERSION: device.master.get(ATTR_UL_INFO_FIRMWARE, None),
         }
 
@@ -208,10 +213,14 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
 
     async def _async_state_change(self, value: Any) -> None:
         """Update device with new entity value/state"""
-        success = await self.device.async_set_state(self.channel, self.feature.attr, value)
-        #self._async_update_attrs()
-        if self.channel.status.device_force_refresh:
-            await self.coordinator.async_request_refresh()
+        success = await self.device.async_set_state(
+            self.channel, self.feature.attr, value
+        )
+        if self.channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False):
+            #await self.coordinator.async_request_refresh()
+            await self.coordinator.async_refresh()
+        else:
+            self._async_update_attrs()
         if self.feature.reload and success:
             ## TODO Can we warn the user there will be a reload??
             self._async_delayed_reload(self.hass, self.coordinator.entry)

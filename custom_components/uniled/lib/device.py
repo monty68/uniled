@@ -30,15 +30,21 @@ class ParseNotificationError(Exception):
 class UniledMaster(UniledChannel):
     """UniLED Master Channel Class"""
     _device: UniledDevice
+    _name: str | None
 
-    def __init__(self, device: UniledDevice) -> None:
+    def __init__(self, device: UniledDevice, name: str | None = MASTER) -> None:
         self._device = device
+        self._name = MASTER if name is True else name
         super().__init__(0)
 
     @property
     def name(self) -> str:
         """Returns the channel name."""
-        return MASTER if self.device.channels > 1 else ""
+        if self.device.channels == 1:
+            return ""
+        if self.device.channels > 1 and self._name is not None:
+            return self._name
+        return super().name
 
     @property
     def device(self) -> UniledDevice:
@@ -51,19 +57,19 @@ class UniledMaster(UniledChannel):
 ##
 class UniledDevice:
     """UniLED Base Device Class"""
-    _channels: list[UniledChannel] = []
-    _model: weakref.ProxyType(UniledModel) | None = None
-    _callbacks: list[Callable[[UniledChannel], None]] = []
+
+    _channels: list[UniledChannel] = list()
+    #_model: weakref.ProxyType(UniledModel) | None = None
+    _model: UniledModel | None = None
+    _callbacks: list[Callable[[UniledChannel], None]] = list()
     _last_notification_data: bytearray = ()
     _last_notification_time = None
 
     def __init__(self) -> None:
         """Init the UniLED Base Driver"""
-        self._create_channels()
     
     def __del__(self):
         """Delete the device"""
-        #self.stop()
         self._model = None
         self._channels.clear()
         _LOGGER.debug("%s: Deleted Device", self.name)
@@ -72,13 +78,19 @@ class UniledDevice:
         """Create device channels."""
         assert self._model is not None  # nosec
         total = self._model.channels or 1
+        master_name = None
+
+        if hasattr(self._model, "master_channel") and total > 1:
+            master_name = self._model.master_channel
+            total += 1
+
         count = len(self._channels)
         if count < total:
             for index in range(total):
                 if not index and not count:
-                    self._channels.append(UniledMaster(self))
+                    self._channels.append(UniledMaster(self, master_name))
                 else:
-                    self._channels.append(UniledChannel(count + index + 1))
+                    self._channels.append(UniledChannel(count + index))
         elif count > total:
             for index in range(count - total):
                 self._channels.pop()
@@ -201,6 +213,7 @@ class UniledDevice:
         command = self._model.build_command(self, channel, attr, state)
         success = await self.send(command) if command else False
         #refresh = not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False)
+        _LOGGER.debug("%s: Command Success = %s (%s)", self.name, success, command)
         if success:
             channel.set(attr, state, True)
         else:
