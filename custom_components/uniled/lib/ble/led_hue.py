@@ -6,6 +6,7 @@ from typing import Any, Final
 
 from ..const import *  # I know!
 from ..channel import UniledChannel
+
 from ..features import (
     UniledAttribute,
     UniledLedStrip,
@@ -16,14 +17,15 @@ from ..features import (
     UniledChipOrder,
     UniledSegmentPixels,
 )
-from ..artifacts import (
-    UNILED_CHIP_TYPES as LEDHUE_CHIP_TYPES,
-    UNILED_CHIP_4COLOR as LEDHUE_CHIP_TYPES_4COLOR,
-    UNILED_CHIP_ORDER_3COLOR as LEDHUE_CHIP_ORDER_RGB,
-    UNILED_CHIP_ORDER_4COLOR as LEDHUE_CHIP_ORDER_RGBW,
+from ..effects import (
     UNILEDEffectType,
     UNILEDEffects,
-    UNILEDMode,
+)
+from ..chips import (
+    UNILED_CHIP_TYPES_4COLOR as LEDHUE_CHIP_TYPES_4COLOR,
+    UNILED_CHIP_TYPES as LEDHUE_CHIP_TYPES,
+    UNILED_CHIP_ORDER_RGB,
+    UNILED_CHIP_ORDER_RGBW,
 )
 from .device import (
     BASE_UUID_FORMAT as LEDHUE_UUID_FORMAT,
@@ -38,13 +40,6 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-LEDHUE_MANUFACTURER_ID: Final = 0
-LEDHUE_MANUFACTURER: Final = "SPLED (LED Hue)"
-LEDHUE_MODEL_NUMBER_SP110E: Final = 0x110E
-LEDHUE_UUID_SERVICE = [LEDHUE_UUID_FORMAT.format(part) for part in ["ffe0"]]
-LEDHUE_UUID_WRITE = [LEDHUE_UUID_FORMAT.format(part) for part in ["ffe1"]]
-LEDHUE_UUID_READ = []
-
 LEDHUE_MAX_SEGMENT_PIXELS = 1024
 LEDHUE_EFFECT_MAX_SPEED = 255
 LEDHUE_EFFECT_TYPE_AUTO = 0x00
@@ -54,7 +49,7 @@ LEDHUE_EFFECT_TYPE_STATIC = 0x79
 LEDHUE_EFFECT_GROUPS: Final = [
     {LEDHUE_EFFECT_TYPE_STATIC: UNILEDEffects.SOLID.value},
     {
-        (LEDHUE_EFFECT_TYPE_DYNAMIC + k): f"{UNILEDEffectType.PATTERN} {k+1}"
+        (LEDHUE_EFFECT_TYPE_DYNAMIC + k): f"Pattern {k+1}"
         for k in range(LEDHUE_EFFECT_TYPE_STATIC - 1)
     },
 ]
@@ -85,6 +80,20 @@ class _LEDHUE(UniledBleModel):
         TURN_OFF = 0xAB
         CHECK_DEVICE = 0xD5
         RENAME_DEVICE = 0xBB
+
+    def __init__(self, id: int, name: str, info: str, data: bytes, channels: int = 1):
+        super().__init__(
+            model_num = id,
+            model_name = name,
+            description = info,
+            manufacturer = "SPLED (LED Hue)",
+            channels = channels,
+            ble_manufacturer_id = 0,
+            ble_service_uuids = [LEDHUE_UUID_FORMAT.format(part) for part in ["ffe0"]],
+            ble_write_uuids = [LEDHUE_UUID_FORMAT.format(part) for part in ["ffe1"]],
+            ble_read_uuids = [],
+            ble_manufacturer_data=data,
+        )
 
     def parse_notifications(
         self,
@@ -124,9 +133,7 @@ class _LEDHUE(UniledBleModel):
                 ATTR_UL_POWER: data[0] == 1,
                 ATTR_UL_EFFECT_LOOP: not effect,
                 ATTR_UL_EFFECT_NUMBER: effect,
-                ATTR_HA_EFFECT: self.str_if_key_in(
-                    effect, LEDHUE_EFFECTS, str(UNILEDMode.AUTO)
-                ),
+                ATTR_HA_EFFECT: self.str_if_key_in(effect, LEDHUE_EFFECTS, "Auto"),
             }
         )
 
@@ -138,7 +145,7 @@ class _LEDHUE(UniledBleModel):
 
         if chip_type not in LEDHUE_CHIP_TYPES_4COLOR:
             device.master.status.set(
-                ATTR_UL_CHIP_ORDER, self.str_if_key_in(data[5], LEDHUE_CHIP_ORDER_RGB)
+                ATTR_UL_CHIP_ORDER, self.chip_order_name(UNILED_CHIP_ORDER_RGB, data[5])
             )
             if effect == LEDHUE_EFFECT_TYPE_STATIC:
                 device.master.status.set(
@@ -146,7 +153,8 @@ class _LEDHUE(UniledBleModel):
                 )
         else:
             device.master.status.set(
-                ATTR_UL_CHIP_ORDER, self.str_if_key_in(data[5], LEDHUE_CHIP_ORDER_RGBW)
+                ATTR_UL_CHIP_ORDER,
+                self.chip_order_name(UNILED_CHIP_ORDER_RGBW, data[5]),
             )
             if effect == LEDHUE_EFFECT_TYPE_STATIC:
                 device.master.status.set(
@@ -264,12 +272,12 @@ class _LEDHUE(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, value: str | None = None
     ) -> bytearray | None:
         """Build chip order message(s)"""
-        order_dict = (
-            LEDHUE_CHIP_ORDER_RGBW
+        sequence = (
+            UNILED_CHIP_ORDER_RGBW
             if device.master.has(ATTR_HA_RGBW_COLOR)
-            else LEDHUE_CHIP_ORDER_RGB
+            else UNILED_CHIP_ORDER_RGB
         )
-        if (order := self.int_if_str_in(value, order_dict)) is not None:
+        if (order := self.chip_order_index(sequence, value)) is not None:
             return bytearray([order & 0xFF, 0x00, 0x00, self.cmd.SET_CHIP_ORDER])
         return None
 
@@ -278,8 +286,8 @@ class _LEDHUE(UniledBleModel):
     ) -> list | None:
         """Return list of chip orders"""
         if device.master.has(ATTR_HA_RGBW_COLOR):
-            return list(LEDHUE_CHIP_ORDER_RGBW.values())
-        return list(LEDHUE_CHIP_ORDER_RGB.values())
+            return self.chip_order_list(UNILED_CHIP_ORDER_RGBW)
+        return self.chip_order_list(UNILED_CHIP_ORDER_RGB)
 
     def build_segment_pixels_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: int | None = None
@@ -295,14 +303,9 @@ class _LEDHUE(UniledBleModel):
 ## SP110E
 ##
 SP110E = _LEDHUE(
-    model_num=LEDHUE_MODEL_NUMBER_SP110E,
-    model_name="SP110E",
-    description="RGB(W) SPI Controller",
-    manufacturer=LEDHUE_MANUFACTURER,
+    id=0x110E,
+    name="SP110E",
+    info="RGB(W) SPI Controller",
+    data=b"\x00\x00",
     channels=1,
-    ble_manufacturer_id=LEDHUE_MANUFACTURER_ID,
-    ble_manufacturer_data=b"\x00\x00",
-    ble_service_uuids=LEDHUE_UUID_SERVICE,
-    ble_write_uuids=LEDHUE_UUID_WRITE,
-    ble_read_uuids=LEDHUE_UUID_READ,
 )
