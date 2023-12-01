@@ -510,7 +510,7 @@ class BanlanX60X(UniledBleModel):
 SP601E = BanlanX60X(
     id=0x601E,
     name="SP601E",
-    info="2xRGB SPI (Music) Controller",
+    info="2xSPI RGB (Music) Controller",
     data=b"\x01\x02",
     channels=2,
 )
@@ -518,7 +518,7 @@ SP601E = BanlanX60X(
 SP602E = BanlanX60X(
     id=0x602E,
     name="SP602E",
-    info="4xRGB SPI (Music) Controller",
+    info="4xSPI RGB (Music) Controller",
     data=b"\x02\x02",
     channels=4,
 )
@@ -526,7 +526,7 @@ SP602E = BanlanX60X(
 SP608E = BanlanX60X(
     id=0x608E,
     name="SP608E",
-    info="8xRGB SPI (Music) Controller",
+    info="8xSPI RGB (Music) Controller",
     data=b"\x08\x02",
     channels=8,
 )
