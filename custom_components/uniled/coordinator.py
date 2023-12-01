@@ -7,7 +7,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, ConfigEntryError
 
 from .const import UNILED_UPDATE_SECONDS, UNILED_REFRESH_DELAY
 from .lib.device import UniledDevice
@@ -69,5 +69,5 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
                     await self.device.stop()
                 raise UpdateFailed(f"{self.device.name}: Invalid entry state!")
             except Exception as ex:
-                raise UpdateFailed(str(ex)) from ex
+                raise ConfigEntryError(str(ex)) from ex
     

@@ -268,14 +268,16 @@ class UniledBleDevice(UniledDevice):
         """Update the device."""
         self._notification_event.clear()
         if not (query := self.model.build_state_query(self)):
-            _LOGGER.warning("%s: Update - Failed, no state query command available!", self.name)
-            return False
+            raise Exception("Update - Failed, no state query command available!")
+        
         _LOGGER.debug("%s: Update - Send State Query...", self.name)
         if not await self.send(query, retry):
             return False
+        
         if not self.available:
             _LOGGER.warning("%s: Update - Failed, device not available.", self.name)
             return False
+        
         if not self._notification_event.is_set():
             # Wait for actual response!
             _LOGGER.debug("%s: Update - Awaiting status notification...", self.name)
