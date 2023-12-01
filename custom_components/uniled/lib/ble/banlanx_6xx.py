@@ -683,7 +683,7 @@ class SP630E(Signature):
 
 dataclass(frozen=True)
 class SP631E_SP641E(Signature):
-    info = "Single Color PWM (Music) Controller"
+    info = "PWM Single Color (Music) Controller"
     conf = {
         0x01: CFG_81(),
     }
@@ -694,7 +694,7 @@ class SP631E_SP641E(Signature):
 
 dataclass(frozen=True)
 class SP632E_SP642E(Signature):
-    info = "CCT PWM (Music) Controller"
+    info = "PWM CCT (Music) Controller"
     conf = {
         0x03: CFG_83(),
     }
@@ -705,7 +705,7 @@ class SP632E_SP642E(Signature):
 
 dataclass(frozen=True)
 class SP633E_SP643E(Signature):
-    info = "RGB PWM (Music) Controller"
+    info = "PWM RGB (Music) Controller"
     conf = {
         0x05: CFG_85(),
     }
@@ -716,7 +716,7 @@ class SP633E_SP643E(Signature):
 
 dataclass(frozen=True)
 class SP634E_SP644E(Signature):
-    info = "RGBW PWM (Music) Controller"
+    info = "PWM RGBW (Music) Controller"
     conf = {
         0x07: CFG_87(),
     }
@@ -727,7 +727,7 @@ class SP634E_SP644E(Signature):
 
 dataclass(frozen=True)
 class SP635E_SP645E(Signature):
-    info = "RGBCCT PWM (Music) Controller"
+    info = "PWM RGBCCT (Music) Controller"
     conf = {
         0x0A: CFG_8A(),
     }
@@ -738,7 +738,7 @@ class SP635E_SP645E(Signature):
 
 dataclass(frozen=True)
 class SP636E_SP646E(Signature):
-    info = "Single Color SPI (Music) Controller"
+    info = "SPI Single Color (Music) Controller"
     conf = {
         0x02: CFG_82(),
     }
@@ -749,7 +749,7 @@ class SP636E_SP646E(Signature):
 
 dataclass(frozen=True)
 class SP637E_SP647E(Signature):
-    info = "CCT SPI (Music) Controller"
+    info = "SPI CCT (Music) Controller"
     conf = {
         0x04: CFG_84(),
         0x0D: CFG_8D()
@@ -761,13 +761,36 @@ class SP637E_SP647E(Signature):
 
 dataclass(frozen=True)
 class SP638E_SP648E(Signature):
-    info = "RGB SPI (Music) Controller"
+    info = "SPI RGB (Music) Controller"
     conf = {
         0x06: CFG_86(),
     }
     ids = {
         0x27: "SP638E",
         0x33: "SP648E"
+    }
+
+dataclass(frozen=True)
+class SP639E_SP649E(Signature):
+    info = "SPI RGBW (Music) Controller"
+    conf = {
+        0x08: CFG_88(),
+    }
+    ids = {
+        0x28: "SP639E",
+        0x34: "SP649E"
+    }
+
+dataclass(frozen=True)
+class SP63AE_SP64AE(Signature):
+    info = "SPI RGBCCT (Music) Controller"
+    conf = {
+        0x0B: CFG_8B(),
+        0x0E: CFG_8E(),
+    }
+    ids = {
+        0x29: "SP63AE",
+        0x35: "SP64AE"
     }
 
 MODEL_SIGNATURE_LIST: Final = [
@@ -778,8 +801,9 @@ MODEL_SIGNATURE_LIST: Final = [
     SP634E_SP644E,
     SP635E_SP645E,
     SP636E_SP646E,
-    #SP637E_SP647E,
-    #SP638E_SP648E,
+    SP637E_SP647E,
+    SP638E_SP648E,
+    SP639E_SP649E,
 ]
 
 ##
@@ -789,7 +813,6 @@ class SP6xxEProxy(UniledBleModel):
     """BanlanX SP6xxE Proxy Model"""
 
     def match_ble_model(self, model: str) -> UniledBleModel | None:
-        _LOGGER.debug("Matching model: '%s'...", model)
         for signature in MODEL_SIGNATURE_LIST:
             for id, name in signature.ids.items():
                 if model != name:
@@ -933,14 +956,14 @@ class BanlanX6xx(SP6xxEProxy):
 
         device.master.status.replace(
             {
-                "dump_chip_type": data[31],
+                "chip_order_number": data[31],
                 ATTR_UL_DEVICE_FORCE_REFRESH: True,
                 ATTR_UL_INFO_FIRMWARE: data[11:18].decode("utf-8"),
                 ATTR_UL_ONOFF_EFFECT: onoff_effect,
                 ATTR_UL_ONOFF_SPEED: onoff_speed,
                 ATTR_UL_ONOFF_PIXELS: int.from_bytes(data[22:24], byteorder="big"),
                 ATTR_UL_ON_POWER: on_power,
-                "_diy_mode_": data[52],
+                "diy_mode": data[52],
                 "debug_extra": bytearray([data[8], data[10], data[26], data[28]]),
                 ATTR_UL_POWER: power,
             }
