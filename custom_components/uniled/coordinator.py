@@ -52,20 +52,21 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
             if self._listeners:
                 _LOGGER.warning("Still have listeners: %s", self._listeners)
 
+        valid_states = (
+            ConfigEntryState.LOADED,
+            ConfigEntryState.SETUP_IN_PROGRESS,
+            ConfigEntryState.SETUP_RETRY,
+        )
+
+        if self.entry.state not in valid_states:
+            if self.device.available:
+                _LOGGER.debug("%s: Forcing stop", self.device.name)
+                await self.device.stop()
+            raise UpdateFailed(f"{self.device.name}: Invalid entry state!")
+
         async with self.lock:
             try:
-                valid_states = (
-                    ConfigEntryState.LOADED,
-                    ConfigEntryState.SETUP_IN_PROGRESS,
-                    ConfigEntryState.SETUP_RETRY,
-                )
-
-                if self.entry.state in valid_states:
-                    success = await self.device.update()
-                if self.device.available:
-                    _LOGGER.debug("%s: Forcing stop", self.device.name)
-                    await self.device.stop()
-                raise UpdateFailed(f"{self.device.name}: Invalid entry state!")
+                success = await self.device.update()
             except Exception as ex:
                 raise ConfigEntryError(str(ex)) from ex
             finally:            
