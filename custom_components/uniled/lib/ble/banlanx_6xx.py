@@ -829,12 +829,6 @@ class SP6xxEProxy(UniledBleModel):
         self, device: BLEDevice, advertisement: AdvertisementData | None = None
     ) -> UniledBleModel | None:
         """Match to one of the SP6xxE devices"""
-        _LOGGER.debug(
-            "Checking support for: '%s' (%s)... %s",
-            device.name,
-            device.address,
-            advertisement,
-        )
         for mid, data in advertisement.manufacturer_data.items():
             if mid != self.ble_manufacturer_id or data[1] != 0x10:
                 continue
@@ -842,13 +836,6 @@ class SP6xxEProxy(UniledBleModel):
                 for id, name in signature.ids.items():
                     if id != data[0]:
                         continue
-                    _LOGGER.debug(
-                            "Device '%s' (%s) identified as '%s', by %s.",
-                            device.name,
-                            device.address,
-                            name,
-                            self.manufacturer,
-                    )
                     return BanlanX6xx(
                         id = id,
                         name = name,

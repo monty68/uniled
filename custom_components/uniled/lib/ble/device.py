@@ -82,20 +82,20 @@ class UniledBleModel(UniledModel):
                     manu_list = [manu_list]
                 for manu_data in manu_list:
                     if data.startswith(manu_data):
-                        _LOGGER.debug(
-                            "Device '%s' (%s) identified as '%s', by %s.",
-                            device.name,
-                            device.address,
-                            self.model_name,
-                            self.manufacturer,
-                        )
+                        #_LOGGER.debug(
+                        #    "Device '%s' (%s) identified as '%s', by %s.",
+                        #    device.name,
+                        #    device.address,
+                        #    self.model_name,
+                        #    self.manufacturer,
+                        #)
                         return True
-                    _LOGGER.debug(
-                        "%s : %s NOT in %s",
-                        mid,
-                        manu_data.hex(),
-                        data.hex(),
-                    )
+                    #_LOGGER.debug(
+                    #    "%s : %s NOT in %s",
+                    #    mid,
+                    #    manu_data.hex(),
+                    #    data.hex(),
+                    #)
             else:
                 pass
         return False
@@ -150,7 +150,16 @@ class UniledBleDevice(UniledDevice):
         for model in UNILED_BLE_MODELS:
             match = model.match_ble_device(device, advertisement)
 
-            if match is True:
+            if isinstance(match, UniledBleModel):
+                _LOGGER.debug(
+                    "Device '%s' (%s) identified as '%s', by %s.",
+                    device.name,
+                    device.address,
+                    match.model_name,
+                    match.manufacturer,
+                )
+                found = match
+            elif match is True:
                 if found is not None:
                     if found := UniledBleDevice.match_model_name(device.name):
                         _LOGGER.debug("Device '%s' name matches model '%s'.", device.name, found.model_name)
@@ -163,13 +172,16 @@ class UniledBleDevice(UniledDevice):
                     return True
                 else:
                     found = model
-            elif isinstance(match, UniledBleModel):
-                _LOGGER.debug("Matched %s == %s", model.model_name, match.model_name)
-                return match
 
         if found is None:
             _LOGGER.debug(
                 "Device '%s' (%s) not supported!",
+                device.name,
+                device.address,
+            )
+        else:
+            _LOGGER.debug(
+                "Device '%s' (%s) is supported!",
                 device.name,
                 device.address,
             )
