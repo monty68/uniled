@@ -61,13 +61,14 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
                 )
 
                 if self.entry.state in valid_states:
-                    if not await self.device.update():
-                        raise UpdateFailed("Update failed")
-                    return
+                    success = await self.device.update()
                 if self.device.available:
                     _LOGGER.debug("%s: Forcing stop", self.device.name)
                     await self.device.stop()
                 raise UpdateFailed(f"{self.device.name}: Invalid entry state!")
             except Exception as ex:
                 raise ConfigEntryError(str(ex)) from ex
+            finally:            
+                if not success:
+                    raise UpdateFailed("Device update failed")
     
