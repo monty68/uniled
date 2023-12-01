@@ -267,6 +267,8 @@ class _LEDCHORD(UniledBleModel):
                         else LEDCHORD_LIGHT_MODE_SINGULAR
                     )
 
+            device.master.status.set(ATTR_HA_BRIGHTNESS, data[10])
+
             if white is not None:
                 device.master.status.set(ATTR_HA_RGBW_COLOR, rgb + (white,))
                 device.master.status.set(
