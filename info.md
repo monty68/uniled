@@ -7,16 +7,32 @@
 
 # UniLED - The Universal Light Controller
 
+UniLED supports the following range of BLE LED controllers:
 
-UniLED Currently supports the following range of cheap BLE addressable LED controllers:
+### LED Chord
+  - **SP107E** - SPI RGB(W) Controller
 
-- [SP107E][SP107E] 
-- [SP110E][SP110E]
-- [SP601E][SP601E] 
-- [SP611E][SP61xE]
-- [SP617E][SP61xE]
-- [SP620E][SP620E]
+### LED Hue
+  - **SP110E** - SPI RGB(W) Controller
 
+### BanlanX
+  - **SP601E**/**SP602E**/**SP608E** - Multi Channel SPI RGB Controllers
+  
+  - **SP613E**/**SP614E** - PWM Controllers
+  - **SP630E** - PWM/SPI RGB, RGBW, RGBCCT Controller
+  - **SP631E**/**SP641E** - PWM Single Color Controllers
+  - **SP632E**/**SP642E** - PWM CCT Controllers
+  - **SP633E**/**SP643E** - PWM RGB Controllers
+  - **SP634E**/**SP644E** - PWM RGBW Controllers
+  - **SP635E**/**SP645E** - PWM RGBCCT Controllers
+  - **SP636E**/**SP646E** - SPI Single Color Controllers
+  - **SP637E**/**SP647E** - SPI CCT Controllers
+  - **SP638E**/**SP648E** - SPI RGB Controllers
+  - **SP639E**/**SP649E** - SPI RGBW Controllers
+  - **SP63AE**/**SP64AE** - SPI RGBCCT Controllers
+
+*Note, for those controllers that support custom effects, such as the SP630E, UniLED only supports selecting the custom effect,
+you will have to use the android or IOS app to configure it.*
 
 ---
 
@@ -70,11 +86,6 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 
 ***
 [ha-logo]: https://raw.githubusercontent.com/monty68/uniled/main/docs/img/ha-logo-32x32.png
-[SP107E]: https://github.com/monty68/uniled/blob/main/docs/sp107e.md
-[SP110E]: https://github.com/monty68/uniled/blob/main/docs/sp110e.md
-[SP601E]: https://github.com/monty68/uniled/blob/main/docs/sp601e.md
-[SP61xE]: https://github.com/monty68/uniled/blob/main/docs/sp61Xe.md
-[SP620E]: https://github.com/monty68/uniled/blob/main/docs/sp620e.md
 [uniled]: https://github.com/monty68/uniled
 [user_profile]: https://github.com/monty68
 [buymecoffee]: https://www.buymeacoffee.com/monty68
