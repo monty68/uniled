@@ -203,7 +203,7 @@ class BanlanX3(UniledBleModel):
                 last[_PACKET_NUMBER] = packet_number
                 last[_PAYLOAD_LENGTH] = payload_so_far
                 device.save_notification_data(last + data[2:])
-                return None
+                return False
 
             if (
                 payload_so_far > message_length
