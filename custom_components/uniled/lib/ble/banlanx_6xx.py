@@ -1227,7 +1227,7 @@ class BanlanX6xx(SP6xxEProxy):
     ) -> bytearray | None:
         """The bytes to send for a color level change"""
         red, green, blue, white = rgbw
-        ## ????? NEEDS TESTING ?????
+        ## ?????
         return self.__encoder(0x52, bytearray([red, green, blue, white]))
 
     def build_rgbww_color_command(
@@ -1271,7 +1271,6 @@ class BanlanX6xx(SP6xxEProxy):
             mode = self.int_if_str_in(
                 mode, DICTOF_MODES, channel.status.light_mode_number
             )
-        _LOGGER.debug("Mode=%s", mode)
         if not cfg or (fxlist := cfg.dictof_mode_effects(mode)) is None:
             return None
         if effect is None:
