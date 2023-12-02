@@ -1273,7 +1273,6 @@ class BanlanX6xx(SP6xxEProxy):
             )
         _LOGGER.debug("Mode=%s", mode)
         if not cfg or (fxlist := cfg.dictof_mode_effects(mode)) is None:
-            _LOGGER.debug("Oops! %s - %s", cfg, fxlist)
             return None
         if effect is None:
             effect = channel.status.effect_number
