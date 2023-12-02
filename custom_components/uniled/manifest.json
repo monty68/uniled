@@ -3,6 +3,7 @@
   "name": "Universal Light Controller v2",
   "bluetooth": [
     { "manufacturer_id": 0 },
+    { "manufacturer_id": 5053 },
     { "manufacturer_id": 20563 },
     { "local_name": "SP1*" }
   ],

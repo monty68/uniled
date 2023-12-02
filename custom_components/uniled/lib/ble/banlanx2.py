@@ -287,7 +287,7 @@ class BanlanX2(UniledBleModel):
             description=info,
             manufacturer=BANLANX_MANUFACTURER,
             channels=1,
-            ble_manufacturer_id=BANLANX_MANUFACTURER_ID,
+            ble_manufacturer_id=[BANLANX_MANUFACTURER_ID, 5053],
             ble_manufacturer_data=data,
             ble_service_uuids=[BANLANX_UUID_FORMAT.format(part) for part in ["ffe0"]],
             ble_write_uuids=[BANLANX_UUID_FORMAT.format(part) for part in ["ffe1"]],
