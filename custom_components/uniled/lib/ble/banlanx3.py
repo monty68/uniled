@@ -1,9 +1,7 @@
 """UniLED BLE Devices - SP LED (BanlanX v3)"""
 from __future__ import annotations
-from dataclasses import dataclass, replace
 from itertools import chain
 from typing import Final
-from enum import IntEnum
 
 from ..const import *  # I know!
 from ..channel import UniledChannel
@@ -16,6 +14,7 @@ from ..features import (
     UniledSensitivity,
     UniledAudioInput,
     UniledChipOrder,
+    UniledEffectLoop,
 )
 from ..effects import (
     UNILED_EFFECT_TYPE_DYNAMIC,
@@ -38,9 +37,6 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-BANLANX3_SP613E: Final = 0x613E
-BANLANX3_SP614E: Final = 0x614E
-
 BANLANX3_AUDIO_INPUTS: Final = {
     0x00: UNILED_AUDIO_INPUT_INTMIC,
     0x01: UNILED_AUDIO_INPUT_PLAYER,
@@ -50,9 +46,9 @@ BANLANX3_AUDIO_INPUTS: Final = {
 BANLANX3_MAX_SENSITIVITY: Final = 16
 BANLANX3_MAX_EFFECT_SPEED: Final = 10
 
-BANLANX3_LIGHT_MODE_SINGULAR = 0x00
-BANLANX3_LIGHT_MODE_AUTO_DYNAMIC = 0x01
-BANLANX3_LIGHT_MODE_AUTO_SOUND = 0x02
+BANLANX3_LIGHT_MODE_SINGULAR: Final = 0x00
+BANLANX3_LIGHT_MODE_AUTO_DYNAMIC: Final = 0x01
+BANLANX3_LIGHT_MODE_AUTO_SOUND: Final = 0x02
 
 BANLANX3_LIGHT_MODES: Final = {
     BANLANX3_LIGHT_MODE_SINGULAR: "Single FX",
@@ -66,7 +62,7 @@ BANLANX3_EFFECT_CUSTOM: Final = 0x64
 BANLANX3_EFFECT_SOUND: Final = 0x65
 BANLANX3_EFFECT_WHITE: Final = 0xCC
 
-BANLANX3_EFFECTS_613: Final = {
+BANLANX3_EFFECTS_RGB: Final = {
     BANLANX3_EFFECT_SOLID: UNILEDEffects.SOLID_COLOR,
     BANLANX3_EFFECT_DYNAMIC + 0: UNILEDEffects.GRADIENT_SEVEN_COLOR,
     BANLANX3_EFFECT_DYNAMIC + 1: UNILEDEffects.JUMP_SEVEN_COLOR,
@@ -89,17 +85,40 @@ BANLANX3_EFFECTS_613: Final = {
     BANLANX3_EFFECT_DYNAMIC + 31: "Adjustable Color Breath",  # Colorable
     BANLANX3_EFFECT_DYNAMIC + 32: "Adjustable Color Strobe",  # Colorable
     BANLANX3_EFFECT_CUSTOM: UNILEDEffects.CUSTOM,
+}
+
+BANLANX3_EFFECTS_RGBW: Final = dict(
+    chain.from_iterable(
+        d.items()
+        for d in (
+            {BANLANX3_EFFECT_WHITE: UNILEDEffects.SOLID_WHITE},
+            BANLANX3_EFFECTS_RGB,
+        )
+    )
+)
+
+BANLANX3_EFFECTS_SOUND: Final = {
     BANLANX3_EFFECT_SOUND + 0: UNILEDEffects.SOUND_MUSIC_BREATH,  # 65
     BANLANX3_EFFECT_SOUND + 1: UNILEDEffects.SOUND_MUSIC_JUMP,  # 66
     BANLANX3_EFFECT_SOUND + 2: UNILEDEffects.SOUND_MUSIC_MONO_BREATH,  # 67 - Colorable
 }
 
-BANLANX3_EFFECTS_614: Final = dict(
+BANLANX3_EFFECTS_RGB_SOUND: Final = dict(
     chain.from_iterable(
         d.items()
         for d in (
-            {BANLANX3_EFFECT_WHITE: UNILEDEffects.SOLID_WHITE},
-            BANLANX3_EFFECTS_613,
+            BANLANX3_EFFECTS_RGB,
+            BANLANX3_EFFECTS_SOUND,
+        )
+    )
+)
+
+BANLANX3_EFFECTS_RGBW_SOUND: Final = dict(
+    chain.from_iterable(
+        d.items()
+        for d in (
+            BANLANX3_EFFECTS_RGBW,
+            BANLANX3_EFFECTS_SOUND,
         )
     )
 )
@@ -112,23 +131,29 @@ BANLANX3_COLORABLE_EFFECTS: Final = (
 )
 
 
-@dataclass(frozen=True)
 class BanlanX3(UniledBleModel):
     """BanlanX v3 Protocol Implementation"""
 
-    def __init__(self, id: int, name: str, info: str, data: bytes, channels: int = 1):
+    colors: int
+    intmic: bool
+
+    def __init__(
+        self, id: int, name: str, info: str, data: bytes, colors: int, intmic: bool
+    ):
         super().__init__(
             model_num=id,
             model_name=name,
             description=info,
             manufacturer=BANLANX_MANUFACTURER,
-            channels=channels,
+            channels=1,
             ble_manufacturer_id=BANLANX_MANUFACTURER_ID,
             ble_manufacturer_data=data,
             ble_service_uuids=[BANLANX_UUID_FORMAT.format(part) for part in ["ffe0"]],
             ble_write_uuids=[BANLANX_UUID_FORMAT.format(part) for part in ["ffe1"]],
             ble_read_uuids=[],
         )
+        self.colors = colors
+        self.intmic = intmic
 
     ## 02 07 10 a7 a6 00 e0 f1 04
     ## 01 02 03 04 05 b3 00 02
@@ -160,9 +185,6 @@ class BanlanX3(UniledBleModel):
         _PAYLOAD_LENGTH = 2
         _HEADER_LENGTH = 3
 
-        # 01 19 11 00 ff 05 00 64 00 ff 00 ff 10 04 03 ff 00 00 00 00
-        # 02 08 00 00 00 ff 00 00 00 00
-        #
         packet_number = data[_PACKET_NUMBER]
 
         if packet_number == 1:
@@ -171,13 +193,7 @@ class BanlanX3(UniledBleModel):
 
             data = device.save_notification_data(data)
             if message_length > payload_length:
-                # _LOGGER.debug(
-                #    "%s: Packet 1 - payload size: %s, message length: %s",
-                #    device.name,
-                #    payload_length,
-                #    message_length,
-                # )
-                return None
+                return False
             data = data[_HEADER_LENGTH:]
         else:
             if (
@@ -189,15 +205,6 @@ class BanlanX3(UniledBleModel):
             message_length = last[_MESSAGE_LENGTH]
             payload_length = data[_MESSAGE_LENGTH]
             payload_so_far = last[_PAYLOAD_LENGTH] + payload_length
-
-            # _LOGGER.debug(
-            #    "%s: Packet %s - payload size: %s, payload so far: %s, message length: %s",
-            #    device.name,
-            #    packet_number,
-            #    payload_length,
-            #    payload_so_far,
-            #    message_length,
-            # )
 
             if payload_so_far < message_length:
                 last[_PACKET_NUMBER] = packet_number
@@ -215,6 +222,11 @@ class BanlanX3(UniledBleModel):
         if len(data) != message_length:
             raise ParseNotificationError("Unknown/Invalid Packet!")
 
+        #
+        # 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+        # --------------------------------------------------------------------------
+        # 01 ff 0a 00 65 00 00 ff ff 10 01 03 ff 00 00 00 ff 00 00 00 ff 00 01 40 00
+        #                                  D# R1 G1 B1 R2 G2 B2 R3 G3 B3 T# AI CW WW
         #
         # 0  = Power State
         # 1  = level
@@ -238,6 +250,7 @@ class BanlanX3(UniledBleModel):
         #
         # xx = Cool White Level
         # xx = Warm White Level (Not used on SP614E)
+        #
         _LOGGER.debug("%s: Good Status Message: %s", device.name, data.hex())
 
         level = data[1]
@@ -247,7 +260,7 @@ class BanlanX3(UniledBleModel):
         mode = data[5]
         input = data[message_length - 3]
         cold = data[message_length - 2]
-        warm = data[message_length - 1]
+        # warm = data[message_length - 1]
 
         device.master.status.replace(
             {
@@ -257,31 +270,31 @@ class BanlanX3(UniledBleModel):
                 ATTR_UL_LIGHT_MODE: self.str_if_key_in(
                     mode, BANLANX3_LIGHT_MODES, UNILED_UNKNOWN
                 ),
+                ATTR_HA_EFFECT: self.str_if_key_in(
+                    effect, BANLANX3_EFFECTS_RGBW_SOUND, UNILED_UNKNOWN
+                ),
+                ATTR_UL_EFFECT_NUMBER: effect,
+                ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
+                ATTR_UL_EFFECT_LOOP: True if mode != 0 else False,
                 ATTR_HA_BRIGHTNESS: level,
             }
         )
 
         if mode == BANLANX3_LIGHT_MODE_SINGULAR:
-            if self.model_num == BANLANX3_SP614E:
+            if self.colors == 4:
                 order_type = UNILED_CHIP_ORDER_RGBW
-                effect_list = BANLANX3_EFFECTS_614
                 if effect == BANLANX3_EFFECT_WHITE:
                     device.master.status.set(ATTR_HA_BRIGHTNESS, cold)
             else:
                 order_type = UNILED_CHIP_ORDER_RGB
-                effect_list = BANLANX3_EFFECTS_613
 
             if effect in BANLANX3_COLORABLE_EFFECTS:
                 device.master.status.set(ATTR_HA_RGB_COLOR, (data[6], data[7], data[8]))
-            elif self.model_num == BANLANX3_SP614E:
+            elif self.colors == 4 and effect != BANLANX3_EFFECT_WHITE:
                 device.master.status.set(ATTR_HA_WHITE, cold)
 
             device.master.status.set(
                 ATTR_UL_CHIP_ORDER, self.chip_order_name(order_type, chip_order)
-            )
-            device.master.status.set(ATTR_UL_EFFECT_NUMBER, effect)
-            device.master.status.set(
-                ATTR_HA_EFFECT, self.str_if_key_in(effect, effect_list, UNILED_UNKNOWN)
             )
 
             if effect == BANLANX3_EFFECT_SOLID or effect == BANLANX3_EFFECT_WHITE:
@@ -308,19 +321,24 @@ class BanlanX3(UniledBleModel):
             device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
 
         if not device.master.features:
-            device.master.features = [
-                UniledLedStrip(),
-                UniledLightMode(),
-                UniledEffectType(),
-                UniledEffectSpeed(BANLANX3_MAX_EFFECT_SPEED),
-                UniledSensitivity(BANLANX3_MAX_SENSITIVITY),
-                UniledAudioInput(),
-                UniledChipOrder(),
+            features = [
                 UniledAttribute(ATTR_UL_LIGHT_MODE),
                 UniledAttribute(ATTR_UL_LIGHT_MODE_NUMBER),
                 UniledAttribute(ATTR_UL_EFFECT_NUMBER),
                 UniledAttribute(ATTR_UL_EFFECT_SPEED),
+                UniledLedStrip(),
+                UniledEffectType(),
+                UniledEffectSpeed(BANLANX3_MAX_EFFECT_SPEED),
+                UniledChipOrder(),
             ]
+
+            if self.intmic:
+                features.append(UniledLightMode()),
+                features.append(UniledAudioInput())
+                features.append(UniledSensitivity(BANLANX3_MAX_SENSITIVITY))
+            else:
+                features.append(UniledEffectLoop())
+            device.master.features = features
 
         return True
 
@@ -386,11 +404,9 @@ class BanlanX3(UniledBleModel):
     ) -> bytearray | None:
         """The bytes to send for an effect change"""
         if isinstance(value, str):
-            if self.model_num == BANLANX3_SP614E:
-                effect_dict = BANLANX3_EFFECTS_614
-            else:
-                effect_dict = BANLANX3_EFFECTS_613
-            effect = self.int_if_str_in(value, effect_dict, BANLANX3_EFFECT_SOLID)
+            effect = self.int_if_str_in(
+                value, BANLANX3_EFFECTS_RGBW_SOUND, BANLANX3_EFFECT_SOLID
+            )
         else:
             effect = int(value)
         return bytearray([0x15, 0x01, effect])
@@ -401,9 +417,14 @@ class BanlanX3(UniledBleModel):
         """Return list of effect names"""
         if channel.status.light_mode_number != BANLANX3_LIGHT_MODE_SINGULAR:
             return None
-        if self.model_num == BANLANX3_SP614E:
-            return list(BANLANX3_EFFECTS_614.values())
-        return list(BANLANX3_EFFECTS_614.values())
+        if not self.intmic:
+            if self.colors == 4:
+                return list(BANLANX3_EFFECTS_RGBW.values())
+            else:
+                return list(BANLANX3_EFFECTS_RGB.values())
+        if self.colors == 4:
+            return list(BANLANX3_EFFECTS_RGBW_SOUND.values())
+        return list(BANLANX3_EFFECTS_RGBW_SOUND.values())
 
     def build_effect_speed_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: int
@@ -413,6 +434,12 @@ class BanlanX3(UniledBleModel):
         if not 1 <= speed <= BANLANX3_MAX_EFFECT_SPEED:
             return None
         return bytearray([0x14, 0x01, speed])
+
+    def build_effect_loop_command(
+        self, device: UniledBleDevice, channel: UniledChannel, state: bool
+    ) -> bytearray | None:
+        """The bytes to send for an effect loop change."""
+        return self.build_light_mode_command(device, channel, 0x01 if state else 0x00)
 
     def build_sensitivity_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: int
@@ -440,11 +467,7 @@ class BanlanX3(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, value: str | None = None
     ) -> bytearray | None:
         """Build chip order message(s)"""
-        sequence = (
-            UNILED_CHIP_ORDER_RGBW
-            if self.model_num == BANLANX3_SP614E
-            else UNILED_CHIP_ORDER_RGB
-        )
+        sequence = UNILED_CHIP_ORDER_RGBW if self.colors == 4 else UNILED_CHIP_ORDER_RGB
         if (order := self.chip_order_index(sequence, value)) is not None:
             return bytearray([order & 0xFF, 0x00, 0x00, self.cmd.SET_CHIP_ORDER])
         return None
@@ -453,27 +476,46 @@ class BanlanX3(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:
         """Return list of chip orders"""
-        if self.model_num == BANLANX3_SP614E:
+        if self.colors == 4:
             return self.chip_order_list(UNILED_CHIP_ORDER_RGBW)
         return self.chip_order_list(UNILED_CHIP_ORDER_RGB)
 
 
 ##
-## SP613E
+## Device Signatures
 ##
 SP613E = BanlanX3(
-    id=BANLANX3_SP613E,
+    id=0x613E,
     name="SP613E",
     info="PWM RGB (Music) Controller",
     data=b"\x09\x00",
+    colors=3,
+    intmic=True,
 )
 
-##
-## SP614E
-##
 SP614E = BanlanX3(
-    id=BANLANX3_SP614E,
+    id=0x614E,
     name="SP614E",
     info="PWM RGBW (Music) Controller",
-    data=b"\x0a\x21",
+    data=[b"\x0a\x00", b"\x0a\x21"],
+    colors=4,
+    intmic=True,
+)
+
+SP623E = BanlanX3(
+    id=0x623E,
+    name="SP623E",
+    info="Mini PWM RGB Controller",
+    data=b"\x0e\x00",
+    colors=3,
+    intmic=False,
+)
+
+SP624E = BanlanX3(
+    id=0x624E,
+    name="SP624E",
+    info="Mini PWM RGBB Controller",
+    data=b"\x0f\x00",
+    colors=4,
+    intmic=False,
 )
