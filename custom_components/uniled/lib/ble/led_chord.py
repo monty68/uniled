@@ -190,22 +190,6 @@ class _LEDCHORD(UniledBleModel):
             # 24 = Screen/Matrix Dot Blue
             # 25 = Input Gain
             #
-            features = [
-                UniledLedStrip(),
-                UniledLightMode(),
-                UniledEffectType(),
-                UniledEffectSpeed(LEDCHORD_MAX_EFFECT_SPEED),
-                UniledChipType(),
-                UniledChipOrder(),
-                UniledSensitivity(LEDCHORD_MAX_SENSITIVITY),
-                UniledSegmentCount(LEDCHORD_MAX_SEGMENT_COUNT),
-                UniledSegmentPixels(LEDCHORD_MAX_SEGMENT_PIXELS),
-                UniledAttribute(ATTR_UL_LIGHT_MODE),
-                UniledAttribute(ATTR_UL_LIGHT_MODE_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_SPEED),
-            ]
-
             power = True if data[0] != 0 else False
             chip_order = data[1]
             chip_type = data[2]
@@ -289,7 +273,21 @@ class _LEDCHORD(UniledBleModel):
             )
 
             if not device.master.features:
-                device.master.features = features
+                device.master.features = [
+                    UniledLedStrip(),
+                    UniledLightMode(),
+                    UniledEffectType(),
+                    UniledEffectSpeed(LEDCHORD_MAX_EFFECT_SPEED),
+                    UniledChipType(),
+                    UniledChipOrder(),
+                    UniledSensitivity(LEDCHORD_MAX_SENSITIVITY),
+                    UniledSegmentCount(LEDCHORD_MAX_SEGMENT_COUNT),
+                    UniledSegmentPixels(LEDCHORD_MAX_SEGMENT_PIXELS),
+                    UniledAttribute(ATTR_UL_LIGHT_MODE),
+                    UniledAttribute(ATTR_UL_LIGHT_MODE_NUMBER),
+                    UniledAttribute(ATTR_UL_EFFECT_NUMBER),
+                    UniledAttribute(ATTR_UL_EFFECT_SPEED),
+                ]
 
             return True
         else:
@@ -356,14 +354,14 @@ class _LEDCHORD(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, rgb: tuple[int, int, int]
     ) -> bytearray | None:
         """The bytes to send for a color level change"""
-        effect = channel.status.effect
+        effect = channel.status.effect_number
         cmd = self.cmd.SET_COLOR
         if effect >= LEDCHORD_FX_STRIP and effect < LEDCHORD_FX_MATRIX:
             cmd = self.cmd.SET_STRIP_COLOR
         elif effect >= LEDCHORD_FX_MATRIX:
             cmd = self.cmd.SET_MATRIX_DOT_COLOR
         elif effect != LEDCHORD_FX_STATIC:
-            effect = (LEDCHORD_FX_STATIC,)
+            effect = LEDCHORD_FX_STATIC
             mode = LEDCHORD_LIGHT_MODE_SINGULAR
             channel.status.update(
                 {
