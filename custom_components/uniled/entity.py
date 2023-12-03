@@ -144,6 +144,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         mangled_name = self._channel.title.replace(" ", "_").lower()
         base_unique_id = coordinator.entry.unique_id or coordinator.entry.entry_id
         self._attr_unique_id = f"_{base_unique_id}_{mangled_name}"
+        
         if (key := getattr(feature, "key", None)) is not None:
             self._attr_unique_id = f"_{self._attr_unique_id}_{key}"
 

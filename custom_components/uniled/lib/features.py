@@ -57,7 +57,7 @@ class UniledLedStrip(UniledAttribute):
     ) -> None:
         self._attr = ATTR_UL_POWER
         self._type = "light"
-        self._name = "Strip"
+        self._name = "Light"
         self._icon = "mdi:led-strip-variant"
         self._key = "strip"
 
