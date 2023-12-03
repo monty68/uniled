@@ -1,29 +1,26 @@
 {
-    "config": {
-      "flow_title": "[%key:component::bluetooth::config::flow_title%]",
-      "step": {
-        "user": {
-          "description": "[%key:component::bluetooth::config::step::user::description%]",
-          "data": {
-            "address": "[%key:common::config_flow::data::device%]"
-          }
-        },
-        "bluetooth_confirm": {
-          "description": "xx",
-          "descriptionX": "[%key:component::bluetooth::config::step::bluetooth_confirm::description%]"
+  "config": {
+    "flow_title": "[%key:component::bluetooth::config::flow_title%]",
+    "step": {
+      "user": {
+        "description": "[%key:component::bluetooth::config::step::user::description%]",
+        "data": {
+          "address": "[%key:common::config_flow::data::device%]"
         }
       },
-      "error": {
-        "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-        "unknown": "[%key:common::config_flow::error::unknown%]"
-      },
-      "abort": {
-        "not_supported": "Device not supported",
-        "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
-        "no_devices_found": "[%key:common::config_flow::abort::no_devices_found%]",
-        "already_in_progress": "[%key:common::config_flow::abort::already_in_progress%]",
-        "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
-      }  
+      "bluetooth_confirm": {
+        "description": "[%key:component::bluetooth::config::step::bluetooth_confirm::description%]"
+      }
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "not_supported": "Device not supported",
+      "no_devices_found": "[%key:common::config_flow::abort::no_devices_found%]",
+      "already_in_progress": "[%key:common::config_flow::abort::already_in_progress%]",
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
     }
   }
-  
+}

@@ -29,11 +29,11 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    #@staticmethod
-    #@callback
-    #def async_get_options_flow(
+    # @staticmethod
+    # @callback
+    # def async_get_options_flow(
     #    config_entry: flow.ConfigEntry,
-    #) -> UniledOptionsFlowHandler:
+    # ) -> UniledOptionsFlowHandler:
     #    """Get the options flow for this handler."""
     #    return UniledOptionsFlowHandler(config_entry)
 
@@ -43,31 +43,15 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
         self._discovered_ble_devices: dict[str, BluetoothServiceInfoBleak] = {}
 
     async def async_step_bluetooth(
-        self, discovery_info: BluetoothServiceInfoBleak
+        self, discovery: BluetoothServiceInfoBleak
     ) -> FlowResult:
         """Handle the bluetooth discovery step."""
-        transport = UNILED_TRANSPORT_BLE
-
-        if (
-            model := UniledBleDevice.match_known_device(
-                discovery_info.device, discovery_info.advertisement
-            )
-        ) is None:
+        if not await self._async_ble_check_device(discovery):
             return self.async_abort(reason="not_supported")
-
-        await self.async_set_unique_id(discovery_info.address)
+        
+        await self.async_set_unique_id(discovery.address)
         self._abort_if_unique_id_configured()
-
-        self._discovery_ble_info = discovery_info
-
-        self.context["title_placeholders"] = {
-            "name": UniledBleDevice.human_readable_name(
-                None, discovery_info.name, discovery_info.address
-            )
-        }
-        self.context[CONF_ADDRESS] = discovery_info.address
-        self.context[CONF_MODEL] = model.model_name if isinstance(model, UniledBleModel) else None
-        self.context[CONF_DEVICE_CLASS] = transport
+        self._discovery_ble_info = discovery
 
         return await self.async_step_bluetooth_confirm()
 
@@ -78,23 +62,48 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            _LOGGER.debug("User Input: %s", user_input)
-            return self.async_abort(reason="not_supported")
+            address = user_input[CONF_ADDRESS]
+            discovery = self._discovered_ble_devices[address]
 
-        data_schema = vol.Schema(
-            {
-                vol.Required(CONF_ADDRESS): vol.In(
-                    {
-                        service_info.address: f"{service_info.name} ({service_info.address})"
-                        for service_info in self._discovered_devices.values()
-                    }
-                ),
-            }
-        )
+            await self.async_set_unique_id(discovery.address, raise_on_progress=False)
+            self._abort_if_unique_id_configured()
+
+            if not await self._async_ble_check_device(discovery):
+                return self.async_abort(reason="not_supported")
+            return self._async_ble_create_entry()
+
+        if discovery := self._discovery_ble_info:
+            self._discovered_ble_devices[discovery.address] = discovery
+        else:
+            current_addresses = self._async_current_ids()
+            for discovery in async_discovered_service_info(self.hass):
+                if (
+                    discovery.address in current_addresses
+                    or discovery.address in self._discovered_ble_devices
+                    or not (
+                        model := UniledBleDevice.match_known_device(
+                            discovery.device, discovery.advertisement
+                        )
+                    )
+                ):
+                    continue
+                self._discovered_ble_devices[discovery.address] = discovery
+
+        if not self._discovered_ble_devices:
+            return self.async_abort(reason="no_devices_found")
 
         return self.async_show_form(
             step_id="user",
-            data_schema=data_schema,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_ADDRESS): vol.In(
+                        {
+                            service_info.address: f"{service_info.name} ({service_info.address})"
+                            for service_info in self._discovered_ble_devices.values()
+                        }
+                    ),
+                }
+            ),
             errors=errors,
         )
 
@@ -103,7 +112,7 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Confirm discovery."""
         if user_input is not None or not onboarding.async_is_onboarded(self.hass):
-            return self._async_create_entry()
+            return self._async_ble_create_entry()
 
         self._set_confirm_only()
         return self.async_show_form(
@@ -111,16 +120,37 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
             description_placeholders=self.context["title_placeholders"],
         )
 
-    def _async_create_entry(self, model=None):
-        """Get/Create entry"""
-        if self.context.get("source") != "bluetooth":
-            return self.async_abort(reason="not_supported")
+    async def _async_ble_check_device(
+        self, discovery: BluetoothServiceInfoBleak
+    ) -> bool:
+        """Check device device is support"""
+        transport = UNILED_TRANSPORT_BLE
 
+        if (
+            model := UniledBleDevice.match_known_device(
+                discovery.device, discovery.advertisement
+            )
+        ) is None:
+            return False
+
+        self.context["title_placeholders"] = {
+            "name": UniledBleDevice.human_readable_name(
+                None, discovery.name, discovery.address
+            )
+        }
+        self.context[CONF_ADDRESS] = discovery.address
+        self.context[CONF_MODEL] = (
+            model.model_name if isinstance(model, UniledBleModel) else None
+        )
+        self.context[CONF_DEVICE_CLASS] = transport
+
+        return True
+
+    def _async_ble_create_entry(self):
+        """Get/Create entry"""
+        model = self.context.get(CONF_MODEL, None)
         address = self.context.get(CONF_ADDRESS, "")
         transport = self.context.get(CONF_DEVICE_CLASS, "")
-
-        _LOGGER.warning("Address: %s", address)
-        _LOGGER.warning(self.context)
 
         return self.async_create_entry(
             title=self.context["title_placeholders"]["name"],
