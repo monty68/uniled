@@ -63,17 +63,16 @@ from .lib.const import (
     ATTR_UL_SEGMENT_COUNT,
     ATTR_UL_SEGMENT_PIXELS,
     ATTR_UL_TOTAL_PIXELS,
+    ATTR_UL_SENSITIVITY,
+    ATTR_UL_RGB2_COLOR,
 )
 
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
 import asyncio
 import logging
 
 _LOGGER = logging.getLogger(__name__)
-
-UNILED_SET_STATE_SERVICE = "set_state"
-UNILED_SET_STATE_SCHEMA = {
-    **LIGHT_TURN_ON_SCHEMA,
-}
 
 
 async def async_setup_entry(
@@ -85,10 +84,24 @@ async def async_setup_entry(
     coordinator: UniledUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     platform = entity_platform.async_get_current_platform()
 
-    ## @todo Build service dynamically!
-    # platform.async_register_entity_service(
-    #    UNILED_SET_STATE_SERVICE, UNILED_SET_STATE_SCHEMA, "async_set_state"
-    # )
+    ## @todo Build service more dynamically!
+    ##
+    schema = {
+        **LIGHT_TURN_ON_SCHEMA,
+    }
+
+    schema[ATTR_UL_LIGHT_MODE] = vol.All(vol.Coerce(int), vol.Clamp(min=1, max=255))
+    schema[ATTR_UL_RGB2_COLOR] = vol.All(
+        vol.Coerce(tuple), vol.ExactSequence((cv.byte,) * 3)
+    )
+    schema[ATTR_UL_EFFECT_LOOP] = cv.boolean
+    schema[ATTR_UL_EFFECT_PLAY] = cv.boolean
+    schema[ATTR_UL_EFFECT_SPEED] = vol.All(vol.Coerce(int), vol.Clamp(min=1, max=255))
+    schema[ATTR_UL_EFFECT_LENGTH] = vol.All(vol.Coerce(int), vol.Clamp(min=1, max=255))
+    schema[ATTR_UL_EFFECT_DIRECTION] = cv.boolean
+    schema[ATTR_UL_SENSITIVITY] = vol.All(vol.Coerce(int), vol.Clamp(min=1, max=255))
+
+    platform.async_register_entity_service("set_state", schema, "async_set_state")
 
     await async_uniled_entity_setup(
         hass, entry, async_add_entities, _add_light_entity, Platform.LIGHT
@@ -108,7 +121,7 @@ class UniledLightEntity(
     UniledEntity, CoordinatorEntity[UniledUpdateCoordinator], LightEntity
 ):
     """Defines a UniLED light control."""
-    
+
     _unrecorded_attributes = frozenset(
         {
             ATTR_UL_LIGHT_MODE,
@@ -160,7 +173,7 @@ class UniledLightEntity(
         elif self.channel.has(ATTR_BRIGHTNESS):
             self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
             self._attr_color_mode = ColorMode.BRIGHTNESS
-        else:           
+        else:
             self._attr_supported_color_modes = {ColorMode.ONOFF}
             self._attr_color_mode = ColorMode.ONOFF
 
@@ -278,7 +291,7 @@ class UniledLightEntity(
                         self.channel, self.feature.attr, False
                     )
                     kwargs.clear()
-                    #return
+                    # return
                 if not self.is_on:
                     if power or (kwargs and self.channel.status.device_needs_on):
                         await self.device.async_set_state(
@@ -299,7 +312,7 @@ class UniledLightEntity(
             if (value := kwargs.pop(ATTR_EFFECT, None)) is not None:
                 await self.device.async_set_state(self.channel, ATTR_EFFECT, value)
 
-            # Process any color temperature changes here as to do a kelvin
+            # Process any color temperature changes here to do a kelvin
             # to cold, warm and brightness conversion first
             #
             if (mired := kwargs.pop(ATTR_COLOR_TEMP, None)) is not None:
