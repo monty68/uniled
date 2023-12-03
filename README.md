@@ -4,7 +4,7 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
 
-# ![HA][ha-logo] UniLED - The Universal Light Controller
+# ![HA][ha-logo] UniLED v2 - The Universal Light Controller
 
 UniLED supports the following range of BLE LED controllers:
 
@@ -15,14 +15,15 @@ UniLED supports the following range of BLE LED controllers:
   - **SP110E** - SPI RGB(W) Controller
 
 ### BanlanX
-  - **SP601E** / **SP602E** / **SP608E** - Multi Channel SPI RGB Controllers
+  - **SP601E** - Multi Channel SPI RGB Controller
   - **SP611E** - SPI RGB Controller
-  - **SP6117** - SPI RGBW Controller
-  - **SP621E** - SPI RGB Mini Controller
-  - **SP623E** - PWM RGB Mini Controller
-  - **SP624E** - PWM RGBW Mini Controller
   - **SP613E** - PWM RGB Controller
   - **SP614E** - PWM RGBW Controller
+  - **SP6117** - SPI RGBW Controller
+  - **SP620E** - USB SPI RGB Mini Controller
+  - **SP621E** - Mini SPI RGB Controller
+  - **SP623E** - Mini PWM RGB Controller
+  - **SP624E** - Mini PWM RGBW Controller
   - **SP630E** - PWM/SPI RGB, RGBW, RGBCCT Controller
   - **SP631E** / **SP641E** - PWM Single Color Controllers
   - **SP632E** / **SP642E** - PWM CCT Controllers
@@ -36,7 +37,7 @@ UniLED supports the following range of BLE LED controllers:
   - **SP63AE** / **SP64AE** - SPI RGBCCT Controllers
 
 *Note, for those controllers that support custom effects, such as the SP630E, UniLED only supports selecting the custom effect,
-you will have to use the android or IOS app to configure it.*
+you will have to use the android or IOS app to configure it first.*
 
 ---
 
@@ -86,13 +87,6 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 
 [uniled]: https://github.com/monty68/uniled
 [ha-logo]: docs/img/ha-logo-32x32.png
-[SP107E]: docs/sp107e.md
-[SP110E]: docs/sp110e.md
-[SP601E]: docs/sp601e.md
-[SP61xE]: docs/sp61Xe.md
-[SP620E]: docs/sp620e.md
-[SP630E]: docs/sp630e.md
-[SP648E]: docs/sp648e.md
 [Info]: info.md
 [user_profile]: https://github.com/monty68
 [maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
