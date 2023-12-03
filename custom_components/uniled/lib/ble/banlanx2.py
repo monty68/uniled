@@ -453,7 +453,6 @@ class BanlanX2(UniledBleModel):
 
             elif effect in BANLANX2_EFFECTS_SOUND:
                 device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
-                device.master.status.set(ATTR_HA_BRIGHTNESS, None)
                 device.master.status.set(ATTR_UL_SENSITIVITY, gain)
                 device.master.status.set(
                     ATTR_UL_AUDIO_INPUT,

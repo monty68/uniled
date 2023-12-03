@@ -300,7 +300,6 @@ class BanlanX3(UniledBleModel):
             if effect == BANLANX3_EFFECT_SOLID or effect == BANLANX3_EFFECT_WHITE:
                 device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_STATIC)
             elif effect >= BANLANX3_EFFECT_SOUND and effect < BANLANX3_EFFECT_WHITE:
-                device.master.status.set(ATTR_HA_BRIGHTNESS, None)
                 device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
                 device.master.status.set(ATTR_UL_SENSITIVITY, data[9])
                 device.master.status.set(
