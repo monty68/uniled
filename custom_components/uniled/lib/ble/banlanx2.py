@@ -427,7 +427,6 @@ class BanlanX2(UniledBleModel):
                 ATTR_UL_EFFECT_NUMBER: effect,
                 ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
                 ATTR_UL_EFFECT_LOOP: True if mode != 0 else False,
-                ATTR_HA_BRIGHTNESS: level,
             }
         )
 
@@ -441,6 +440,7 @@ class BanlanX2(UniledBleModel):
 
             if effect in BANLANX2_COLORABLE_EFFECTS:
                 device.master.status.set(ATTR_HA_RGB_COLOR, (data[7], data[8], data[9]))
+                device.master.status.set(ATTR_HA_BRIGHTNESS, level)
             elif self.colors == 4 and effect != BANLANX2_EFFECT_WHITE:
                 device.master.status.set(ATTR_HA_WHITE, cold)
 
@@ -452,8 +452,8 @@ class BanlanX2(UniledBleModel):
                 device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_STATIC)
 
             elif effect in BANLANX2_EFFECTS_SOUND:
-                device.master.status.set(ATTR_HA_BRIGHTNESS, None)
                 device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
+                device.master.status.set(ATTR_HA_BRIGHTNESS, None)
                 device.master.status.set(ATTR_UL_SENSITIVITY, gain)
                 device.master.status.set(
                     ATTR_UL_AUDIO_INPUT,
@@ -548,12 +548,12 @@ class BanlanX2(UniledBleModel):
         red, green, blue = rgb
         commands = []
 
-        if channel.status.effect not in BANLANX2_COLORABLE_EFFECTS:
+        if channel.status.effect_number not in BANLANX2_COLORABLE_EFFECTS:
             commands.append(
                 self.build_effect_command(device, channel, BANLANX2_EFFECT_SOLID)
             )
 
-        level = channel.status.brightness
+        level = channel.status.get(ATTR_HA_BRIGHTNESS, 0xFF)
         commands.append(bytearray([0xA0, 0x69, 0x04, red, green, blue, level]))
 
         return commands

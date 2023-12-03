@@ -276,7 +276,6 @@ class BanlanX3(UniledBleModel):
                 ATTR_UL_EFFECT_NUMBER: effect,
                 ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
                 ATTR_UL_EFFECT_LOOP: True if mode != 0 else False,
-                ATTR_HA_BRIGHTNESS: level,
             }
         )
 
@@ -290,6 +289,7 @@ class BanlanX3(UniledBleModel):
 
             if effect in BANLANX3_COLORABLE_EFFECTS:
                 device.master.status.set(ATTR_HA_RGB_COLOR, (data[6], data[7], data[8]))
+                device.master.status.set(ATTR_HA_BRIGHTNESS, level)
             elif self.colors == 4 and effect != BANLANX3_EFFECT_WHITE:
                 device.master.status.set(ATTR_HA_WHITE, cold)
 
@@ -394,10 +394,18 @@ class BanlanX3(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, rgb: tuple[int, int, int]
     ) -> bytearray | None:
         """The bytes to send for an RGB color change"""
-        if channel.status.effect_number not in BANLANX3_COLORABLE_EFFECTS:
-            return None
         red, green, blue = rgb
-        return bytearray([0x13, 0x04, red, green, blue, channel.status.brightness])
+        commands = []
+
+        if channel.status.effect_number not in BANLANX3_COLORABLE_EFFECTS:
+            commands.append(
+                self.build_effect_command(device, channel, BANLANX3_EFFECT_SOLID)
+            )
+
+        level = channel.status.get(ATTR_HA_BRIGHTNESS, 0xFF)
+        commands.append(bytearray([0x13, 0x04, red, green, blue, level]))
+
+        return commands
 
     def build_effect_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: str | int
