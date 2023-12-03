@@ -83,15 +83,15 @@ class _LEDHUE(UniledBleModel):
 
     def __init__(self, id: int, name: str, info: str, data: bytes, channels: int = 1):
         super().__init__(
-            model_num = id,
-            model_name = name,
-            description = info,
-            manufacturer = "SPLED (LED Hue)",
-            channels = channels,
-            ble_manufacturer_id = 0,
-            ble_service_uuids = [LEDHUE_UUID_FORMAT.format(part) for part in ["ffe0"]],
-            ble_write_uuids = [LEDHUE_UUID_FORMAT.format(part) for part in ["ffe1"]],
-            ble_read_uuids = [],
+            model_num=id,
+            model_name=name,
+            description=info,
+            manufacturer="SPLED (LED Hue)",
+            channels=channels,
+            ble_manufacturer_id=0,
+            ble_service_uuids=[LEDHUE_UUID_FORMAT.format(part) for part in ["ffe0"]],
+            ble_write_uuids=[LEDHUE_UUID_FORMAT.format(part) for part in ["ffe1"]],
+            ble_read_uuids=[],
             ble_manufacturer_data=data,
         )
 
@@ -103,49 +103,51 @@ class _LEDHUE(UniledBleModel):
     ) -> bool:
         """Parse notification message(s)"""
 
-        if sender == 12 and len(data) == 13 and data[0] == 0x00:
+        #    00 01 02 03 04 05 06 07 08 09 10 11
+        #    -----------------------------------
+        #    01 65 c4 38 03 00 00 32 69 ff 00 00
+        #
+        #    00 79 e8 db 03 02 00 15 00 ff ff 66
+        # 00 01 79 ba 2b 03 02 00 15 ff ff 00 66
+        # ff 01 2b bf ff 03 02 02 58 00 00 00 d6
+        #
+        if len(data) == 13:
             data = data[1:]
-        elif sender != 12 or len(data) != 12:
-            raise ParseNotificationError("Packet is invalid")
+        elif len(data) != 12:
+            raise ParseNotificationError("Packet is invalid!")
 
-        features = [
-            UniledLedStrip(),
-            UniledEffectType(),
-            UniledEffectLoop(),
-            UniledEffectSpeed(LEDHUE_EFFECT_MAX_SPEED),
-            UniledChipType(),
-            UniledChipOrder(),
-            UniledSegmentPixels(LEDHUE_MAX_SEGMENT_PIXELS),
-            UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-            UniledAttribute(ATTR_UL_EFFECT_LOOP),
-            UniledAttribute(ATTR_UL_EFFECT_SPEED),
-        ]
-
+        power = data[0]
         effect = data[1]  # If 0, then in Auto Mode
+        speed = data[2]
+        level = data[3]
         chip_type = data[4]
+        chip_order = data[5]
 
         device.master.status.replace(
             {
                 ATTR_UL_DEVICE_FORCE_REFRESH: True,
                 ATTR_UL_CHIP_TYPE: self.str_if_key_in(chip_type, LEDHUE_CHIP_TYPES),
-                ATTR_UL_CHIP_ORDER: data[5],
+                ATTR_UL_CHIP_ORDER: chip_order,
                 ATTR_UL_SEGMENT_PIXELS: int.from_bytes(data[6:8], byteorder="big"),
-                ATTR_UL_POWER: data[0] == 1,
+                ATTR_UL_POWER: power != 0x00,
                 ATTR_UL_EFFECT_LOOP: not effect,
                 ATTR_UL_EFFECT_NUMBER: effect,
-                ATTR_HA_EFFECT: self.str_if_key_in(effect, LEDHUE_EFFECTS, "Auto"),
+                ATTR_HA_EFFECT: self.str_if_key_in(
+                    effect, LEDHUE_EFFECTS, UNILED_UNKNOWN
+                ),
             }
         )
 
         if effect == LEDHUE_EFFECT_TYPE_AUTO or effect != LEDHUE_EFFECT_TYPE_STATIC:
             device.master.status.set(ATTR_UL_EFFECT_TYPE, str(UNILEDEffectType.DYNAMIC))
-            device.master.status.set(ATTR_UL_EFFECT_SPEED, data[2])
+            device.master.status.set(ATTR_UL_EFFECT_SPEED, speed)
         else:
             device.master.status.set(ATTR_UL_EFFECT_TYPE, str(UNILEDEffectType.STATIC))
 
         if chip_type not in LEDHUE_CHIP_TYPES_4COLOR:
             device.master.status.set(
-                ATTR_UL_CHIP_ORDER, self.chip_order_name(UNILED_CHIP_ORDER_RGB, data[5])
+                ATTR_UL_CHIP_ORDER,
+                self.chip_order_name(UNILED_CHIP_ORDER_RGB, chip_order),
             )
             if effect == LEDHUE_EFFECT_TYPE_STATIC:
                 device.master.status.set(
@@ -154,16 +156,28 @@ class _LEDHUE(UniledBleModel):
         else:
             device.master.status.set(
                 ATTR_UL_CHIP_ORDER,
-                self.chip_order_name(UNILED_CHIP_ORDER_RGBW, data[5]),
+                self.chip_order_name(UNILED_CHIP_ORDER_RGBW, chip_order),
             )
             if effect == LEDHUE_EFFECT_TYPE_STATIC:
                 device.master.status.set(
                     ATTR_HA_RGBW_COLOR, (data[8], data[9], data[10], data[11])
                 )
-        device.master.status.set(ATTR_HA_BRIGHTNESS, data[3])
+
+        device.master.status.set(ATTR_HA_BRIGHTNESS, level)
 
         if not device.master.features:
-            device.master.features = features
+            device.master.features = [
+                UniledLedStrip(),
+                UniledEffectType(),
+                UniledEffectLoop(),
+                UniledEffectSpeed(LEDHUE_EFFECT_MAX_SPEED),
+                UniledChipType(),
+                UniledChipOrder(),
+                UniledSegmentPixels(LEDHUE_MAX_SEGMENT_PIXELS),
+                UniledAttribute(ATTR_UL_EFFECT_NUMBER),
+                UniledAttribute(ATTR_UL_EFFECT_LOOP),
+                UniledAttribute(ATTR_UL_EFFECT_SPEED),
+            ]
 
         return True
 
