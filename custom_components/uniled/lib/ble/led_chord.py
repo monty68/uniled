@@ -238,7 +238,7 @@ class _LEDCHORD(UniledBleModel):
                 type = LEDCHORD_EFFECT_TYPE_STATIC
                 mode = LEDCHORD_LIGHT_MODE_SINGULAR
             elif effect < LEDCHORD_FX_STATIC:
-                device.master.status.set(ATTR_UL_EFFECT_SPEED, data[2])
+                device.master.status.set(ATTR_UL_EFFECT_SPEED, data[9])
                 type = LEDCHORD_EFFECT_TYPE_DYNAMIC
                 mode = (
                     LEDCHORD_LIGHT_MODE_AUTO_DYNAMIC
