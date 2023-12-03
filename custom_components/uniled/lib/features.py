@@ -48,6 +48,14 @@ class UniledLight(UniledAttribute):
         self._icon = "mdi:lightbulb"
         self._key = "light"
 
+class UniledBulb(UniledLight):
+    """UniLED Light Feature Class"""
+
+    def __init__(
+        self,
+    ) -> None:
+        super().__init__()
+        self._key = "bulb"
 
 class UniledLedStrip(UniledAttribute):
     """UniLED Light Feature Class"""
