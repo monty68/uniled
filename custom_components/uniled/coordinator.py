@@ -64,6 +64,7 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
                 await self.device.stop()
             raise UpdateFailed(f"{self.device.name}: Invalid entry state!")
 
+        success = False
         async with self.lock:
             try:
                 success = await self.device.update()
