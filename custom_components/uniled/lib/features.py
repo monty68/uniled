@@ -55,7 +55,19 @@ class UniledBulb(UniledLight):
         self,
     ) -> None:
         super().__init__()
+        self._name = "Bulb"
         self._key = "bulb"
+
+class UniledLamp(UniledLight):
+    """UniLED Light Feature Class"""
+
+    def __init__(
+        self,
+    ) -> None:
+        super().__init__()
+        self._name = "Lamp"
+        self._icon = "mdi:lamp"
+        self._key = "lamp"
 
 class UniledLedStrip(UniledAttribute):
     """UniLED Light Feature Class"""
@@ -65,7 +77,7 @@ class UniledLedStrip(UniledAttribute):
     ) -> None:
         self._attr = ATTR_UL_POWER
         self._type = "light"
-        self._name = "Light"
+        self._name = "Light" # Backwards compat
         self._icon = "mdi:led-strip-variant"
         self._key = "strip"
 
