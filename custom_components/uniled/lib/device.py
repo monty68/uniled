@@ -172,7 +172,8 @@ class UniledDevice:
         """Register a callback to be called when the state changes."""
 
         def unregister_callback() -> None:
-            self._callbacks.remove(callback)
+            if callback in self._callbacks:
+                self._callbacks.remove(callback)
 
         self._callbacks.append(callback)
         return unregister_callback

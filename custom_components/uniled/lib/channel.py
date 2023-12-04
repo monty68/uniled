@@ -175,9 +175,13 @@ class UniledChannel:
         """Register a callback to be called when the state changes."""
 
         def unregister_callback() -> None:
-            self._callbacks.remove(callback)
+            if callback not in self._callbacks:
+                _LOGGER.warning("attempt to unregister noexistent callback: %s", callback)
+            if callback in self._callbacks:
+                self._callbacks.remove(callback)
 
         self._callbacks.append(callback)
+
         return unregister_callback
 
     def _fire_callbacks(self) -> None:
