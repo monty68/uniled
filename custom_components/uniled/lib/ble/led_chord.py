@@ -354,7 +354,7 @@ class _LEDCHORD(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, rgb: tuple[int, int, int]
     ) -> bytearray | None:
         """The bytes to send for a color level change"""
-        effect = channel.status.effect_number
+        effect = channel.get(ATTR_UL_EFFECT_NUMBER)
         cmd = self.cmd.SET_COLOR
         if effect >= LEDCHORD_FX_STRIP and effect < LEDCHORD_FX_MATRIX:
             cmd = self.cmd.SET_STRIP_COLOR
@@ -455,7 +455,7 @@ class _LEDCHORD(UniledBleModel):
         """Build chip order message(s)"""
         sequence = (
             LEDCHORD_CHIP_ORDER_RGBW
-            if device.master.has(ATTR_HA_RGBW_COLOR)
+            if channel.has(ATTR_HA_RGBW_COLOR)
             else LEDCHORD_CHIP_ORDER_RGB
         )
         if (order := self.chip_order_index(sequence, value)) is not None:
@@ -466,7 +466,7 @@ class _LEDCHORD(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:
         """Return list of chip orders"""
-        if device.master.has(ATTR_HA_RGBW_COLOR):
+        if channel.has(ATTR_HA_RGBW_COLOR):
             return self.chip_order_list(LEDCHORD_CHIP_ORDER_RGBW)
         return self.chip_order_list(LEDCHORD_CHIP_ORDER_RGB)
 

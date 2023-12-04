@@ -288,7 +288,7 @@ class _LEDHUE(UniledBleModel):
         """Build chip order message(s)"""
         sequence = (
             UNILED_CHIP_ORDER_RGBW
-            if device.master.has(ATTR_HA_RGBW_COLOR)
+            if channel.has(ATTR_HA_RGBW_COLOR)
             else UNILED_CHIP_ORDER_RGB
         )
         if (order := self.chip_order_index(sequence, value)) is not None:
@@ -299,7 +299,7 @@ class _LEDHUE(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:
         """Return list of chip orders"""
-        if device.master.has(ATTR_HA_RGBW_COLOR):
+        if channel.has(ATTR_HA_RGBW_COLOR):
             return self.chip_order_list(UNILED_CHIP_ORDER_RGBW)
         return self.chip_order_list(UNILED_CHIP_ORDER_RGB)
 
