@@ -183,7 +183,7 @@ class _LEDHUE(UniledBleModel):
 
     def build_on_connect(self, device: UniledBleDevice) -> list[bytearray] | None:
         """Build on connect message(s)"""
-        return bytearray([0x00, 0x00, 0x00, self.cmd.CHECK_DEVICE])
+        return None # bytearray([0x00, 0x00, 0x00, self.cmd.CHECK_DEVICE])
 
     def build_state_query(self, device: UniledBleDevice) -> bytearray | None:
         """Build a state query message"""
