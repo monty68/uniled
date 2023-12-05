@@ -46,6 +46,8 @@ LEDHUE_EFFECT_TYPE_AUTO = 0x00
 LEDHUE_EFFECT_TYPE_DYNAMIC = 0x01
 LEDHUE_EFFECT_TYPE_STATIC = 0x79
 
+LEDHUE_AUTO_CYCLE_FX = "Auto Cycle FX's"
+
 LEDHUE_EFFECT_GROUPS: Final = [
     {LEDHUE_EFFECT_TYPE_STATIC: UNILEDEffects.SOLID.value},
     {
@@ -141,6 +143,8 @@ class _LEDHUE(UniledBleModel):
         if effect == LEDHUE_EFFECT_TYPE_AUTO or effect != LEDHUE_EFFECT_TYPE_STATIC:
             device.master.status.set(ATTR_UL_EFFECT_TYPE, str(UNILEDEffectType.DYNAMIC))
             device.master.status.set(ATTR_UL_EFFECT_SPEED, speed)
+            if effect == LEDHUE_EFFECT_TYPE_AUTO:
+                device.master.status.set(ATTR_UL_EFFECT, LEDHUE_AUTO_CYCLE_FX)
         else:
             device.master.status.set(ATTR_UL_EFFECT_TYPE, str(UNILEDEffectType.STATIC))
 
@@ -248,7 +252,10 @@ class _LEDHUE(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:
         """Return list of effect names"""
-        return list(LEDHUE_EFFECTS.values())
+        fxlist = list(LEDHUE_EFFECTS.values())
+        if channel.status.effect_loop is True:
+            fxlist.insert(0, LEDHUE_AUTO_CYCLE_FX)
+        return fxlist
 
     def build_effect_loop_command(
         self, device: UniledBleDevice, channel: UniledChannel, state: bool
