@@ -42,7 +42,7 @@ BANLANX_MANUFACTURER: Final = "SPLED (BanlanX)"
 BANLANX_MANUFACTURER_ID: Final = 20563
 
 UNILED_BLE_ERROR_BACKOFF_TIME = 0.25
-UNILED_BLE_NOTFICATION_TIMEOUT = 2.0
+UNILED_BLE_NOTFICATION_TIMEOUT = 5.0
 
 
 class CharacteristicMissingError(Exception):
@@ -82,20 +82,20 @@ class UniledBleModel(UniledModel):
                     manu_list = [manu_list]
                 for manu_data in manu_list:
                     if data.startswith(manu_data):
-                        #_LOGGER.debug(
+                        # _LOGGER.debug(
                         #    "Device '%s' (%s) identified as '%s', by %s.",
                         #    device.name,
                         #    device.address,
                         #    self.model_name,
                         #    self.manufacturer,
-                        #)
+                        # )
                         return True
-                    #_LOGGER.debug(
+                    # _LOGGER.debug(
                     #    "%s : %s NOT in %s",
                     #    mid,
                     #    manu_data.hex(),
                     #    data.hex(),
-                    #)
+                    # )
             else:
                 pass
         return False
@@ -162,7 +162,11 @@ class UniledBleDevice(UniledDevice):
             elif match is True:
                 if found is not None:
                     if found := UniledBleDevice.match_model_name(device.name):
-                        _LOGGER.debug("Device '%s' name matches model '%s'.", device.name, found.model_name)
+                        _LOGGER.debug(
+                            "Device '%s' name matches model '%s'.",
+                            device.name,
+                            found.model_name,
+                        )
                         return found
                     _LOGGER.debug(
                         "Device '%s' (%s) needs protocol resolving!",
@@ -278,22 +282,27 @@ class UniledBleDevice(UniledDevice):
     ##
     async def update(self, retry: int | None = None) -> bool:
         """Update the device."""
-        self._notification_event.clear()
+
         if not (query := self.model.build_state_query(self)):
             raise Exception("Update - Failed, no state query command available!")
-        
+
         _LOGGER.debug("%s: Update - Send State Query...", self.name)
+        self._notification_event.clear()
         if not await self.send(query, retry):
             return False
-        
+
         if not self.available:
             _LOGGER.warning("%s: Update - Failed, device not available.", self.name)
             return False
-        
+
         if not self._notification_event.is_set():
             # Wait for actual response!
-            _LOGGER.debug("%s: Update - Awaiting status notification...", self.name)
             async with self._operation_lock:
+                _LOGGER.debug(
+                    "%s: Update - Awaiting %s seconds for status notification...",
+                    self.name,
+                    UNILED_BLE_NOTFICATION_TIMEOUT,
+                )
                 try:
                     async with async_timeout.timeout(UNILED_BLE_NOTFICATION_TIMEOUT):
                         await self._notification_event.wait()
@@ -547,7 +556,7 @@ class UniledBleDevice(UniledDevice):
             if not self.channels:
                 self._create_channels()
             try:
-                if self._model.parse_notifications(self, sender.handle, data):
+                if self._model.parse_notifications(self, sender.handle, data) is True:
                     self._last_notification_time = time.monotonic()
                     self._last_notification_data = ()
                     self._notification_event.set()
@@ -555,12 +564,20 @@ class UniledBleDevice(UniledDevice):
                     return
             except ParseNotificationError as ex:
                 _LOGGER.warning(
-                    "%s: Notification parser failed! - %s", self.name, str(ex),
+                    "%s: Notification parser failed! - %s",
+                    self.name,
+                    str(ex),
                 )
             except Exception as ex:
                 _LOGGER.warning(
-                    "%s: Notification parser exception!", self.name, exc_info=True,
+                    "%s: Notification parser exception!",
+                    self.name,
+                    exc_info=True,
                 )
+        else:
+            _LOGGER.debug(
+                "%s: Device has no valid model, notification ignored", self.name
+            )
 
     async def _start_notify(self) -> bool:
         """Start notification."""
