@@ -244,8 +244,8 @@ class _LEDHUE(UniledBleModel):
             effect = self.int_if_str_in(
                 value, LEDHUE_EFFECTS, LEDHUE_EFFECT_TYPE_STATIC
             )
-        else:
-            effect = int(value)
+        elif (effect := int(value)) not in LEDHUE_EFFECTS:
+            return None
         return bytearray([effect, 0x00, 0x00, self.cmd.SET_EFFECT])
 
     def fetch_effect_list(
@@ -282,6 +282,7 @@ class _LEDHUE(UniledBleModel):
         """Build chip type message(s)"""
         if (type := self.int_if_str_in(value, LEDHUE_CHIP_TYPES)) is not None:
             return bytearray([type & 0xFF, 0x00, 0x00, self.cmd.SET_CHIP_TYPE])
+        return None
 
     def fetch_chip_type_list(
         self, device: UniledBleDevice, channel: UniledChannel

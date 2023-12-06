@@ -512,8 +512,8 @@ class BanlanX2(UniledBleModel):
             mode = self.int_if_str_in(
                 value, BANLANX2_LIGHT_MODES, BANLANX2_LIGHT_MODE_SINGULAR
             )
-        else:
-            mode = int(value)
+        elif (mode := int(value)) not in BANLANX2_LIGHT_MODES:
+            return None
         return bytearray([0xA0, 0x6A, 0x01, mode])
 
     def fetch_light_mode_list(
@@ -578,8 +578,8 @@ class BanlanX2(UniledBleModel):
             effect = self.int_if_str_in(
                 value, BANLANX2_EFFECTS_RGBW_SOUND, BANLANX2_EFFECT_SOLID
             )
-        else:
-            effect = int(value)
+        elif (effect := int(value)) not in BANLANX2_EFFECTS_RGBW_SOUND:
+            return None
         return bytearray([0xA0, 0x63, 0x01, effect])
 
     def fetch_effect_list(
@@ -634,7 +634,12 @@ class BanlanX2(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, value: str
     ) -> bytearray | None:
         """The bytes to send for an input change"""
-        input = self.int_if_str_in(value, BANLANX2_AUDIO_INPUTS, 0x00)
+        if (
+            input := self.int_if_str_in(
+                str(value), BANLANX2_AUDIO_INPUTS, channel.status.audio_input
+            )
+        ) is None:
+            return None
         return bytearray([0xA0, 0x6C, 0x01, input])
 
     def fetch_audio_input_list(
@@ -648,7 +653,7 @@ class BanlanX2(UniledBleModel):
     ) -> bytearray | None:
         """Build chip order message(s)"""
         sequence = UNILED_CHIP_ORDER_RGBW if self.colors == 4 else UNILED_CHIP_ORDER_RGB
-        if (order := self.chip_order_index(sequence, value)) is not None:
+        if (order := self.chip_order_index(sequence, str(value))) is not None:
             return bytearray([0xA0, 0x64, 0x01, order])
         return None
 

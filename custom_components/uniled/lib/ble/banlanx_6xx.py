@@ -1179,13 +1179,15 @@ class BanlanX6xx(SP6xxEProxy):
         return self.__encoder(0x0A, bytearray([0x01 if state else 0x00]))
 
     def build_on_power_command(
-        self, device: UniledBleDevice, channel: UniledChannel, mode: Any
+        self, device: UniledBleDevice, channel: UniledChannel, value: Any
     ) -> bytearray | None:
         """Build on power restore message(s)"""
-        if isinstance(mode, str):
+        if isinstance(value, str):
             mode = self.int_if_str_in(
-                mode, DICTOF_ON_POWER_STATES, channel.status.on_power
+                value, DICTOF_ON_POWER_STATES, channel.status.on_power
             )
+        elif (mode := int(value)) not in DICTOF_ON_POWER_STATES:
+            return None
         return self.__encoder(0x0B, bytearray([mode]))
 
     def fetch_on_power_list(
@@ -1262,15 +1264,17 @@ class BanlanX6xx(SP6xxEProxy):
         self,
         device: UniledBleDevice,
         channel: UniledChannel,
-        mode: Any,
+        value: Any,
         effect: int | None = None,
     ) -> list[bytearray] | None:
         """The bytes to send for a light mode change."""
         cfg: _CONFIG = channel.context
-        if isinstance(mode, str):
+        if isinstance(value, str):
             mode = self.int_if_str_in(
-                mode, DICTOF_MODES, channel.status.light_mode_number
+                value, DICTOF_MODES, channel.status.light_mode_number
             )
+        elif (mode := int(value)) not in DICTOF_MODES:
+            return None           
         if not cfg or (fxlist := cfg.dictof_mode_effects(mode)) is None:
             return None
         if effect is None:
@@ -1367,7 +1371,7 @@ class BanlanX6xx(SP6xxEProxy):
         self, device: UniledBleDevice, channel: UniledChannel, value: str
     ) -> bytearray | None:
         """The bytes to send for an input change"""
-        input = self.int_if_str_in(value, DICTOF_AUDIO_INPUTS, 0x00)
+        input = self.int_if_str_in(str(value), DICTOF_AUDIO_INPUTS, 0x00)
         return self.__encoder(0x59, bytearray([input]))
 
     def fetch_audio_input_list(
@@ -1395,7 +1399,7 @@ class BanlanX6xx(SP6xxEProxy):
         self, device: UniledBleDevice, channel: UniledChannel, value: str
     ) -> list[bytearray]:
         """Build light type message(s)"""
-        if (light := self.int_if_str_in(value, self.fetch_light_type_dict())) is None:
+        if (light := self.int_if_str_in(str(value), self.fetch_light_type_dict())) is None:
             return None
         cfg: _CONFIG = self.match_light_type_config(light)
         if cfg is None:

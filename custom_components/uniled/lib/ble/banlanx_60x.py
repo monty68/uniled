@@ -9,6 +9,7 @@ from ..features import (
     UniledAttribute,
     UniledGroup,
     UniledButton,
+    UniledSelect,
     UniledLedStrip,
     UniledSceneLoop,
     UniledEffectType,
@@ -82,6 +83,7 @@ BANLANX60X_AUDIO_INPUTS: Final = {
 }
 
 BANLANX60X_MAX_SENSITIVITY = 16
+BANLANX60X_MAX_SCENES = 9
 BANLANX60X_MAX_EFFECT_SPEED = 30
 BANLANX60X_MAX_EFFECT_LENGTH = 96
 
@@ -136,6 +138,32 @@ BANLANX60X_EFFECTS: Final = {
     BANLANX60X_EFFECT_SOUND + 15: _FX_SOUND(UNILEDEffects.SOUND_PARTY),
 }
 
+ATTR_UL_SCENE_SAVE_SELECT: Final = "scene_to_save"
+ATTR_UL_SCENE_SAVE_BUTTON: Final = "scene_save"
+
+
+class SceneSaveSelect(UniledSelect):
+    def __init__(self):
+        super().__init__(
+            UniledGroup.CONFIGURATION,
+            False,
+            ATTR_UL_SCENE_SAVE_SELECT,
+            "Save to which scene",
+            "mdi:star-settings",
+            None,
+        )
+
+
+class SceneSaveButton(UniledButton):
+    def __init__(self):
+        super().__init__(
+            UniledGroup.CONFIGURATION,
+            False,
+            ATTR_UL_SCENE_SAVE_BUTTON,
+            "Save to Scene",
+            "mdi:star-plus",
+        )
+
 
 ##
 ## BanlanX - SP60xE Protocol Implementation
@@ -143,7 +171,17 @@ BANLANX60X_EFFECTS: Final = {
 class BanlanX60X(UniledBleModel):
     """BanlanX - SP60xE Protocol Implementation"""
 
-    def __init__(self, id: int, name: str, info: str, data: bytes, channels: int):
+    triggers: int
+
+    def __init__(
+        self,
+        id: int,
+        name: str,
+        info: str,
+        data: bytes,
+        channels: int,
+        triggers: int = 0,
+    ):
         super().__init__(
             model_num=id,
             model_name=name,
@@ -156,6 +194,7 @@ class BanlanX60X(UniledBleModel):
             ble_read_uuids=[],
             ble_manufacturer_data=data,
         )
+        self.triggers = triggers
 
     @property
     def master_channel(self):
@@ -238,7 +277,7 @@ class BanlanX60X(UniledBleModel):
                         # 3  = Level (0x00 - 0xFF)
                         # 4  = Effect Speed (0x01 - 0x1E)
                         # 5  = Effect Length (0x01 - 0x96)
-                        # 6  = Effect Direction? (0x00 = Backwards, 0x01 = Forwards)
+                        # 6  = Effect Direction (0x00 = Backwards, 0x01 = Forwards)
                         # 7  = Red Level (0x00 - 0xFF)
                         # 8  = Green Level (0x00 - 0xFF)
                         # 9  = Blue Level (x00 - 0xFF)
@@ -326,12 +365,18 @@ class BanlanX60X(UniledBleModel):
                     _LOGGER.debug("%s: Residual : %s", device.name, data.hex())
                     loop = True if data[1] != 0 else False
 
+                last_save_scene = device.master.status.get(
+                    ATTR_UL_SCENE_SAVE_SELECT, str(BANLANX60X_MAX_SCENES)
+                )
+
                 device.master.status.replace(
                     {
                         ATTR_UL_DEVICE_FORCE_REFRESH: True,
                         ATTR_UL_POWER: True if master_power != 0 else False,
                         ATTR_UL_SCENE: True if master_power != 0 else False,
                         ATTR_UL_SCENE_LOOP: loop,
+                        ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
+                        ATTR_UL_SCENE_SAVE_BUTTON: False,
                     }
                 )
 
@@ -343,11 +388,12 @@ class BanlanX60X(UniledBleModel):
                     device.master.features = [
                         UniledLedStrip(),
                         UniledSceneLoop(),
+                        #SceneSaveSelect(),
+                        #SceneSaveButton(),
                         UniledAttribute(ATTR_UL_SCENE_LOOP),
                     ]
 
-                    SCENE_BUTTONS = 9
-                    for b in range(SCENE_BUTTONS):
+                    for b in range(BANLANX60X_MAX_SCENES):
                         device.master.features.append(
                             UniledButton(
                                 UniledGroup.STANDARD,
@@ -399,22 +445,20 @@ class BanlanX60X(UniledBleModel):
         self,
         device: UniledBleDevice,
         channel: UniledChannel,
-        effect: Any,
+        value: Any,
     ) -> bytearray | None:
         """The bytes to send for an effect change"""
         if not channel.number:
             return None
         cnum = device.channels - 1 if not channel.number else channel.number - 1
-        if isinstance(effect, str):
-            for fx in BANLANX60X_EFFECTS:
-                if BANLANX60X_EFFECTS[fx].name == effect:
-                    effect = int(fx)
-                    break
-        return (
-            None
-            if not isinstance(effect, int)
-            else bytearray([0xAA, 0x23, 0x02, cnum, effect])
-        )
+
+        if isinstance(value, str):
+            effect = self.int_if_str_in(
+                value, BANLANX60X_EFFECTS, BANLANX60X_EFFECT_SOLID
+            )
+        elif (effect := int(value)) not in BANLANX60X_EFFECTS:
+            return None
+        return bytearray([0xAA, 0x23, 0x02, cnum, effect])
 
     def fetch_effect_list(
         self, device: UniledBleDevice, channel: UniledChannel
@@ -489,14 +533,29 @@ class BanlanX60X(UniledBleModel):
         """Build scene loop message(s)"""
         return bytearray([0xAA, 0x30, 0x01, 0x01 if state else 0x00])
 
+    def build_scene_save_command(
+        self, device: UniledBleDevice, channel: UniledChannel, scene: int
+    ) -> bytearray:
+        """Build scene save message(s)"""
+
+    def fetch_scene_to_save_list(
+        self, device: UniledBleDevice, channel: UniledChannel
+    ) -> bytearray:
+        """Return list of scene numbers"""
+        scenes = list()
+        for b in range(BANLANX60X_MAX_SCENES):
+            scenes.append(str(b + 1))
+        return scenes
+
     def build_chip_order_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: str | None = None
     ) -> list[bytearray]:
         """Build chip order message(s)"""
-        order = self.chip_order_index(UNILED_CHIP_ORDER_RGB, value)
         cnum = device.channels - 1 if not channel.number else channel.number - 1
-        return bytearray([0xAA, 0x24, 0x02, cnum, order])
-
+        if (order := self.chip_order_index(UNILED_CHIP_ORDER_RGB, str(value))) is not None:
+            return bytearray([0xAA, 0x24, 0x02, cnum, order])
+        return None
+    
     def fetch_chip_order_list(
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:
@@ -521,6 +580,7 @@ SP602E = BanlanX60X(
     info="4xSPI RGB (Music) Controller",
     data=b"\x02\x02",
     channels=4,
+    triggers=4,
 )
 
 SP608E = BanlanX60X(
@@ -529,4 +589,5 @@ SP608E = BanlanX60X(
     info="8xSPI RGB (Music) Controller",
     data=b"\x08\x02",
     channels=8,
+    triggers=4,
 )

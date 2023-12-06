@@ -357,8 +357,8 @@ class BanlanX3(UniledBleModel):
             mode = self.int_if_str_in(
                 value, BANLANX3_LIGHT_MODES, BANLANX3_LIGHT_MODE_SINGULAR
             )
-        else:
-            mode = int(value)
+        elif (mode := int(value)) not in BANLANX3_LIGHT_MODES:
+            return None
         return bytearray([0x16, 0x01, mode])
 
     def fetch_light_mode_list(
@@ -414,8 +414,8 @@ class BanlanX3(UniledBleModel):
             effect = self.int_if_str_in(
                 value, BANLANX3_EFFECTS_RGBW_SOUND, BANLANX3_EFFECT_SOLID
             )
-        else:
-            effect = int(value)
+        elif (effect := int(value)) not in BANLANX3_EFFECTS_RGBW_SOUND:
+            return None
         return bytearray([0x15, 0x01, effect])
 
     def fetch_effect_list(
@@ -461,7 +461,12 @@ class BanlanX3(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, value: str
     ) -> bytearray | None:
         """The bytes to send for an input change"""
-        input = self.int_if_str_in(value, BANLANX3_AUDIO_INPUTS, 0x00)
+        if (
+            input := self.int_if_str_in(
+                str(value), BANLANX3_AUDIO_INPUTS, channel.status.audio_input
+            )
+        ) is None:
+            return None
         return bytearray([0x19, 0x01, input])
 
     def fetch_audio_input_list(

@@ -318,8 +318,8 @@ class _LEDCHORD(UniledBleModel):
             mode = self.int_if_str_in(
                 value, LEDCHORD_LIGHT_MODES, LEDCHORD_LIGHT_MODE_SINGULAR
             )
-        else:
-            mode = int(value)
+        elif (mode := int(value)) not in LEDCHORD_LIGHT_MODES:
+            return None
         if mode == LEDCHORD_LIGHT_MODE_AUTO_DYNAMIC:
             cmd = self.cmd.SET_DYNAMIC_AUTO_MODE
         elif mode == LEDCHORD_LIGHT_MODE_AUTO_STRIP:
@@ -354,8 +354,8 @@ class _LEDCHORD(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, rgb: tuple[int, int, int]
     ) -> bytearray | None:
         """The bytes to send for a color level change"""
-        effect = channel.get(ATTR_UL_EFFECT_NUMBER)
         cmd = self.cmd.SET_COLOR
+        effect = channel.get(ATTR_UL_EFFECT_NUMBER)
         if effect >= LEDCHORD_FX_STRIP and effect < LEDCHORD_FX_MATRIX:
             cmd = self.cmd.SET_STRIP_COLOR
         elif effect >= LEDCHORD_FX_MATRIX:
@@ -407,8 +407,8 @@ class _LEDCHORD(UniledBleModel):
         """The bytes to send for an effect change"""
         if isinstance(value, str):
             effect = self.int_if_str_in(value, LEDCHORD_EFFECTS, LEDCHORD_FX_STATIC)
-        else:
-            effect = int(value)
+        elif (effect := int(value)) not in LEDCHORD_EFFECTS:
+            return None
         return bytearray([effect, 0x00, 0x00, self.cmd.SET_EFFECT])
 
     def fetch_effect_list(
@@ -442,6 +442,7 @@ class _LEDCHORD(UniledBleModel):
         """Build chip type message(s)"""
         if (type := self.int_if_str_in(value, LEDCHORD_CHIP_TYPES)) is not None:
             return bytearray([type & 0xFF, 0x00, 0x00, self.cmd.SET_CHIP_TYPE])
+        return None
 
     def fetch_chip_type_list(
         self, device: UniledBleDevice, channel: UniledChannel
