@@ -11,6 +11,8 @@ from .model import (
 
 from .const import (
     UNILED_MASTER as MASTER,
+    UNILED_DEVICE_RETRYS,
+    CONF_UL_RETRY_COUNT,
     ATTR_UL_INFO_FIRMWARE,
     ATTR_UL_DEVICE_FORCE_REFRESH,
 )
@@ -24,11 +26,13 @@ _LOGGER = logging.getLogger(__name__)
 class ParseNotificationError(Exception):
     """Raised on notifcation parse errors."""
 
+
 ##
 ## Master Channel
 ##
 class UniledMaster(UniledChannel):
     """UniLED Master Channel Class"""
+
     _device: UniledDevice
     _name: str | None
 
@@ -52,6 +56,7 @@ class UniledMaster(UniledChannel):
         assert self._device is not None  # nosec
         return self._device
 
+
 ##
 ## Uniled Base Device Class
 ##
@@ -59,15 +64,21 @@ class UniledDevice:
     """UniLED Base Device Class"""
 
     _channels: list[UniledChannel] = list()
-    #_model: weakref.ProxyType(UniledModel) | None = None
+    # _model: weakref.ProxyType(UniledModel) | None = None
     _model: UniledModel | None = None
     _callbacks: list[Callable[[UniledChannel], None]] = list()
     _last_notification_data: bytearray = ()
     _last_notification_time = None
+    _config = None
+    _retry_count: int = UNILED_DEVICE_RETRYS
 
-    def __init__(self) -> None:
+    def __init__(self, config: Any) -> None:
         """Init the UniLED Base Driver"""
-    
+        self._config = config
+        if isinstance(config, dict):
+            self._retry_count = config.get(CONF_UL_RETRY_COUNT, UNILED_DEVICE_RETRYS)
+        _LOGGER.debug("%s - %s", self._config, self.retry_count)
+
     def __del__(self):
         """Delete the device"""
         self._model = None
@@ -124,8 +135,8 @@ class UniledDevice:
         assert self._model is not None  # nosec
         return self._model.description
 
-    #@property
-    #def firmware(self) -> str | None:
+    # @property
+    # def firmware(self) -> str | None:
     #    return self.master.get(ATTR_UL_INFO_FIRMWARE)
 
     @property
@@ -166,6 +177,11 @@ class UniledDevice:
         self._last_notification_data = save
         return save
 
+    @property
+    def retry_count(self) -> int:
+        """Device retry count"""
+        return self._retry_count
+    
     def register_callback(
         self, callback: Callable[[UniledChannel], None]
     ) -> Callable[[], None]:
@@ -209,18 +225,20 @@ class UniledDevice:
             return False
         return await self.async_set_state(self, channel, attr, state)
 
-    async def async_set_state(self, channel: UniledChannel, attr: str, state: Any) -> bool:
+    async def async_set_state(
+        self, channel: UniledChannel, attr: str, state: Any
+    ) -> bool:
         """Set a channel attribute state"""
         command = self._model.build_command(self, channel, attr, state)
         success = await self.send(command) if command else False
-        #refresh = not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False)
+        # refresh = not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False)
         _LOGGER.debug("%s: Command Success = %s (%s)", self.name, success, command)
         if success:
             channel.set(attr, state, True)
         else:
             channel.refresh()
         return success
-    
+
     async def async_set_multi_state(self, channel_id: int, **kwargs) -> None:
         """Set a channel (id) multi attribute states"""
         if not (channel := self.channel(channel_id)):
@@ -229,8 +247,10 @@ class UniledDevice:
 
     async def async_set_multi_state(self, channel: UniledChannel, **kwargs) -> bool:
         """Set a channel multi attribute states"""
-        success = await self.send(self._model.build_multi_commands(self, channel, **kwargs))
-        #if not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False):
+        success = await self.send(
+            self._model.build_multi_commands(self, channel, **kwargs)
+        )
+        # if not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False):
         channel.refresh()
         return success
 
@@ -264,9 +284,6 @@ class UniledDevice:
         """Stop the device"""
 
     @abstractmethod
-    async def send(
-        self, commands: list[bytes] | bytes
-    ) -> bool:
+    async def send(self, commands: list[bytes] | bytes) -> bool:
         """Send command(s) to a device."""
         return False
-    

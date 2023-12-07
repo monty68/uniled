@@ -4,9 +4,6 @@ from dataclasses import dataclass
 from enum import IntEnum
 from .helpers import StrEnum
 
-# Home Assistant Config Keys
-CONF_RETRY_COUNT = "retry_count"
-
 UNILED_DEVICE_TIMEOUT: Final = 40
 UNILED_DEVICE_RETRYS: Final = 3
 UNILED_UPDATE_SECONDS: Final = 30
@@ -31,6 +28,11 @@ UNILED_AUDIO_INPUT_INTMIC: Final = "Int. Mic"
 UNILED_AUDIO_INPUT_EXTMIC: Final = "Ext. Mic"
 UNILED_AUDIO_INPUT_PLAYER: Final = "Player"
 
+# Home Assistant Config Keys
+CONF_HA_MODEL = "model"
+
+# Uniled Config Keys
+CONF_UL_RETRY_COUNT = "retry_count"
 
 # Home Assistant Supported Light Attributes
 ATTR_HA_TRANSITION = "transition"

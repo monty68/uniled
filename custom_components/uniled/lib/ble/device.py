@@ -1,7 +1,7 @@
 """UniLED BLE Device Handler."""
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 from bleak.exc import BleakDBusError
 from bleak.backends.device import BLEDevice
@@ -24,7 +24,6 @@ from ..device import UniledDevice, ParseNotificationError
 from ..model import UniledModel
 from ..const import (
     UNILED_TRANSPORT_BLE,
-    UNILED_DEVICE_RETRYS as UNILED_BLE_DEVICE_RETRYS,
     UNILED_DISCONNECT_DELAY as UNILED_BLE_DISCONNECT_DELAY,
     UNILED_COMMAND_SETTLE_DELAY as UNILED_BLE_COMMAND_SETTLE_DELAY,
 )
@@ -212,10 +211,10 @@ class UniledBleDevice(UniledDevice):
     ##
     def __init__(
         self,
+        config: Any,
         ble_device: BLEDevice,
         advertisement_data: AdvertisementData | None = None,
         model_name: str | None = None,
-        retry_count: int = UNILED_BLE_DEVICE_RETRYS,
     ) -> None:
         """Init the UniLED BLE Model"""
         _LOGGER.debug(
@@ -224,7 +223,7 @@ class UniledBleDevice(UniledDevice):
             hex(id(self)),
             model_name,
         )
-        super().__init__()
+        super().__init__(config)
         self._channels = list()
         self._ble_device = ble_device
         self._advertisement_data = advertisement_data
@@ -234,7 +233,6 @@ class UniledBleDevice(UniledDevice):
         self._disconnect_timer: asyncio.TimerHandle | None = None
         self._timed_disconnect_task: asyncio.Task[None] | None = None
         self._expected_disconnect = False
-        self._retry_count = retry_count
         self.loop = asyncio.get_event_loop()
         self._client: BleakClientWithServiceCache | None = None
         self._read_char: BleakGATTCharacteristic | None = None
@@ -286,8 +284,10 @@ class UniledBleDevice(UniledDevice):
         if not (query := self.model.build_state_query(self)):
             raise Exception("Update - Failed, no state query command available!")
 
-        _LOGGER.debug("%s: Update - Send State Query...", self.name)
+        _LOGGER.debug("%s: Update - Send State Query... (%s)", self.name, len(self._callbacks))
         self._notification_event.clear()
+        if len(self._callbacks) == 1 and retry == None:
+            retry = 0
         if not await self.send(query, retry):
             return False
 
@@ -334,6 +334,7 @@ class UniledBleDevice(UniledDevice):
                 finally:
                     pass
                 self._last_notification_time = None
+        await close_stale_connections(self._ble_device)
         _LOGGER.debug("%s: Stopped", self.name)
 
     ##
@@ -368,7 +369,7 @@ class UniledBleDevice(UniledDevice):
     ) -> bool:
         """Send command to device and read response."""
         if retry is None:
-            retry = self._retry_count
+            retry = self.retry_count
 
         if self._model and not self.available:
             if (on_connect := self._model.build_on_connect(self)) is not None:

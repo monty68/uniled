@@ -34,7 +34,7 @@ from .const import (
     DOMAIN,
     UNILED_DEVICE_RETRYS,
     UNILED_DEVICE_TIMEOUT,
-    CONF_RETRY_COUNT,
+    CONF_UL_RETRY_COUNT,
 )
 
 from .coordinator import UniledUpdateCoordinator
@@ -62,13 +62,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not entry.options:
         hass.config_entries.async_update_entry(
             entry,
-            options={CONF_RETRY_COUNT: UNILED_DEVICE_RETRYS},
+            options={CONF_UL_RETRY_COUNT: UNILED_DEVICE_RETRYS},
         )
 
     address: str = str(entry.data[CONF_ADDRESS]).upper()
     model_name: str = entry.data.get(CONF_MODEL, None)
     device_class: str = entry.data[CONF_DEVICE_CLASS]
-    device_retrys: int = entry.options[CONF_RETRY_COUNT]
 
     if device_class == UNILED_TRANSPORT_BLE:
         ble_device = bluetooth.async_ble_device_from_address(
@@ -76,7 +75,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ) or await get_device(address)
 
         if not ble_device:
-            # bluetooth.async_rediscover_address(hass, address)
             raise ConfigEntryNotReady(
                 f"Could not find BLE device with address {address}"
             )
@@ -102,7 +100,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
         uniled = UniledBleDevice(
-            ble_device, service_info.advertisement, model_name, device_retrys
+            entry.options, ble_device, service_info.advertisement, model_name
         )
 
         if not uniled.model:
@@ -154,17 +152,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             await coordinator.async_config_entry_first_refresh()
         except ConfigEntryNotReady:
+            _LOGGER.debug("%s: First update attempt failed!", uniled.name)
             cancel_first_update()
-            await uniled.stop()
-            if device_class == UNILED_TRANSPORT_BLE:
-                bluetooth.async_rediscover_address(hass, address)
+            await coordinator.device.stop()
+            del coordinator
+            gc.collect()
             raise
         try:
             async with async_timeout.timeout(UNILED_DEVICE_TIMEOUT):
                 await startup_event.wait()
                 _LOGGER.debug("*** Response from UniLED Device: %s", uniled.name)
         except asyncio.TimeoutError as ex:
-            await uniled.stop()
+            cancel_first_update()
+            await coordinator.device.stop()
+            del coordinator
+            gc.collect()
             raise ConfigEntryNotReady("No response from device") from ex
         finally:
             cancel_first_update()
@@ -177,7 +179,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Close the connection."""
         await uniled.stop()
         bluetooth.async_rediscover_address(hass, uniled.address)
-
 
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
@@ -199,18 +200,27 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     if entry.title != coordinator.title:
         await hass.config_entries.async_reload(entry.entry_id)
 
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload the config entry."""
-    domain_data = hass.data[DOMAIN]
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        coordinator: UniledUpdateCoordinator = domain_data.pop(entry.entry_id)
-
+async def async_unload_entry(hass, entry) -> bool:
+    """Unload a config entry."""
+    _LOGGER.info('Unload entry %s', entry.entry_id)
+    if entry.entry_id in hass.data[DOMAIN]:
+        coordinator: UniledUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
         await coordinator.device.stop()
-        if coordinator.device.transport == UNILED_TRANSPORT_BLE:
+
+    unload_ok = all(
+        await asyncio.gather(
+            *[
+                hass.config_entries.async_forward_entry_unload(entry, component)
+                for component in PLATFORMS
+            ]
+        )
+    )
+
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+        if coordinator.device.transport != UNILED_TRANSPORT_NET:
             bluetooth.async_rediscover_address(hass, coordinator.device.address)
         del coordinator
         gc.collect()
 
-    _LOGGER.debug("Unloaded OK: %s", unload_ok)
     return unload_ok

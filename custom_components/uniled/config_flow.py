@@ -16,7 +16,7 @@ from .lib.ble.device import UniledBleDevice, UniledBleModel, UNILED_TRANSPORT_BL
 from .lib.net.device import UniledNetDevice, UniledNetModel, UNILED_TRANSPORT_NET
 
 # from .lib.zng.device import UniledZngDevice, UNILED_TRANSPORT_ZNG
-from .const import DOMAIN, UNILED_DEVICE_RETRYS, CONF_RETRY_COUNT
+from .const import DOMAIN, UNILED_DEVICE_RETRYS, CONF_UL_RETRY_COUNT
 
 import voluptuous as vol
 import logging
