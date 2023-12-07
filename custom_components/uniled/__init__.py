@@ -165,7 +165,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             async with async_timeout.timeout(UNILED_DEVICE_TIMEOUT):
                 await startup_event.wait()
+                cancel_first_update()
                 _LOGGER.debug("*** Response from UniLED Device: %s", uniled.name)
+
+                hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+                await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+                entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
+                async def _async_stop(event: Event) -> None:
+                    """Close the connection."""
+                    await uniled.stop()
+                    bluetooth.async_rediscover_address(hass, uniled.address)
+
+                entry.async_on_unload(
+                    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+                )
+
+                _LOGGER.debug(
+                    "*** Added UniLED device entry for: %s, ID: %s, Unique ID: %s",
+                    uniled.name,
+                    entry.entry_id,
+                    entry.unique_id,
+                )
+
+                return True
+
         except asyncio.TimeoutError as ex:
             cancel_first_update()
             await coordinator.device.stop()
@@ -174,31 +198,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             del coordinator
             gc.collect()
             raise ConfigEntryNotReady("No response from device") from ex
-        finally:
-            cancel_first_update()
-
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-
-    async def _async_stop(event: Event) -> None:
-        """Close the connection."""
-        await uniled.stop()
-        bluetooth.async_rediscover_address(hass, uniled.address)
-
-    entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
-    )
-
-    _LOGGER.debug(
-        "*** Added UniLED device entry for: %s, ID: %s, Unique ID: %s",
-        uniled.name,
-        entry.entry_id,
-        entry.unique_id,
-    )
-
-    return True
-
+        
+        return False
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
