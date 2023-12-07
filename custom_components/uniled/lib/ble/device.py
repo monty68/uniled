@@ -284,10 +284,8 @@ class UniledBleDevice(UniledDevice):
         if not (query := self.model.build_state_query(self)):
             raise Exception("Update - Failed, no state query command available!")
 
-        _LOGGER.debug("%s: Update - Send State Query... (%s)", self.name, len(self._callbacks))
+        _LOGGER.debug("%s: Update - Send State Query... (retrys=%s)", self.name, retry)
         self._notification_event.clear()
-        if len(self._callbacks) == 1 and retry == None:
-            retry = 0
         if not await self.send(query, retry):
             return False
 

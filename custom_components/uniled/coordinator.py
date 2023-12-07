@@ -58,16 +58,18 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
             ConfigEntryState.SETUP_RETRY,
         )
 
+        _LOGGER.debug("%s: Update entry state: %s", self.device.name, self.entry.state)
+
         if self.entry.state not in valid_states:
             if self.device.available:
-                _LOGGER.debug("%s: Forcing stop", self.device.name)
                 await self.device.stop()
-            raise UpdateFailed(f"{self.device.name}: Invalid entry state!")
+            raise UpdateFailed("Invalid entry state: %s", self.entry.state)
 
         success = False
         async with self.lock:
             try:
-                success = await self.device.update()
+                retry = None if self.entry.state == ConfigEntryState.LOADED else 0
+                success = await self.device.update(retry)
             except Exception as ex:
                 raise ConfigEntryError(str(ex)) from ex
             finally:            
