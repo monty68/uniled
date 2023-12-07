@@ -106,7 +106,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not uniled.model:
             model = await uniled.resolve_model(model_name is None, False)
             if model is None:
-                return False
+                raise ConfigEntryError(
+                    f"Could not resolve model for BLE device with address {address}"
+                )
 
         if uniled.model_name != model_name:
             new = {**entry.data}
@@ -134,7 +136,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     elif device_class == UNILED_TRANSPORT_NET:
-        raise ConfigEntryNotReady(
+        raise ConfigEntryError(
             f"Unable to communicate with network device {address} as currently not supported!"
         )
     else:
