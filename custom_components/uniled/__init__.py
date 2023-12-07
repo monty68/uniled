@@ -155,6 +155,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.debug("%s: First update attempt failed!", uniled.name)
             cancel_first_update()
             await coordinator.device.stop()
+            if coordinator.device.transport != UNILED_TRANSPORT_NET:
+                bluetooth.async_rediscover_address(hass, coordinator.device.address)
             del coordinator
             gc.collect()
             raise
@@ -165,6 +167,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except asyncio.TimeoutError as ex:
             cancel_first_update()
             await coordinator.device.stop()
+            if coordinator.device.transport != UNILED_TRANSPORT_NET:
+                bluetooth.async_rediscover_address(hass, coordinator.device.address)
             del coordinator
             gc.collect()
             raise ConfigEntryNotReady("No response from device") from ex
