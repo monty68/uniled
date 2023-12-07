@@ -11,6 +11,7 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+
 @dataclass(frozen=True)
 class UniledModel:
     """UniLED Base Model Class"""
@@ -21,40 +22,43 @@ class UniledModel:
     manufacturer: str  # The manufacturers name
     channels: int  # The number of supported channels
 
-    def chip_order_list(self, sequence: str) -> list:
+    def chip_order_list(self, sequence: str, suffix: str = "") -> list:
         """Generate list of chip order combinations"""
         combos = list()
-        if sequence:
+        letters = len(sequence)
+        if sequence and letters <= 3:
             for combo in itertools.permutations(sequence, len(sequence)):
-                combos.append("".join(combo))
+                combos.append("".join(combo) + suffix)
+        elif letters <= 5:
+            combos = self.chip_order_list(sequence[:3], sequence[3:])
+            for combo in itertools.permutations(sequence, len(sequence)):
+                order = "".join(combo) + suffix
+                if order not in combos:
+                    combos.append(order)
         return combos
 
-    def chip_order_name(self, sequence: str, order: int) -> str | None:
-        """Return chip order name from index"""
-        if sequence:
-            if order == 0:
-                return sequence   
-            index = 0
-            for combo in itertools.permutations(sequence, len(sequence)):
-                if index == order:
-                    return "".join(combo)
-                index += 1
+    def chip_order_name(self, sequence: str, value: int) -> str:
+        """Generate list of chip order combinations"""
+        order = None
+        if orders := self.chip_order_list(sequence):
+            try:
+                order = orders[value]
+            except IndexError:
+                pass
+        return order
+
+    def chip_order_index(self, sequence: str, value: str) -> int:
+        """Generate list of chip order combinations"""
+        if orders := self.chip_order_list(sequence):
+            if value in orders:
+                return orders.index(value)
         return None
 
-    def chip_order_index(self, sequence: str, order: str) -> int | None:
-        """Return index from chip order name"""
-        if sequence:
-            index = 0
-            for combo in itertools.permutations(sequence, len(sequence)):
-                if order == "".join(combo):
-                    return index
-                index += 1
-        return None
-        
     @abstractmethod
     def parse_notifications(self, device: Any, sender: int, data: bytearray) -> bool:
         """Parse notification message(s)"""
         from .device import ParseNotificationError
+
         raise ParseNotificationError("No parser available!")
 
     @abstractmethod
@@ -107,9 +111,7 @@ class UniledModel:
         list_fetcher = getattr(self, list_method, None)
         if callable(list_fetcher):
             return list_fetcher(device, channel)
-        _LOGGER.warning(
-            "%s: Method '%s' not found.", self.model_name, list_method
-        )
+        _LOGGER.warning("%s: Method '%s' not found.", self.model_name, list_method)
         return []
 
     ##
