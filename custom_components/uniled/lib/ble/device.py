@@ -64,6 +64,7 @@ class UniledBleModel(UniledModel):
     ble_service_uuids: list[str]
     ble_write_uuids: list[str]
     ble_read_uuids: list[str]
+    ble_notify_uuids: list[str]
 
     def match_ble_device(
         self, device: BLEDevice, advertisement: AdvertisementData | None = None
@@ -237,6 +238,7 @@ class UniledBleDevice(UniledDevice):
         self._client: BleakClientWithServiceCache | None = None
         self._read_char: BleakGATTCharacteristic | None = None
         self._write_char: BleakGATTCharacteristic | None = None
+        self._notify_char: BleakGATTCharacteristic | None = None
 
         if model_name is not None:
             self._set_model(self.match_model_name(model_name))
@@ -583,7 +585,7 @@ class UniledBleDevice(UniledDevice):
         _LOGGER.debug("%s: Subscribe to notifications; RSSI: %s", self.name, self.rssi)
         self._last_notification_data = ()
         self._reset_disconnect_timer()
-        await self._client.start_notify(self._read_char, self._notification_handler)
+        await self._client.start_notify(self._notify_char, self._notification_handler)
         return True
 
     ##
@@ -708,11 +710,19 @@ class UniledBleDevice(UniledDevice):
                     if char := services.get_characteristic(characteristic):
                         self._read_char = char
                         break
+            if self._model.ble_notify_uuids:
+                for characteristic in self._model.ble_notify_uuids:
+                    if char := services.get_characteristic(characteristic):
+                        self._notify_char = char
+                        break
             if not self._read_char:
                 self._read_char = self._write_char
+            if not self._notify_char:
+                self._notify_char = self._read_char
         _LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
         _LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
-        return bool(self._read_char and self._write_char)
+        _LOGGER.debug("%s: Notify Characteristic: %s", self.name, self._notify_char)
+        return bool(self._read_char and self._write_char and self._notify_char)
 
     ##
     ## Utilities

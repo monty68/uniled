@@ -292,6 +292,7 @@ class BanlanX2(UniledBleModel):
             ble_service_uuids=[BANLANX_UUID_FORMAT.format(part) for part in ["ffe0"]],
             ble_write_uuids=[BANLANX_UUID_FORMAT.format(part) for part in ["ffe1"]],
             ble_read_uuids=[],
+            ble_notify_uuids=[],
         )
         self.colors = colors
         self.intmic = intmic

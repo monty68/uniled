@@ -856,6 +856,7 @@ class SP6xxEProxy(UniledBleModel):
             ble_service_uuids = BANLANX6XX_UUID_SERVICE,
             ble_write_uuids = BANLANX6XX_UUID_WRITE,
             ble_read_uuids = BANLANX6XX_UUID_READ,
+            ble_notify_uuids=[],
             ble_manufacturer_data = bytearray([id & 0xFF, 0x10]),
         )
 
