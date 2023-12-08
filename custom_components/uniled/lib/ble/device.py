@@ -475,8 +475,8 @@ class UniledBleDevice(UniledDevice):
             return False
         if not self._write_char:
             raise CharacteristicMissingError("Write characteristic missing")
-        if not self._read_char:
-            raise CharacteristicMissingError("Read characteristic missing")
+        #if not self._read_char:
+        #    raise CharacteristicMissingError("Read characteristic missing")
 
         to_send = len(commands)
         for command in commands:
