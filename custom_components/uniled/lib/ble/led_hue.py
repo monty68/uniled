@@ -9,13 +9,13 @@ from ..channel import UniledChannel
 
 from ..features import (
     UniledAttribute,
-    UniledLedStrip,
-    UniledEffectType,
-    UniledEffectLoop,
-    UniledEffectSpeed,
-    UniledChipType,
-    UniledChipOrder,
-    UniledSegmentPixels,
+    LightStripFeature,
+    EffectTypeFeature,
+    EffectLoopFeature,
+    EffectSpeedFeature,
+    ChipTypeFeature,
+    ChipOrderFeature,
+    SegmentPixelsFeature,
 )
 from ..effects import (
     UNILEDEffectType,
@@ -28,7 +28,7 @@ from ..chips import (
     UNILED_CHIP_ORDER_RGBW,
 )
 from .device import (
-    BASE_UUID_FORMAT as LEDHUE_UUID_FORMAT,
+    UUID_BASE_FORMAT as LEDHUE_UUID_FORMAT,
     ParseNotificationError,
     UniledBleDevice,
     UniledBleModel,
@@ -172,16 +172,17 @@ class _LEDHUE(UniledBleModel):
 
         if not device.master.features:
             device.master.features = [
-                UniledLedStrip(),
-                UniledEffectType(),
-                UniledEffectLoop(),
-                UniledEffectSpeed(LEDHUE_EFFECT_MAX_SPEED),
-                UniledChipType(),
-                UniledChipOrder(),
-                UniledSegmentPixels(LEDHUE_MAX_SEGMENT_PIXELS),
-                UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_LOOP),
-                UniledAttribute(ATTR_UL_EFFECT_SPEED),
+                LightStripFeature(extra=(
+                    ATTR_UL_EFFECT_NUMBER,
+                    ATTR_UL_EFFECT_LOOP,
+                    ATTR_UL_EFFECT_SPEED,
+                )),
+                EffectTypeFeature(),
+                EffectLoopFeature(),
+                EffectSpeedFeature(LEDHUE_EFFECT_MAX_SPEED),
+                SegmentPixelsFeature(LEDHUE_MAX_SEGMENT_PIXELS),
+                ChipTypeFeature(),
+                ChipOrderFeature(),
             ]
 
         return True

@@ -7,14 +7,14 @@ from ..const import *  # I know!
 from ..channel import UniledChannel
 from ..features import (
     UniledAttribute,
-    UniledLedStrip,
-    UniledLightMode,
-    UniledEffectType,
-    UniledEffectSpeed,
-    UniledSensitivity,
-    UniledAudioInput,
-    UniledChipOrder,
-    UniledEffectLoop,
+    LightStripFeature,
+    LightModeFeature,
+    EffectTypeFeature,
+    EffectSpeedFeature,
+    AudioSensitivityFeature,
+    AudioInputFeature,
+    ChipOrderFeature,
+    EffectLoopFeature,
 )
 from ..effects import (
     UNILED_EFFECT_TYPE_DYNAMIC,
@@ -23,7 +23,7 @@ from ..effects import (
     UNILEDEffects,
 )
 from .device import (
-    BASE_UUID_FORMAT as BANLANX_UUID_FORMAT,
+    UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
     BANLANX_MANUFACTURER,
     BANLANX_MANUFACTURER_ID,
     ParseNotificationError,
@@ -322,22 +322,23 @@ class BanlanX3(UniledBleModel):
 
         if not device.master.features:
             features = [
-                UniledAttribute(ATTR_UL_LIGHT_MODE),
-                UniledAttribute(ATTR_UL_LIGHT_MODE_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_SPEED),
-                UniledLedStrip(),
-                UniledEffectType(),
-                UniledEffectSpeed(BANLANX3_MAX_EFFECT_SPEED),
-                UniledChipOrder(),
+                LightStripFeature(extra=(
+                    ATTR_UL_LIGHT_MODE,
+                    ATTR_UL_LIGHT_MODE_NUMBER,
+                    ATTR_UL_EFFECT_NUMBER,
+                    ATTR_UL_EFFECT_SPEED,
+                )),
+                EffectTypeFeature(),
+                EffectSpeedFeature(BANLANX3_MAX_EFFECT_SPEED),
+                ChipOrderFeature(),
             ]
 
             if self.intmic:
-                features.append(UniledLightMode()),
-                features.append(UniledAudioInput())
-                features.append(UniledSensitivity(BANLANX3_MAX_SENSITIVITY))
+                features.append(LightModeFeature()),
+                features.append(AudioInputFeature())
+                features.append(AudioSensitivityFeature(BANLANX3_MAX_SENSITIVITY))
             else:
-                features.append(UniledEffectLoop())
+                features.append(EffectLoopFeature())
             device.master.features = features
 
         return True

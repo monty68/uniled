@@ -6,6 +6,8 @@ from enum import IntEnum
 from .const import *
 
 dataclass(frozen=True)
+
+
 class UniledGroup(IntEnum):
     """UniLED Attribute Group"""
 
@@ -21,11 +23,12 @@ class UniledAttribute:
     _reload: bool = False
     _enabled: bool = True
     _group: UniledGroup = UniledGroup.STANDARD
-    _type: str = UNILED_EXTRA_ATTRIBUTE_TYPE
+    _type: str
     _attr: str
     _name: str | None = None
     _icon: str | None = None
     _key: str | None = None
+    _extra: list | None = None
 
     def __init__(
         self,
@@ -69,6 +72,10 @@ class UniledAttribute:
     def key(self) -> str:
         return self._key or self._attr
 
+    @property
+    def extra(self) -> list:
+        return self._extra
+
 
 class UniledSensor(UniledAttribute):
     """UniLED Sensor Feature Class"""
@@ -81,6 +88,7 @@ class UniledSensor(UniledAttribute):
         name: str,
         icon: str,
         key: str | None,
+        extra: list | None = None,
     ) -> None:
         self._type = "sensor"
         self._enabled = enabled
@@ -89,6 +97,7 @@ class UniledSensor(UniledAttribute):
         self._name = name
         self._icon = icon
         self._key = key
+        self._extra = extra
 
 
 class UniledSelect(UniledAttribute):
@@ -102,6 +111,7 @@ class UniledSelect(UniledAttribute):
         name: str,
         icon: str,
         key: str | None,
+        extra: list | None = None,
     ) -> None:
         self._type = "select"
         self._enabled = enabled
@@ -110,6 +120,7 @@ class UniledSelect(UniledAttribute):
         self._name = name
         self._icon = icon
         self._key = key
+        self._extra = extra
 
 
 class UniledSwitch(UniledAttribute):
@@ -124,6 +135,7 @@ class UniledSwitch(UniledAttribute):
         icon_on: str,
         icon_off: str | None = None,
         key: str | None = None,
+        extra: list | None = None,
     ) -> None:
         self._type = "switch"
         self._enabled = enabled
@@ -133,10 +145,12 @@ class UniledSwitch(UniledAttribute):
         self._icon = icon_on
         self._icon2 = icon_off
         self._key = key
+        self._extra = extra
 
     def state_icon(self, state: bool = True) -> str:
         """Return icon depending on state"""
         return self._icon if state or not self._icon2 else self._icon2
+
 
 class UniledButton(UniledAttribute):
     """UniLED Sensor Feature Class"""
@@ -149,7 +163,8 @@ class UniledButton(UniledAttribute):
         name: str,
         icon: str | None = None,
         key: str | None = None,
-        value: Any = True
+        value: Any = True,
+        extra: list | None = None,
     ) -> None:
         self._type = "button"
         self._enabled = enabled
@@ -159,6 +174,7 @@ class UniledButton(UniledAttribute):
         self._icon = icon
         self._key = key
         self._value = value
+        self._extra = extra
 
     @property
     def value(self) -> int:
@@ -183,6 +199,7 @@ class UniledNumber(UniledAttribute):
         max: int,
         min: int = 1,
         inc: int = 1,
+        extra: list | None = None,
     ) -> None:
         self._type = "number"
         self._enabled = enabled
@@ -194,6 +211,7 @@ class UniledNumber(UniledAttribute):
         self._max = max
         self._min = min
         self._inc = inc
+        self._extra = extra
 
     @property
     def min_value(self) -> int:

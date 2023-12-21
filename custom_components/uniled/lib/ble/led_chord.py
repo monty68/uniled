@@ -7,15 +7,15 @@ from ..const import *  # I know!
 from ..channel import UniledChannel
 from ..features import (
     UniledAttribute,
-    UniledLedStrip,
-    UniledLightMode,
-    UniledEffectType,
-    UniledEffectSpeed,
-    UniledSensitivity,
-    UniledChipType,
-    UniledChipOrder,
-    UniledSegmentCount,
-    UniledSegmentPixels,
+    LightStripFeature,
+    LightModeFeature,
+    EffectTypeFeature,
+    EffectSpeedFeature,
+    AudioSensitivityFeature,
+    ChipTypeFeature,
+    ChipOrderFeature,
+    SegmentCountFeature,
+    SegmentPixelsFeature,
 )
 from ..effects import (
     UNILEDEffectType,
@@ -28,7 +28,7 @@ from ..chips import (
     UNILED_CHIP_TYPES_4COLOR as LEDCHORD_CHIP_TYPES_4COLOR,
 )
 from .device import (
-    BASE_UUID_FORMAT as LEDCHORD_UUID_FORMAT,
+    UUID_BASE_FORMAT as LEDCHORD_UUID_FORMAT,
     ParseNotificationError,
     UniledBleDevice,
     UniledBleModel,
@@ -275,19 +275,20 @@ class _LEDCHORD(UniledBleModel):
 
             if not device.master.features:
                 device.master.features = [
-                    UniledLedStrip(),
-                    UniledLightMode(),
-                    UniledEffectType(),
-                    UniledEffectSpeed(LEDCHORD_MAX_EFFECT_SPEED),
-                    UniledChipType(),
-                    UniledChipOrder(),
-                    UniledSensitivity(LEDCHORD_MAX_SENSITIVITY),
-                    UniledSegmentCount(LEDCHORD_MAX_SEGMENT_COUNT),
-                    UniledSegmentPixels(LEDCHORD_MAX_SEGMENT_PIXELS),
-                    UniledAttribute(ATTR_UL_LIGHT_MODE),
-                    UniledAttribute(ATTR_UL_LIGHT_MODE_NUMBER),
-                    UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-                    UniledAttribute(ATTR_UL_EFFECT_SPEED),
+                    LightStripFeature(extra=(
+                        ATTR_UL_LIGHT_MODE,
+                        ATTR_UL_LIGHT_MODE_NUMBER,
+                        ATTR_UL_EFFECT_NUMBER,
+                        ATTR_UL_EFFECT_SPEED,
+                    )),
+                    LightModeFeature(),
+                    EffectTypeFeature(),
+                    EffectSpeedFeature(LEDCHORD_MAX_EFFECT_SPEED),
+                    ChipTypeFeature(),
+                    ChipOrderFeature(),
+                    AudioSensitivityFeature(LEDCHORD_MAX_SENSITIVITY),
+                    SegmentCountFeature(LEDCHORD_MAX_SEGMENT_COUNT),
+                    SegmentPixelsFeature(LEDCHORD_MAX_SEGMENT_PIXELS),
                 ]
 
             return True

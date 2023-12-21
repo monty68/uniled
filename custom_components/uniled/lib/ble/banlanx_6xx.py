@@ -7,23 +7,23 @@ from ..const import *  # I know!
 from ..channel import UniledChannel
 from ..features import (
     UniledAttribute,
-    UniledLedStrip,
-    UniledEffectType,
-    UniledEffectLoop,
-    UniledEffectPlay,
-    UniledEffectSpeed,
-    UniledEffectLength,
-    UniledEffectDirection,
-    UniledAudioInput,
-    UniledSensitivity,
-    UniledLightMode,
-    UniledLightType,
-    UniledChipOrder,
-    UniledOnOffEffect,
-    UniledOnOffSpeed,
-    UniledOnOffPixels,
-    UniledCoexistence,
-    UniledOnPower,
+    LightStripFeature,
+    EffectTypeFeature,
+    EffectLoopFeature,
+    EffectPlayFeature,
+    EffectSpeedFeature,
+    EffectLengthFeature,
+    EffectDirectionFeature,
+    AudioInputFeature,
+    AudioSensitivityFeature,
+    LightModeFeature,
+    LightTypeFeature,
+    ChipOrderFeature,
+    OnOffEffectFeature,
+    OnOffSpeedFeature,
+    OnOffPixelsFeature,
+    CoexistenceFeature,
+    OnPowerFeature,
 )
 from ..effects import (
     UNILEDEffectType,
@@ -38,7 +38,7 @@ from ..chips import (
     UNILED_CHIP_ORDER_RGBCW,
 )
 from .device import (
-    BASE_UUID_FORMAT as BANLANX6XX_UUID_FORMAT,
+    UUID_BASE_FORMAT as BANLANX6XX_UUID_FORMAT,
     ParseNotificationError,
     UniledBleDevice,
     UniledBleModel,
@@ -1055,41 +1055,42 @@ class BanlanX6xx(SP6xxEProxy):
 
         if cfg:
             features = [
-                UniledLedStrip(),
-                UniledLightMode(),
-                UniledEffectType(),
-                UniledEffectLoop(),
-                UniledEffectPlay(),
-                UniledEffectSpeed(MAX_EFFECT_SPEED),
-                UniledEffectLength(MAX_EFFECT_LENGTH),
-                UniledEffectDirection(),
-                UniledAudioInput(),
-                UniledSensitivity(MAX_SENSITIVITY),
-                UniledOnOffEffect(),
-                UniledOnOffSpeed(),
-                UniledOnOffPixels(MAX_ONOFF_PIXELS),
-                UniledOnPower(),
-                UniledAttribute(ATTR_UL_LIGHT_MODE),
-                UniledAttribute(ATTR_UL_LIGHT_MODE_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_LOOP),
-                UniledAttribute(ATTR_UL_EFFECT_PLAY),
-                UniledAttribute(ATTR_UL_EFFECT_SPEED),
-                UniledAttribute(ATTR_UL_EFFECT_LENGTH),
-                UniledAttribute(ATTR_UL_EFFECT_DIRECTION),
+                LightStripFeature(extra=(
+                    ATTR_UL_LIGHT_MODE,
+                    ATTR_UL_LIGHT_MODE_NUMBER,
+                    ATTR_UL_EFFECT_NUMBER,
+                    ATTR_UL_EFFECT_LOOP,
+                    ATTR_UL_EFFECT_PLAY,
+                    ATTR_UL_EFFECT_SPEED,
+                    ATTR_UL_EFFECT_LENGTH,
+                    ATTR_UL_EFFECT_DIRECTION,
+                )),
+                LightModeFeature(),
+                EffectTypeFeature(),
+                EffectLoopFeature(),
+                EffectPlayFeature(),
+                EffectSpeedFeature(MAX_EFFECT_SPEED),
+                EffectLengthFeature(MAX_EFFECT_LENGTH),
+                EffectDirectionFeature(),
+                AudioInputFeature(),
+                AudioSensitivityFeature(MAX_SENSITIVITY),
+                OnOffEffectFeature(),
+                OnOffSpeedFeature(),
+                OnOffPixelsFeature(MAX_ONOFF_PIXELS),
+                OnPowerFeature(),
             ]
 
             if self.configs and len(self.configs) > 1:
-                features.append(UniledLightType())
+                features.append(LightTypeFeature())
                 device.master.status.set(ATTR_UL_LIGHT_TYPE, cfg.name)
 
             if cfg.order and len(cfg.order) > 1:
-                features.append(UniledChipOrder())
+                features.append(ChipOrderFeature())
                 order = self.chip_order_name(cfg.order, data[31])
                 device.master.status.set(ATTR_UL_CHIP_ORDER, order)
 
             if cfg.coexistence:
-                features.append(UniledCoexistence())
+                features.append(CoexistenceFeature())
                 device.master.status.set(
                     ATTR_UL_COEXISTENCE, True if coexistence != 0x00 else False
                 )

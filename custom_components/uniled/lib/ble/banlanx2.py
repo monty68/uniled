@@ -7,15 +7,15 @@ from ..const import *  # I know!
 from ..channel import UniledChannel
 from ..features import (
     UniledAttribute,
-    UniledLedStrip,
-    UniledLightMode,
-    UniledEffectLoop,
-    UniledEffectType,
-    UniledEffectSpeed,
-    UniledEffectLength,
-    UniledSensitivity,
-    UniledAudioInput,
-    UniledChipOrder,
+    LightStripFeature,
+    LightModeFeature,
+    EffectLoopFeature,
+    EffectTypeFeature,
+    EffectSpeedFeature,
+    EffectLengthFeature,
+    AudioSensitivityFeature,
+    AudioInputFeature,
+    ChipOrderFeature,
 )
 from ..effects import (
     UNILED_EFFECT_TYPE_DYNAMIC,
@@ -24,7 +24,7 @@ from ..effects import (
     UNILEDEffects,
 )
 from .device import (
-    BASE_UUID_FORMAT as BANLANX_UUID_FORMAT,
+    UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
     BANLANX_MANUFACTURER,
     BANLANX_MANUFACTURER_ID,
     ParseNotificationError,
@@ -198,15 +198,14 @@ BANLANX2_EFFECTS_RGB: Final = {
     0x84: UNILEDEffects.DOT_SPIN_CYAN,
     0x85: UNILEDEffects.DOT_SPIN_PURPLE,
     0x86: UNILEDEffects.DOT_SPIN_WHITE,
-    0x87: UNILEDEffects.SEGMENT_SPIN,
-    0x88: UNILEDEffects.SEGMENT_SPIN_RED,
-    0x89: UNILEDEffects.SEGMENT_SPIN_GREEN,
-    0x8A: UNILEDEffects.SEGMENT_SPIN_BLUE,
-    0x8B: UNILEDEffects.SEGMENT_SPIN_YELLOW,
-    0x8C: UNILEDEffects.SEGMENT_SPIN_CYAN,
-    0x8D: UNILEDEffects.SEGMENT_SPIN_PURPLE,
-    0x8E: UNILEDEffects.SEGMENT_SPIN_WHITE,
-    0x8F: UNILEDEffects.GRADIENT,
+    0x87: UNILEDEffects.SEGMENT_SPIN_RED,
+    0x88: UNILEDEffects.SEGMENT_SPIN_GREEN,
+    0x89: UNILEDEffects.SEGMENT_SPIN_BLUE,
+    0x8A: UNILEDEffects.SEGMENT_SPIN_YELLOW,
+    0x8B: UNILEDEffects.SEGMENT_SPIN_CYAN,
+    0x8C: UNILEDEffects.SEGMENT_SPIN_PURPLE,
+    0x8D: UNILEDEffects.SEGMENT_SPIN_WHITE,
+    0x8E: UNILEDEffects.GRADIENT,
 }
 
 BANLANX2_EFFECTS_SOUND: Final = {
@@ -476,23 +475,24 @@ class BanlanX2(UniledBleModel):
 
         if not device.master.features:
             features = [
-                UniledAttribute(ATTR_UL_LIGHT_MODE),
-                UniledAttribute(ATTR_UL_LIGHT_MODE_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-                UniledAttribute(ATTR_UL_EFFECT_SPEED),
-                UniledLedStrip(),
-                UniledEffectType(),
-                UniledEffectSpeed(BANLANX2_MAX_EFFECT_SPEED),
-                UniledEffectLength(BANLANX2_MAX_EFFECT_LENGTH),
-                UniledChipOrder(),
+                LightStripFeature(extra=(
+                    ATTR_UL_LIGHT_MODE,
+                    ATTR_UL_LIGHT_MODE_NUMBER,
+                    ATTR_UL_EFFECT_NUMBER,
+                    ATTR_UL_EFFECT_SPEED,
+                )),
+                EffectTypeFeature(),
+                EffectSpeedFeature(BANLANX2_MAX_EFFECT_SPEED),
+                EffectLengthFeature(BANLANX2_MAX_EFFECT_LENGTH),
+                ChipOrderFeature(),
             ]
 
             if self.intmic:
-                features.append(UniledLightMode()),
-                features.append(UniledAudioInput())
-                features.append(UniledSensitivity(BANLANX2_MAX_SENSITIVITY))
+                features.append(LightModeFeature()),
+                features.append(AudioInputFeature())
+                features.append(AudioSensitivityFeature(BANLANX2_MAX_SENSITIVITY))
             else:
-                features.append(UniledEffectLoop())
+                features.append(EffectLoopFeature())
             device.master.features = features
 
         return True

@@ -10,22 +10,22 @@ from ..features import (
     UniledGroup,
     UniledButton,
     UniledSelect,
-    UniledLedStrip,
-    UniledSceneLoop,
-    UniledEffectType,
-    UniledEffectSpeed,
-    UniledEffectLength,
-    UniledEffectDirection,
-    UniledSensitivity,
-    UniledAudioInput,
-    UniledChipOrder,
+    LightStripFeature,
+    SceneLoopFeature,
+    EffectTypeFeature,
+    EffectSpeedFeature,
+    EffectLengthFeature,
+    EffectDirectionFeature,
+    AudioSensitivityFeature,
+    AudioInputFeature,
+    ChipOrderFeature,
 )
 from ..effects import (
     UNILEDEffectType,
     UNILEDEffects,
 )
 from .device import (
-    BASE_UUID_FORMAT as BANLANX_UUID_FORMAT,
+    UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
     BANLANX_MANUFACTURER,
     BANLANX_MANUFACTURER_ID,
     ParseNotificationError,
@@ -340,17 +340,18 @@ class BanlanX60X(UniledBleModel):
 
                         if not channel.features:
                             channel.features = [
-                                UniledLedStrip(),
-                                UniledEffectType(),
-                                UniledEffectSpeed(BANLANX60X_MAX_EFFECT_SPEED),
-                                UniledEffectLength(BANLANX60X_MAX_EFFECT_LENGTH),
-                                UniledEffectDirection(),
-                                UniledSensitivity(BANLANX60X_MAX_SENSITIVITY),
-                                UniledChipOrder(),
-                                UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-                                UniledAttribute(ATTR_UL_EFFECT_SPEED),
-                                UniledAttribute(ATTR_UL_EFFECT_LENGTH),
-                                UniledAttribute(ATTR_UL_EFFECT_DIRECTION),
+                                LightStripFeature(extra=(
+                                    ATTR_UL_EFFECT_NUMBER,
+                                    ATTR_UL_EFFECT_SPEED,
+                                    ATTR_UL_EFFECT_LENGTH,
+                                    ATTR_UL_EFFECT_DIRECTION,
+                                )),
+                                EffectTypeFeature(),
+                                EffectSpeedFeature(BANLANX60X_MAX_EFFECT_SPEED),
+                                EffectLengthFeature(BANLANX60X_MAX_EFFECT_LENGTH),
+                                EffectDirectionFeature(),
+                                AudioSensitivityFeature(BANLANX60X_MAX_SENSITIVITY),
+                                ChipOrderFeature(),
                             ]
 
                     # Next Channels Data?
@@ -387,8 +388,8 @@ class BanlanX60X(UniledBleModel):
 
                 if not device.master.features:
                     device.master.features = [
-                        UniledLedStrip(),
-                        UniledSceneLoop(),
+                        LightStripFeature(),
+                        SceneLoopFeature(),
                         #SceneSaveSelect(),
                         #SceneSaveButton(),
                         UniledAttribute(ATTR_UL_SCENE_LOOP),
@@ -408,7 +409,7 @@ class BanlanX60X(UniledBleModel):
                         )
 
                     if self.model_num > 0x601E:
-                        device.master.features.append(UniledAudioInput())
+                        device.master.features.append(AudioInputFeature())
                 return True
         raise ParseNotificationError("Unknown/Invalid Packet!")
 

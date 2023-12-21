@@ -36,53 +36,48 @@ from .attributes import (
 )
 
 
-class UniledLight(UniledAttribute):
+class LightFeature(UniledAttribute):
     """UniLED Light Feature Class"""
 
-    def __init__(
-        self,
-    ) -> None:
+    def __init__(self, extra: list | None = None) -> None:
         self._attr = ATTR_UL_POWER
         self._type = "light"
         self._name = "Light"
         self._icon = "mdi:lightbulb"
         self._key = "light"
+        self._extra = extra
 
-class UniledBulb(UniledLight):
-    """UniLED Light Feature Class"""
 
-    def __init__(
-        self,
-    ) -> None:
-        super().__init__()
-        self._name = "Bulb"
-        self._key = "bulb"
+class LampFeature(LightFeature):
+    """UniLED Lamp Feature Class"""
 
-class UniledLamp(UniledLight):
-    """UniLED Light Feature Class"""
-
-    def __init__(
-        self,
-    ) -> None:
-        super().__init__()
+    def __init__(self, extra: list | None = None) -> None:
+        super().__init__(extra)
         self._name = "Lamp"
         self._icon = "mdi:lamp"
         self._key = "lamp"
 
-class UniledLedStrip(UniledAttribute):
-    """UniLED Light Feature Class"""
 
-    def __init__(
-        self,
-    ) -> None:
-        self._attr = ATTR_UL_POWER
-        self._type = "light"
-        self._name = "Light" # Backwards compat
+class LightBulbFeature(LightFeature):
+    """UniLED Light Bulb Feature Class"""
+
+    def __init__(self, extra: list | None = None) -> None:
+        super().__init__(extra)
+        self._name = "Bulb"
+        self._icon = "mdi:lightbulb"
+        self._key = "bulb"
+
+
+class LightStripFeature(LightFeature):
+    """UniLED Light Strip Feature Class"""
+
+    def __init__(self, extra: list | None = None) -> None:
+        super().__init__(extra)
+        self._name = "Light"  # Backwards compat
         self._icon = "mdi:led-strip-variant"
         self._key = "strip"
 
-
-class UniledEffectType(UniledSensor):
+class EffectTypeFeature(UniledSensor):
     """UniLED Effect Type Feature Class"""
 
     def __init__(self) -> None:
@@ -96,7 +91,7 @@ class UniledEffectType(UniledSensor):
         )
 
 
-class UniledEffectSpeed(UniledNumber):
+class EffectSpeedFeature(UniledNumber):
     """UniLED Effect Speed Feature Class"""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
@@ -113,7 +108,7 @@ class UniledEffectSpeed(UniledNumber):
         )
 
 
-class UniledEffectLength(UniledNumber):
+class EffectLengthFeature(UniledNumber):
     """UniLED Effect Length Feature Class"""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
@@ -130,7 +125,7 @@ class UniledEffectLength(UniledNumber):
         )
 
 
-class UniledEffectDirection(UniledSwitch):
+class EffectDirectionFeature(UniledSwitch):
     """UniLED Effect Length Feature Class"""
 
     def __init__(self) -> None:
@@ -141,11 +136,11 @@ class UniledEffectDirection(UniledSwitch):
             "Effect Direction",
             "mdi:arrow-right",
             "mdi:arrow-left",
-            "direction", # Backwards compat
+            "direction",  # Backwards compat
         )
 
 
-class UniledEffectLoop(UniledSwitch):
+class EffectLoopFeature(UniledSwitch):
     """UniLED Effect Loop Feature Class"""
 
     def __init__(self) -> None:
@@ -158,20 +153,8 @@ class UniledEffectLoop(UniledSwitch):
             "mdi:refresh-auto",
         )
 
-class UniledSceneLoop(UniledSwitch):
-    """UniLED Scene Loop Feature Class"""
 
-    def __init__(self) -> None:
-        super().__init__(
-            UniledGroup.STANDARD,
-            True,
-            ATTR_UL_SCENE_LOOP,
-            "Loop Scenes",
-            "mdi:progress-star",
-            "mdi:refresh-auto",
-        )
-
-class UniledEffectPlay(UniledSwitch):
+class EffectPlayFeature(UniledSwitch):
     """UniLED Effect Play Feature Class"""
 
     def __init__(self) -> None:
@@ -185,7 +168,21 @@ class UniledEffectPlay(UniledSwitch):
         )
 
 
-class UniledAudioInput(UniledSelect):
+class SceneLoopFeature(UniledSwitch):
+    """UniLED Scene Loop Feature Class"""
+
+    def __init__(self) -> None:
+        super().__init__(
+            UniledGroup.STANDARD,
+            True,
+            ATTR_UL_SCENE_LOOP,
+            "Loop Scenes",
+            "mdi:progress-star",
+            "mdi:refresh-auto",
+        )
+
+
+class AudioInputFeature(UniledSelect):
     """UniLED Sound Input Feature Class"""
 
     def __init__(self) -> None:
@@ -195,11 +192,11 @@ class UniledAudioInput(UniledSelect):
             ATTR_UL_AUDIO_INPUT,
             "Audio Input",
             "mdi:microphone",
-            "input", # Backwards compat
+            "input",  # Backwards compat
         )
 
 
-class UniledSensitivity(UniledNumber):
+class AudioSensitivityFeature(UniledNumber):
     """UniLED Sensitivity Feature Class"""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
@@ -209,14 +206,14 @@ class UniledSensitivity(UniledNumber):
             ATTR_UL_SENSITIVITY,
             "Audio Input Sensitivity",
             "mdi:knob",
-            "sensitivity", # Backwards compat
+            "sensitivity",  # Backwards compat
             max,
             min,
             inc,
         )
 
 
-class UniledLightMode(UniledSelect):
+class LightModeFeature(UniledSelect):
     """UniLED Light Mode Feature Class"""
 
     def __init__(self) -> None:
@@ -226,11 +223,11 @@ class UniledLightMode(UniledSelect):
             ATTR_UL_LIGHT_MODE,
             "Light Mode",
             "mdi:palette",
-            "mode", # Backwards compat
+            "mode",  # Backwards compat
         )
 
 
-class UniledLightType(UniledSelect):
+class LightTypeFeature(UniledSelect):
     """UniLED Light Type Feature Class"""
 
     def __init__(self) -> None:
@@ -245,7 +242,7 @@ class UniledLightType(UniledSelect):
         self._reload = True
 
 
-class UniledChipType(UniledSelect):
+class ChipTypeFeature(UniledSelect):
     """UniLED Chip Type Feature Class"""
 
     def __init__(self) -> None:
@@ -259,7 +256,7 @@ class UniledChipType(UniledSelect):
         )
 
 
-class UniledChipOrder(UniledSelect):
+class ChipOrderFeature(UniledSelect):
     """UniLED Chip Order Feature Class"""
 
     def __init__(self) -> None:
@@ -272,7 +269,8 @@ class UniledChipOrder(UniledSelect):
             None,
         )
 
-class UniledOnOffEffect(UniledSelect):
+
+class OnOffEffectFeature(UniledSelect):
     """UniLED On/Off Effect Feature Class"""
 
     def __init__(self) -> None:
@@ -285,7 +283,8 @@ class UniledOnOffEffect(UniledSelect):
             None,
         )
 
-class UniledOnOffSpeed(UniledSelect):
+
+class OnOffSpeedFeature(UniledSelect):
     """UniLED On/Off Mode Feature Class"""
 
     def __init__(self) -> None:
@@ -298,7 +297,8 @@ class UniledOnOffSpeed(UniledSelect):
             None,
         )
 
-class UniledOnOffPixels(UniledNumber):
+
+class OnOffPixelsFeature(UniledNumber):
     """UniLED On/Off Pixels Feature Class"""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
@@ -314,7 +314,8 @@ class UniledOnOffPixels(UniledNumber):
             inc,
         )
 
-class UniledOnPower(UniledSelect):
+
+class OnPowerFeature(UniledSelect):
     """UniLED Light Type Feature Class"""
 
     def __init__(self) -> None:
@@ -328,7 +329,7 @@ class UniledOnPower(UniledSelect):
         )
 
 
-class UniledCoexistence(UniledSwitch):
+class CoexistenceFeature(UniledSwitch):
     """UniLED Effect Length Feature Class"""
 
     def __init__(self) -> None:
@@ -342,7 +343,7 @@ class UniledCoexistence(UniledSwitch):
         )
 
 
-class UniledSegmentCount(UniledNumber):
+class SegmentCountFeature(UniledNumber):
     """UniLED Segment Count Feature Class"""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
@@ -358,16 +359,18 @@ class UniledSegmentCount(UniledNumber):
             inc,
         )
 
-class UniledSegmentPixels(UniledOnOffPixels):
+
+class SegmentPixelsFeature(OnOffPixelsFeature):
     """UniLED Segment Pixels Feature Class"""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
         super().__init__(max, min, inc)
         self._attr = ATTR_UL_SEGMENT_PIXELS
         self._name = "Segment Pixels"
-        self._key = "segment_length" # Backwards compat
+        self._key = "segment_length"  # Backwards compat
 
-class UniledTemperature(UniledNumber):
+
+class ColorTemperatureFeature(UniledNumber):
     """UniLED Sensitivity Feature Class"""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
@@ -382,22 +385,3 @@ class UniledTemperature(UniledNumber):
             min,
             inc,
         )
-
-
-# "mdi:tape-measure"
-# "mdi-pencil-ruler"
-# "mdi:cog"
-# "mdi:knob",
-# "mdi:AutoMode"
-# "mdi:chip"
-# "mdi:microphone"
-# "mdi:magic-staff"
-# "mdi:refresh-auto"
-# "mdi:numeric"
-# "mdi:star"
-# "mdi:star-cog"
-# "mdi:star-shooting"
-# "mdi:lightbulb-multiple-outline"
-# "mdi:lightbulb-group-outline"
-# "mdi:lightbulb-auto"
-# "mdi:lightbulb-question"
