@@ -44,10 +44,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up UNILED from a config entry."""
 
     device_class: str = entry.data[CONF_DEVICE_CLASS]
-    address: str = entry.data[CONF_ADDRESS]
-    model_name: str = entry.data.get(CONF_MODEL, None)
 
     if device_class == UNILED_TRANSPORT_BLE:
+        address: str = entry.data[CONF_ADDRESS]
+        model_name: str = entry.data.get(CONF_MODEL, None)
+
         ble_device = bluetooth.async_ble_device_from_address(
             hass, address.upper(), True
         ) or await get_device(address)

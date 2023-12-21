@@ -128,3 +128,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .to.do
+tests/playing.py
