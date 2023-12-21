@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, ConfigEntryError
 
-from .const import UNILED_UPDATE_SECONDS, UNILED_REFRESH_DELAY
+from .const import UNILED_REFRESH_DELAY
 from .lib.device import UniledDevice
 
 import logging
@@ -33,17 +33,17 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name=f"{self.device.name}",
             update_method=self._async_update,
-            update_interval=timedelta(seconds=UNILED_UPDATE_SECONDS),
+            update_interval=timedelta(seconds = device.update_interval),
             # We don't want an immediate refresh since the device
             # takes a moment to reflect the state change
-            #request_refresh_debouncer=Debouncer(
-            #    hass, _LOGGER, cooldown=UNILED_REFRESH_DELAY, immediate=False
-            #),
+            request_refresh_debouncer=Debouncer(
+                hass, _LOGGER, cooldown=UNILED_REFRESH_DELAY, immediate=False
+            ),
         )
 
     def __del__(self):
         """Destroy the class"""
-        _LOGGER.debug("Coordinator destroyed")
+        _LOGGER.debug("%s: Coordinator destroyed", self.device.name)
 
     async def _async_update(self) -> None:
         """Fetch all device and sensor data from api."""
@@ -58,21 +58,22 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
             ConfigEntryState.SETUP_RETRY,
         )
 
-        _LOGGER.debug("%s: Update entry state: %s", self.device.name, self.entry.state)
-
         if self.entry.state not in valid_states:
             if self.device.available:
                 await self.device.stop()
             raise UpdateFailed("Invalid entry state: %s", self.entry.state)
 
-        success = False
-        async with self.lock:
-            try:
-                retry = None if self.entry.state == ConfigEntryState.LOADED else 0
-                success = await self.device.update(retry)
-            except Exception as ex:
-                raise ConfigEntryError(str(ex)) from ex
-            finally:            
-                if not success:
-                    raise UpdateFailed("Device update failed")
-    
+        if self.device.started:
+            success = False
+            async with self.lock:
+                try:
+                    retry = None if self.entry.state == ConfigEntryState.LOADED else 0
+                    success = await self.device.update(retry)
+                except Exception as ex:
+                    raise ConfigEntryError(str(ex)) from ex
+                finally:            
+                    if not success:
+                        raise UpdateFailed("Device update failed")
+        else:
+            pass 
+   

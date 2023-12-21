@@ -72,7 +72,7 @@ class UniledModel:
         self, device: Any, channel: UniledChannel, attr: str, value: any
     ) -> list[bytearray]:
         """Build supported command"""
-        _LOGGER.debug(
+        _LOGGER.info(
             "%s: %s, command: %s = %s (%s)",
             self.model_name,
             channel.name,

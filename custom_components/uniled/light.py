@@ -15,18 +15,22 @@ from homeassistant.util.color import (
 )
 
 from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_MODE,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_COLOR_TEMP,
-    ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
     ATTR_RGBW_COLOR,
     ATTR_RGBWW_COLOR,
+    ATTR_SUPPORTED_COLOR_MODES,
+    ATTR_TRANSITION,
     ATTR_WHITE,
     LIGHT_TURN_ON_SCHEMA,
     LightEntity,
     LightEntityFeature,
     ColorMode,
+    color_supported,
 )
 
 from .entity import (
@@ -42,29 +46,25 @@ from .entity import (
 from .lib.attributes import UniledAttribute
 
 from .lib.const import (
-    UNILED_COMMAND_SETTLE_DELAY,
-    UNILED_EXTRA_ATTRIBUTE_TYPE,
-    UNILED_DEFAULT_MIN_KELVIN,
-    UNILED_DEFAULT_MAX_KELVIN,
     ATTR_HA_MIN_COLOR_TEMP_KELVIN,
     ATTR_HA_MAX_COLOR_TEMP_KELVIN,
+    ATTR_HA_MIN_MIREDS,
+    ATTR_HA_MAX_MIREDS,
     ATTR_UL_CCT_COLOR,
     ATTR_UL_DEVICE_FORCE_REFRESH,
     ATTR_UL_DEVICE_NEEDS_ON,
-    ATTR_UL_EFFECT,
-    ATTR_UL_EFFECT_NUMBER,
     ATTR_UL_EFFECT_LOOP,
     ATTR_UL_EFFECT_PLAY,
     ATTR_UL_EFFECT_SPEED,
     ATTR_UL_EFFECT_LENGTH,
     ATTR_UL_EFFECT_DIRECTION,
     ATTR_UL_LIGHT_MODE,
-    ATTR_UL_LIGHT_MODE_NUMBER,
-    ATTR_UL_SEGMENT_COUNT,
-    ATTR_UL_SEGMENT_PIXELS,
-    ATTR_UL_TOTAL_PIXELS,
     ATTR_UL_SENSITIVITY,
     ATTR_UL_RGB2_COLOR,
+    UNILED_DEFAULT_MAX_KELVIN,
+    UNILED_DEFAULT_MIN_KELVIN,
+    UNILED_DEFAULT_MAX_MIREDS,
+    UNILED_DEFAULT_MIN_MIREDS,
 )
 
 import homeassistant.helpers.config_validation as cv
@@ -75,6 +75,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -123,23 +124,6 @@ class UniledLightEntity(
 ):
     """Defines a UniLED light control."""
 
-    _unrecorded_attributes = frozenset(
-        {
-            ATTR_UL_LIGHT_MODE,
-            ATTR_UL_LIGHT_MODE_NUMBER,
-            ATTR_UL_EFFECT,
-            ATTR_UL_EFFECT_NUMBER,
-            ATTR_UL_EFFECT_LOOP,
-            ATTR_UL_EFFECT_PLAY,
-            ATTR_UL_EFFECT_SPEED,
-            ATTR_UL_EFFECT_LENGTH,
-            ATTR_UL_EFFECT_DIRECTION,
-            ATTR_UL_SEGMENT_COUNT,
-            ATTR_UL_SEGMENT_PIXELS,
-            ATTR_UL_TOTAL_PIXELS,
-        }
-    )
-
     def __init__(
         self,
         coordinator: UniledUpdateCoordinator,
@@ -154,7 +138,12 @@ class UniledLightEntity(
         """Handle updating _attr values."""
         super()._async_update_attrs()
 
-        if self.channel.has(ATTR_RGBWW_COLOR):
+        if self.channel.has(ATTR_SUPPORTED_COLOR_MODES):
+            self._attr_supported_color_modes = self.channel.get(
+                ATTR_SUPPORTED_COLOR_MODES, {ColorMode.ONOFF}
+            )
+            self._attr_color_mode = self.channel.get(ATTR_COLOR_MODE, ColorMode.ONOFF)
+        elif self.channel.has(ATTR_RGBWW_COLOR):
             self._attr_supported_color_modes = {ColorMode.RGBWW}
             self._attr_color_mode = ColorMode.RGBWW
         elif self.channel.has(ATTR_RGBW_COLOR):
@@ -163,14 +152,13 @@ class UniledLightEntity(
         elif self.channel.has(ATTR_RGB_COLOR):
             self._attr_supported_color_modes = {ColorMode.RGB}
             self._attr_color_mode = ColorMode.RGB
-        elif self.channel.has(ATTR_UL_CCT_COLOR) or self.channel.has(
-            ATTR_COLOR_TEMP_KELVIN
+        elif (
+            self.channel.has(ATTR_COLOR_TEMP)
+            or self.channel.has(ATTR_COLOR_TEMP_KELVIN)
+            or self.channel.has(ATTR_UL_CCT_COLOR)
         ):
             self._attr_supported_color_modes = {ColorMode.COLOR_TEMP}
             self._attr_color_mode = ColorMode.COLOR_TEMP
-        elif self.channel.has(ATTR_WHITE):
-            self._attr_supported_color_modes = {ColorMode.WHITE}
-            self._attr_color_mode = ColorMode.WHITE
         elif self.channel.has(ATTR_BRIGHTNESS):
             self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
             self._attr_color_mode = ColorMode.BRIGHTNESS
@@ -178,20 +166,11 @@ class UniledLightEntity(
             self._attr_supported_color_modes = {ColorMode.ONOFF}
             self._attr_color_mode = ColorMode.ONOFF
 
+        self._attr_supported_features = 0
         if self.channel.has(ATTR_EFFECT):
-            self._attr_supported_features = LightEntityFeature.EFFECT
-
-    @property
-    def extra_state_attributes(self):
-        """Return the device state attributes."""
-        extra = {}
-        for feature in self.channel.features:
-            if feature.type != UNILED_EXTRA_ATTRIBUTE_TYPE:
-                continue
-            if (value := self.device.get_state(self.channel, feature.attr)) is not None:
-                key = feature.attr if feature.key is None else feature.key
-                extra[key] = value
-        return extra
+            self._attr_supported_features |= LightEntityFeature.EFFECT
+        if self.channel.has(ATTR_TRANSITION):
+            self._attr_supported_features |= LightEntityFeature.TRANSITION
 
     @property
     def is_on(self) -> bool:
@@ -226,17 +205,31 @@ class UniledLightEntity(
     @property
     def color_temp(self) -> int | None:
         """Return the mired value of this light."""
+        if self.channel.has(ATTR_COLOR_TEMP):
+            return self.channel.get(ATTR_COLOR_TEMP)
         return color_temperature_kelvin_to_mired(self.color_temp_kelvin)
+
+    @property
+    def max_mireds(self) -> int:
+        """Return the warmest color_temp that this light supports."""
+        if self.channel.has(ATTR_HA_MAX_MIREDS):
+            return self.channel.get(ATTR_HA_MAX_MIREDS)
+        return self._attr_max_mireds
+
+    @property
+    def min_mireds(self) -> int:
+        """Return the coldest color_temp that this light supports."""
+        if self.channel.has(ATTR_HA_MIN_MIREDS):
+            return self.channel.get(ATTR_HA_MIN_MIREDS)
+        return self._attr_min_mireds
 
     @property
     def color_temp_kelvin(self) -> int | None:
         """Return the kelvin value of this light."""
         if self.channel.has(ATTR_COLOR_TEMP_KELVIN):
-            return self.device.get_state(self.channel, ATTR_COLOR_TEMP_KELVIN)
+            return self.channel.get(ATTR_COLOR_TEMP_KELVIN)
         elif self.channel.has(ATTR_UL_CCT_COLOR):
-            cold, warm, level, kelvin = self.device.get_state(
-                self.channel, ATTR_UL_CCT_COLOR
-            )
+            cold, warm, level, kelvin = self.channel.get(ATTR_UL_CCT_COLOR)
             if not kelvin:
                 kelvin, level = rgbww_to_color_temperature(
                     (0, 0, 0, cold, warm),
@@ -244,21 +237,38 @@ class UniledLightEntity(
                     self.max_color_temp_kelvin,
                 )
             return kelvin
-        return self._attrcolor_temp_kelvin
-
-    @property
-    def min_color_temp_kelvin(self) -> int:
-        """Max Color Temp in Kelvins"""
-        return self.channel.status.get(
-            ATTR_HA_MIN_COLOR_TEMP_KELVIN, UNILED_DEFAULT_MIN_KELVIN
-        )
+        elif self.channel.has(ATTR_COLOR_TEMP):
+            kelvin = color_temperature_mired_to_kelvin(
+                self.channel.get(ATTR_COLOR_TEMP)
+            )
+            return kelvin
+        return self._attr_color_temp_kelvin
 
     @property
     def max_color_temp_kelvin(self) -> int:
-        """Max Color Temp in Kelvins"""
-        return self.channel.status.get(
-            ATTR_HA_MAX_COLOR_TEMP_KELVIN, UNILED_DEFAULT_MAX_KELVIN
-        )
+        """Max Color Temp in Kelvin"""
+        if self.channel.has(ATTR_HA_MAX_COLOR_TEMP_KELVIN):
+            return self.channel.get(
+                ATTR_HA_MAX_COLOR_TEMP_KELVIN, UNILED_DEFAULT_MAX_KELVIN
+            )
+        if self.channel.has(ATTR_HA_MIN_MIREDS):
+            return color_temperature_mired_to_kelvin(
+                self.channel.get(ATTR_HA_MIN_MIREDS)
+            )
+        return self._attr_max_color_temp_kelvin
+
+    @property
+    def min_color_temp_kelvin(self) -> int:
+        """Max Color Temp in Kelvin"""
+        if self.channel.has(ATTR_HA_MIN_COLOR_TEMP_KELVIN):
+            return self.channel.get(
+                ATTR_HA_MIN_COLOR_TEMP_KELVIN, UNILED_DEFAULT_MIN_KELVIN
+            )
+        if self.channel.has(ATTR_HA_MAX_MIREDS):
+            return color_temperature_mired_to_kelvin(
+                self.channel.get(ATTR_HA_MAX_MIREDS)
+            )
+        return self._attr_min_color_temp_kelvin
 
     @property
     def effect(self) -> str | None:
@@ -281,6 +291,7 @@ class UniledLightEntity(
     async def async_set_state(self, **kwargs: Any) -> None:
         """Control a light"""
         self.coordinator.async_set_updated_data(None)
+
         async with self.coordinator.lock:
             # Process power state first, in case device needs on before
             # processing any other commands.
@@ -316,9 +327,6 @@ class UniledLightEntity(
             # Process any color temperature changes here to do a kelvin
             # to cold, warm and brightness conversion first
             #
-            if (mired := kwargs.pop(ATTR_COLOR_TEMP, None)) is not None:
-                pass
-
             if (kelvin := kwargs.pop(ATTR_COLOR_TEMP_KELVIN, None)) is not None:
                 if self.channel.has(ATTR_COLOR_TEMP_KELVIN):
                     await self.device.async_set_state(
@@ -335,6 +343,11 @@ class UniledLightEntity(
                     await self.device.async_set_state(
                         self.channel, ATTR_UL_CCT_COLOR, (cold, warm, level, kelvin)
                     )
+                elif self.channel.has(ATTR_COLOR_TEMP):
+                    if (mireds := kwargs.pop(ATTR_COLOR_TEMP, None)) is not None:
+                        await self.device.async_set_state(
+                            self.channel, ATTR_COLOR_TEMP, mireds
+                        )
 
             # Process any other commands
             #

@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.match import ADDRESS, BluetoothCallbackMatcher
+from homeassistant.components.bluetooth.match import (
+    BluetoothCallbackMatcher,
+    MANUFACTURER_ID,
+    ADDRESS,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import Event, HomeAssistant, callback, CoreState
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.const import (
@@ -12,29 +16,39 @@ from homeassistant.const import (
     CONF_DEVICE,
     CONF_ADDRESS,
     CONF_MODEL,
+    EVENT_HOMEASSISTANT_STARTED,
     EVENT_HOMEASSISTANT_STOP,
     Platform,
 )
-
-from .lib.models_db import UNILED_MODELS
-
+from .lib.zng.manager import (
+    CONF_ZNG_ACTIVE_SCAN as CONF_ACTIVE_SCAN,
+    CONF_ZNG_MESH_ID as CONF_MESH_ID,
+    CONF_ZNG_MESH_KEY as CONF_MESH_KEY,
+    CONF_ZNG_MESH_NAME as CONF_MESH_NAME,
+    CONF_ZNG_MESH_PASS as CONF_MESH_PASS,
+    CONF_ZNG_MESH_TOKEN as CONF_MESH_TOKEN,
+    UNILED_TRANSPORT_ZNG,
+    ZENGGE_MANUFACTURER_ID,
+    ZenggeManager,
+)
 from .lib.ble.device import (
     close_stale_connections,
     get_device,
     UNILED_TRANSPORT_BLE,
     UniledBleDevice,
 )
-
 from .lib.net.device import (
     UNILED_TRANSPORT_NET,
     UniledNetDevice,
 )
-
 from .const import (
     DOMAIN,
-    UNILED_DEVICE_RETRYS,
+    CONF_UL_RETRY_COUNT as CONF_RETRY_COUNT,
+    CONF_UL_TRANSPORT as CONF_TRANSPORT,
+    CONF_UL_UPDATE_INTERVAL as CONF_UPDATE_INTERVAL,
+    UNILED_DEVICE_RETRYS as DEFAULT_RETRY_COUNT,
+    UNILED_UPDATE_SECONDS as DEFAULT_UPDATE_INTERVAL,
     UNILED_DEVICE_TIMEOUT,
-    CONF_UL_RETRY_COUNT,
 )
 
 from .coordinator import UniledUpdateCoordinator
@@ -56,20 +70,85 @@ PLATFORMS: list[Platform] = [
 ]
 
 
+async def async_setup(hass, config):
+    """Set up a skeleton component."""
+
+    hass.data[DOMAIN] = {}
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up UNILED from a config entry."""
 
-    if not entry.options:
-        hass.config_entries.async_update_entry(
-            entry,
-            options={CONF_UL_RETRY_COUNT: UNILED_DEVICE_RETRYS},
+    transport: str = entry.data[CONF_DEVICE_CLASS]
+
+    if transport == UNILED_TRANSPORT_ZNG:
+        mesh_name: str = entry.data[CONF_MESH_NAME]
+        mesh_id: str = entry.data[CONF_MESH_ID]
+        mesh_key: str = entry.data[CONF_MESH_KEY]
+        mesh_pass: str = entry.data[CONF_MESH_PASS]
+        mesh_token: str = entry.data[CONF_MESH_TOKEN]
+
+        uniled = ZenggeManager(
+            entry.options, mesh_name, mesh_id, mesh_key, mesh_pass, mesh_token
+        )
+        coordinator = UniledUpdateCoordinator(hass, uniled, entry)
+        hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+        entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+        @callback
+        def _async_ble_sniffer(
+            service_info: bluetooth.BluetoothServiceInfoBleak,
+            change: bluetooth.BluetoothChange,
+        ) -> None:
+            """Update from a ble callback."""
+            coordinator.device.set_device_and_advertisement(
+                service_info.device, service_info.advertisement
+            )
+
+        scan_mode = (
+            bluetooth.BluetoothScanningMode.ACTIVE
+            if entry.options.get(CONF_ACTIVE_SCAN, True)
+            else bluetooth.BluetoothScanningMode.PASSIVE
         )
 
-    address: str = str(entry.data[CONF_ADDRESS]).upper()
-    model_name: str = entry.data.get(CONF_MODEL, None)
-    device_class: str = entry.data[CONF_DEVICE_CLASS]
+        entry.async_on_unload(
+            bluetooth.async_register_callback(
+                hass,
+                _async_ble_sniffer,
+                BluetoothCallbackMatcher({MANUFACTURER_ID: ZENGGE_MANUFACTURER_ID}),
+                scan_mode,
+            )
+        )
 
-    if device_class == UNILED_TRANSPORT_BLE:
+        entry.async_on_unload(
+            hass.bus.async_listen_once(
+                EVENT_HOMEASSISTANT_STOP, coordinator.device.shutdown
+            )
+        )
+        
+        _LOGGER.debug(
+            "*** Added UniLED entry for: %s - %s (%s) %s HASS: %s",
+            coordinator.device.name,
+            entry.unique_id,
+            entry.entry_id,
+            scan_mode,
+            hass.state
+        )
+
+        if hass.state == CoreState.running:
+            await coordinator.device.startup()
+        else:
+            hass.bus.async_listen_once(
+                EVENT_HOMEASSISTANT_STARTED, coordinator.device.startup
+            )
+
+        return True
+    elif transport == UNILED_TRANSPORT_BLE:
+        address: str = str(entry.data[CONF_ADDRESS]).upper()
+        model_name: str = entry.data.get(CONF_MODEL, None)
+
         ble_device = bluetooth.async_ble_device_from_address(
             hass, address, True
         ) or await get_device(address)
@@ -135,84 +214,109 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         )
 
-    elif device_class == UNILED_TRANSPORT_NET:
+    elif transport == UNILED_TRANSPORT_NET:
         raise ConfigEntryError(
             f"Unable to communicate with network device {address} as currently not supported!"
         )
     else:
         raise ConfigEntryError(
-            f"Unable to communicate with device {address} of unsupported class: {device_class}"
+            f"Unable to communicate with device {address} of unsupported class: {transport}"
         )
 
     coordinator = UniledUpdateCoordinator(hass, uniled, entry)
-    if not uniled.available:
+
+    if not coordinator.device.available:
         ## Device is not available, so attempt first connection
         startup_event = asyncio.Event()
-        cancel_first_update = uniled.register_callback(lambda *_: startup_event.set())
-        _LOGGER.debug("*** Awaiting UniLED Device: %s, first response...", uniled.name)
+        cancel_first_update = coordinator.device.register_callback(
+            lambda *_: startup_event.set()
+        )
+        _LOGGER.debug(
+            "*** Awaiting UniLED Device: %s, first response...", coordinator.device.name
+        )
 
         try:
             await coordinator.async_config_entry_first_refresh()
         except ConfigEntryNotReady:
-            _LOGGER.debug("%s: First update attempt failed!", uniled.name)
+            _LOGGER.debug("%s: First update attempt failed!", coordinator.device.name)
             cancel_first_update()
-            await coordinator.device.stop()
-            if coordinator.device.transport != UNILED_TRANSPORT_NET:
-                bluetooth.async_rediscover_address(hass, coordinator.device.address)
+            await _async_shutdown_coordinator(hass, coordinator)
             del coordinator
             gc.collect()
             raise
+
         try:
             async with async_timeout.timeout(UNILED_DEVICE_TIMEOUT):
                 await startup_event.wait()
                 cancel_first_update()
-                _LOGGER.debug("*** Response from UniLED Device: %s", uniled.name)
-
-                hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-                await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-                entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-
-                async def _async_stop(event: Event) -> None:
-                    """Close the connection."""
-                    await uniled.stop()
-                    bluetooth.async_rediscover_address(hass, uniled.address)
-
-                entry.async_on_unload(
-                    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
-                )
-
                 _LOGGER.debug(
-                    "*** Added UniLED device entry for: %s, ID: %s, Unique ID: %s",
-                    uniled.name,
-                    entry.entry_id,
-                    entry.unique_id,
+                    "*** Response from UniLED Device: %s", coordinator.device.name
                 )
-
-                return True
 
         except asyncio.TimeoutError as ex:
             cancel_first_update()
-            await coordinator.device.stop()
-            if coordinator.device.transport != UNILED_TRANSPORT_NET:
-                bluetooth.async_rediscover_address(hass, coordinator.device.address)
+            await _async_shutdown_coordinator(hass, coordinator)
             del coordinator
             gc.collect()
             raise ConfigEntryNotReady("No response from device") from ex
-        
-        return False
+            return False
+
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
+    async def _async_stop(event: Event) -> None:
+        """Close the connection."""
+        await coordinator.device.shutdown()
+        if (
+            coordinator.device.transport != UNILED_TRANSPORT_NET
+            and coordinator.device.address
+        ):
+            bluetooth.async_rediscover_address(hass, coordinator.device.address)
+
+    hass.bus.async_listen_once(
+        EVENT_HOMEASSISTANT_STARTED, coordinator.device.startup
+    )
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+    )
+
+    _LOGGER.debug(
+        "*** Added UniLED device entry for: %s, ID: %s, Unique ID: %s",
+        uniled.name,
+        entry.entry_id,
+        entry.unique_id,
+    )
+
+    return True
+
+
+async def _async_shutdown_coordinator(
+    hass: HomeAssistant, coordinator: UniledUpdateCoordinator
+) -> None:
+    """Shutdown coordinator device"""
+    await coordinator.device.stop()
+    if coordinator.device.transport != UNILED_TRANSPORT_NET:
+        bluetooth.async_rediscover_address(hass, coordinator.device.address)
+
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
     coordinator: UniledUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    if entry.title != coordinator.title:
-        await hass.config_entries.async_reload(entry.entry_id)
+    _LOGGER.info("%s: Reloading due to config/options update...", coordinator.device.name)
+    #if entry.title != coordinator.title:
+        #await hass.config_entries.async_reload(entry.entry_id)
+    await hass.config_entries.async_reload(entry.entry_id)
+
 
 async def async_unload_entry(hass, entry) -> bool:
     """Unload a config entry."""
-    _LOGGER.info('Unload entry %s', entry.entry_id)
+    coordinator = None
     if entry.entry_id in hass.data[DOMAIN]:
         coordinator: UniledUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-        await coordinator.device.stop()
+        _LOGGER.info("%s: Unloading...", coordinator.device.name)
+        await coordinator.device.shutdown()
 
     unload_ok = all(
         await asyncio.gather(
@@ -225,9 +329,15 @@ async def async_unload_entry(hass, entry) -> bool:
 
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
-        if coordinator.device.transport != UNILED_TRANSPORT_NET:
-            bluetooth.async_rediscover_address(hass, coordinator.device.address)
-        del coordinator
+        if coordinator:
+            if coordinator.device.transport != UNILED_TRANSPORT_NET:
+                bluetooth.async_rediscover_address(hass, coordinator.device.address)
+            del coordinator
         gc.collect()
 
     return unload_ok
+
+async def async_migrate_entry(hass, config_entry):
+    """Migrate old entry."""
+    _LOGGER.debug("Migrating from version %s", config_entry.version)
+    

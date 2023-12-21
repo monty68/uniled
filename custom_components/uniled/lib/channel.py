@@ -22,8 +22,9 @@ class UniledStatus:
 
     def __init__(self, channel: UniledChannel, status: dict(str, Any) = {}) -> None:
         self._channel = channel
-        self._status = status
-
+        self._status = dict()
+        self._status.update(status)
+        
     def __getattr__(self, attr):
         if str(attr).startswith("_"):
             if attr in self.__dict__:
@@ -58,16 +59,17 @@ class UniledStatus:
 
     def replace(self, status: dict(str, Any), refresh: bool = False) -> None:
         """Replace the status attributes"""
-        self._status = status
+        self._status.clear()
+        self._status.update(status)
         if refresh:
-            _LOGGER.debug("%s: Status replace: %s", self._channel.title, self._status)
+            _LOGGER.debug("%s: Status (%s) replace:\n%s", self._channel.title, hex(id(self._status)), self._status)
             self.refresh()
 
     def update(self, status: dict(str, Any), refresh: bool = False) -> None:
         """Update the status attributes"""
         self._status.update(status)
         if refresh:
-            _LOGGER.debug("%s: Status replace: %s", self._channel.title, self._status)
+            _LOGGER.debug("%s: Status (%s) update:\n%s", self._channel.title, hex(id(self._status)), self._status)
             self.refresh()
 
     def refresh(self) -> None:
@@ -93,7 +95,7 @@ class UniledChannel:
     def __init__(self, number: int) -> None:
         self._number = number
         self._status = UniledStatus(self)
-        _LOGGER.debug("Inititalized: %s", self.title)
+        _LOGGER.debug("Inititalized: %s (%s)", self.title, hex(id(self._status)))
 
     def __del__(self):
         self._status = None
@@ -166,7 +168,7 @@ class UniledChannel:
 
     def refresh(self) -> None:
         """Refresh channels status."""
-        _LOGGER.debug("%s: Refresh", self.title)
+        # _LOGGER.debug("%s: Refresh", self.title)
         self._fire_callbacks()
 
     def register_callback(

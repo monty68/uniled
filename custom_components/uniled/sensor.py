@@ -13,19 +13,15 @@ from homeassistant.components.sensor import (
     SensorStateClass,
     SensorEntity,
 )
-
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
 )
-
 from .lib.attributes import (
     UniledAttribute,
     UniledGroup,
     UniledSensor,
 )
-
 from .entity import (
-    UNILED_TRANSPORT_BLE,
     UniledUpdateCoordinator,
     UniledChannel,
     UniledEntity,
@@ -33,6 +29,7 @@ from .entity import (
     AddEntitiesCallback,
     async_uniled_entity_setup,
 )
+from .lib.net.device import UNILED_TRANSPORT_NET
 
 EXTRA_ATTRIBUTE_MAC_ADDRESS = "mac_address"
 
@@ -60,7 +57,7 @@ def _add_sensor_entity(
     """Create UniLED sensor entity."""
     if feature:
         return UniledSensorEntity(coordinator, channel, feature)
-    if channel.number == 0 and coordinator.device.transport == UNILED_TRANSPORT_BLE:
+    if channel.number == 0 and coordinator.device.transport != UNILED_TRANSPORT_NET:
         return UniledSignalSensor(coordinator, channel)
     return None
 

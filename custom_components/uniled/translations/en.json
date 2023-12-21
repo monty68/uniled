@@ -1,26 +1,97 @@
 {
+    "title": "Universal Light Controller",
     "config": {
-        "abort": {
-            "already_configured": "Device is already configured",
-            "already_in_progress": "Configuration flow is already in progress",
-            "no_devices_found": "No devices found on the network",
-            "not_supported": "Device not supported"
+      "abort": {
+        "already_configured": "Device is already configured",
+        "already_in_progress": "Configuration flow is already in progress",
+        "mesh_no_devices": "Mesh location has no assigned devices",
+        "mesh_no_locations": "Mesh has no assigned locations",
+        "mesh_not_supported": "Mesh not supported",
+        "no_devices_found": "No devices found on the network",
+        "not_supported": "Device not supported"
+      },
+      "error": {
+        "cannot_connect": "Failed to connect",
+        "max_length_16": "Max 16 chars",
+        "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs)",
+        "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs)",
+        "mesh_login": "Failed to login to mesh cloud (check logs)",
+        "mesh_no_devices": "Mesh location has no assigned devices",
+        "unknown": "Unexpected error"
+      },
+      "flow_title": "{name}",
+      "step": {
+        "user": {
+          "data": {
+            "address": "Device"
+          },
+          "description": "Choose a device to set up"
         },
-        "error": {
-            "cannot_connect": "Failed to connect",
-            "unknown": "Unexpected error"
+        "bluetooth_confirm": {
+          "description": "Confirm you want to set up {name}?"
         },
-        "flow_title": "{name}",
-        "step": {
-            "bluetooth_confirm": {
-                "description": "Do you want to set up {name}?"
-            },
-            "user": {
-                "data": {
-                    "address": "Device"
-                },
-                "description": "Choose a device to set up"
-            }
+        "mesh_cloud": {
+          "title": "Connect to (Magic Hue/Hao Deng) Mesh Cloud",
+          "description": "Provide the credentials you use in the app",
+          "data": {
+            "username": "Username (email)",
+            "password": "Password",
+            "country": "Country"
+          }
+        },
+        "mesh_location": {
+          "title": "Mesh Location",
+          "description": "Choose the mesh location",
+          "data": {
+            "location": "Location"
+          }
+        },
+        "mesh_config": {
+          "title": "Mesh Credentials",
+          "description": "Confirm the mesh credentials",
+          "data": {
+            "mesh_key": "Mesh Key",
+            "mesh_pass": "Mesh Password",
+            "mesh_token": "Mesh Long Term Token"
+          }
         }
+      }
+    },
+    "options": {
+      "error": {
+        "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs)",
+        "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs)",
+        "mesh_login": "Failed to login to mesh cloud (check logs)",
+        "mesh_no_devices": "No devices matching mesh IDs found in the cloud account.",
+        "unknown": "Unexpected error"
+      },
+      "step": {
+        "menu": {
+          "menu_options": {
+            "tune": "Tune Device Communications",
+            "mesh": "Mesh Cloud Credentials"
+          }
+        },
+        "tune": {
+          "title": "Tune Device Communications",
+          "data": {
+            "retry_count": "Retry Counter",
+            "update_interval": "Polling interval"
+          },
+          "data_description": {
+            "retry_count": "The number of retrys when attempting to communicate with a device.",
+            "update_interval": "The interval in seconds between polling a device for status updates."
+          }
+        },
+        "mesh": {
+          "title": "Mesh Cloud Credentials",
+          "description": "Update the credentials you use in the app",
+          "data": {
+            "username": "Username (email)",
+            "password": "Password",
+            "country": "Country"
+          }
+        }
+      }
     }
 }
