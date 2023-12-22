@@ -5,9 +5,15 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
 
-# UniLED v2 - The Universal Light Controller
+# UniLED v2.1 (Beta) - The Universal Light Controller
+### 💥Breaking Changes
 
-UniLED supports the following range of BLE LED controllers:
+This release is unable to automactically migrate entities from v1 or v2.0
+versions and once installed, any entities previously created, will not function and must be deleted, rediscovered and reinstalled.
+
+---
+
+### UniLED supports the following range of BLE LED controllers:
 
 ### 📱LED Chord
   - **SP107E** - SPI RGB(W) Controller
@@ -41,6 +47,10 @@ UniLED supports the following range of BLE LED controllers:
 1. These devices only support a single bluetooth connection at any one time. If you connect via the app, then HA will not be able to connect and visa versa, when HA is connected and controlling the device, you will not be able to connect to it via the app.
 2. For those controllers that support custom effects, such as the SP630E, UniLED only supports selecting the custom effect, you will have to disable the device in HA and use the android or IOS app to configure it first, then renable in HA.
 3. HA will report certain entities, such as Effect Speed as being unavailable when the chosen effect does not support it, for example when using a solid effect, the effect speed will show as unavailable until a dynamic effect is selected. 
+
+### 📱Hao Deng
+#### **Experimental** support for Hao Deng/Zengge BLE Mesh devices.
+
 ---
 
 
@@ -90,7 +100,7 @@ If you want to contribute to UniLED, please read the [Contribution guidelines](C
 
 ## 🎉 Acknowledgements <a name = "acknowledgement"></a>
 
-- [SleepyNinja](https://github.com/SleepyNinja0o) for the great work deciphering and developing code for Zengge mesh devices and used as a basis to implement support in UniLED.
+- [SleepyNinja](https://github.com/SleepyNinja0o) for the great work deciphering and developing code for Zengge BLE Mesh devices and which has been used as a basis to implement support in UniLED.
 
 ***
 [ha-logo]: https://raw.githubusercontent.com/monty68/uniled/main/docs/img/ha-logo-32x32.png
