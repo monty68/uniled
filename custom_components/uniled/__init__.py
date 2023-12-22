@@ -11,6 +11,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, callback, CoreState
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.device_registry import format_mac
+from homeassistant.helpers.entity_registry import async_migrate_entries
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_DEVICE,
@@ -70,17 +72,10 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup(hass, config):
-    """Set up a skeleton component."""
-
-    hass.data[DOMAIN] = {}
-    return True
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up UNILED from a config entry."""
 
-    transport: str = entry.data[CONF_DEVICE_CLASS]
+    transport: str = entry.data.get(CONF_TRANSPORT)
 
     if transport == UNILED_TRANSPORT_ZNG:
         mesh_name: str = entry.data[CONF_MESH_NAME]
@@ -127,14 +122,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 EVENT_HOMEASSISTANT_STOP, coordinator.device.shutdown
             )
         )
-        
+
         _LOGGER.debug(
             "*** Added UniLED entry for: %s - %s (%s) %s HASS: %s",
             coordinator.device.name,
             entry.unique_id,
             entry.entry_id,
             scan_mode,
-            hass.state
+            hass.state,
         )
 
         if hass.state == CoreState.running:
@@ -274,9 +269,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ):
             bluetooth.async_rediscover_address(hass, coordinator.device.address)
 
-    hass.bus.async_listen_once(
-        EVENT_HOMEASSISTANT_STARTED, coordinator.device.startup
-    )
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, coordinator.device.startup)
 
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
@@ -304,9 +297,11 @@ async def _async_shutdown_coordinator(
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
     coordinator: UniledUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    _LOGGER.info("%s: Reloading due to config/options update...", coordinator.device.name)
-    #if entry.title != coordinator.title:
-        #await hass.config_entries.async_reload(entry.entry_id)
+    _LOGGER.info(
+        "%s: Reloading due to config/options update...", coordinator.device.name
+    )
+    # if entry.title != coordinator.title:
+    # await hass.config_entries.async_reload(entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
@@ -337,7 +332,11 @@ async def async_unload_entry(hass, entry) -> bool:
 
     return unload_ok
 
-async def async_migrate_entry(hass, config_entry):
+
+async def async_migrate_entry(hass, entry):
     """Migrate old entry."""
-    _LOGGER.debug("Migrating from version %s", config_entry.version)
-    
+    if entry.version == 1:
+        # Miserable, but needed :-(
+        _LOGGER.error("UniLED is unable to migrate this entities configuration, remove and re-install.")
+        return False
+    return True
