@@ -20,7 +20,6 @@ from homeassistant.const import (
     CONF_ADDRESS,
     CONF_COUNTRY,
     CONF_DEVICES,
-    CONF_DEVICE_CLASS,  # Use CONF_TRANSPORT instead in v2!
     CONF_HOST,
     CONF_IP_ADDRESS,
     CONF_LOCATION,
@@ -70,7 +69,7 @@ _LOGGER = logging.getLogger(__name__)
 class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
     """Handle a UniLED config flow."""
 
-    VERSION = 1
+    VERSION = 2
 
     @staticmethod
     @callback
@@ -363,9 +362,6 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(
             title=self.context["title_placeholders"]["name"],
             data={
-                CONF_DEVICE_CLASS: self.context.get(
-                    CONF_TRANSPORT, UNILED_TRANSPORT_ZNG
-                ),
                 CONF_TRANSPORT: self.context.get(CONF_TRANSPORT, UNILED_TRANSPORT_ZNG),
                 CONF_MESH_NAME: self.context.get(CONF_MESH_NAME, None),
                 CONF_MESH_ID: self.context.get(CONF_MESH_ID, None),
@@ -437,7 +433,6 @@ class UniledConfigFlowHandler(flow.ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(
             title=self.context["title_placeholders"]["name"],
             data={
-                CONF_DEVICE_CLASS: self.context.get(CONF_TRANSPORT, ""),
                 CONF_TRANSPORT: self.context.get(CONF_TRANSPORT, ""),
                 CONF_ADDRESS: self.context.get(CONF_ADDRESS, ""),
                 CONF_MODEL: self.context.get(CONF_MODEL, None),
