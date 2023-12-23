@@ -177,8 +177,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
                 self._attr_name = f"{channel.name} {feature.name}"
         else:
             self._attr_name = f"{feature.name}"
-
-        # self._attr_has_entity_name = True
+        self._attr_has_entity_name = True
 
         mangled_name = channel.title.replace(" ", "_").lower()
         base_unique_id = coordinator.entry.unique_id or coordinator.entry.entry_id
@@ -186,8 +185,6 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
 
         if (key := getattr(feature, "key", None)) is not None:
             self._attr_unique_id = f"_{self._attr_unique_id}_{key}"
-        
-        _LOGGER.warn("ID: %s", self._attr_unique_id)
 
         self._attr_entity_registry_enabled_default = feature.enabled
         self._attr_entity_category = None
