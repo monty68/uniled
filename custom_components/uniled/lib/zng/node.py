@@ -17,6 +17,7 @@ from ..const import (
     ATTR_UL_NODE_ID,
     ATTR_UL_POWER,
     ATTR_UL_RSSI,
+    ATTR_UL_STATUS,
 )
 from .telink import TELINK_MANUFACTURER_ID, TELINK_MESH_ADDRESS_NONE
 
@@ -43,8 +44,19 @@ class ZenggeFeature(UniledAttribute):
             ATTR_UL_RSSI,
         )
         self._attr = ATTR_UL_POWER
-        self._type = "light"
         self._node = node
+
+    @property
+    def attr(self) -> str:
+        if self.node.node_type == ZENGGE_DEVICE_TYPE_PANEL_RGBCCT:
+            return ATTR_UL_STATUS
+        return self._attr
+
+    @property
+    def type(self) -> str:
+        if self.node.node_type == ZENGGE_DEVICE_TYPE_PANEL_RGBCCT:
+            return "sensor"
+        return "light"
 
     @property
     def name(self) -> str:

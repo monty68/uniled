@@ -43,15 +43,16 @@ from ..const import (
     COLOR_MODE_RGB,
     COLOR_MODE_WHITE,
     ATTR_HA_BRIGHTNESS,
+    ATTR_HA_COLOR_MODE,
     ATTR_HA_COLOR_TEMP,
-    ATTR_HA_MIN_MIREDS,
+    ATTR_HA_EFFECT,
     ATTR_HA_MAX_MIREDS,
+    ATTR_HA_MIN_MIREDS,
     ATTR_HA_RGB_COLOR,
     ATTR_HA_RGBW_COLOR,
     ATTR_HA_RGBWW_COLOR,
-    ATTR_HA_WHITE,
-    ATTR_HA_COLOR_MODE,
     ATTR_HA_SUPPORTED_COLOR_MODES,
+    ATTR_HA_WHITE,
     ATTR_UL_DEVICE_FORCE_REFRESH,
     ATTR_UL_LIGHT_MODE_NUMBER,
     ATTR_UL_MAC_ADDRESS,
@@ -60,6 +61,7 @@ from ..const import (
     ATTR_UL_NODE_WIRING,
     ATTR_UL_POWER,
     ATTR_UL_RSSI,
+    ATTR_UL_STATUS,
 )
 
 import time
@@ -102,6 +104,9 @@ ZENGGE_DEFAULT_MESH_KEY: Final = "ZenggeMesh"
 ZENGGE_DEFAULT_MESH_PASS: Final = "ZenggeTechnology"
 ZENGGE_DEFAULT_MESH_TOKEN: Final = None
 
+ZENGGE_STATUS_ONLINE: Final = "Online"
+ZENGGE_STATUS_OFFLINE: Final = "Offline"
+
 ZENGGE_WIRING_CONNECTION_NONE: Final = 0
 ZENGGE_WIRING_CONNECTION_RGB: Final = 1
 ZENGGE_WIRING_CONNECTION_RGB_W: Final = 2
@@ -126,18 +131,44 @@ ZENGGE_WIRING_CONTROL_CCT: Final = 8
 # STATEACTION_INCREASEBRIGHTNESS = 0x03
 # STATEACTION_DECREASEBRIGHTNESS = 0x04
 
-ZENGGE_COLOR_MODE_RGB = 0x60
-ZENGGE_COLOR_MODE_WARMWHITE = 0x61
-ZENGGE_COLOR_MODE_CCT = 0x62
-ZENGGE_COLOR_MODE_AUX = 0x63
-ZENGGE_COLOR_MODE_CCTAUX = 0x64
+ZENGGE_COLOR_MODE_RGB: Final = 0x60
+ZENGGE_COLOR_MODE_WARMWHITE: Final = 0x61
+ZENGGE_COLOR_MODE_CCT: Final = 0x62
+ZENGGE_COLOR_MODE_AUX: Final = 0x63
+ZENGGE_COLOR_MODE_CCTAUX: Final = 0x64
 
-ZENGGE_DIMMING_TARGET_RGBKWC = 0x01  # Set RGB, Keep WC
-ZENGGE_DIMMING_TARGET_WCKRGB = 0x02  # Set WC, Keep RGB
-ZENGGE_DIMMING_TARGET_RGBWC = 0x03  # Set RGB & WC
-ZENGGE_DIMMING_TARGET_RGBOWC = 0x04  # Set RGB, WC Off
-ZENGGE_DIMMING_TARGET_WCORGB = 0x05  # Set WC, RGB Off
-ZENGGE_DIMMING_TARGET_AUTO = 0x06  # Set lights according to situation
+ZENGGE_DIMMING_TARGET_RGBKWC: Final = 0x01  # Set RGB, Keep WC
+ZENGGE_DIMMING_TARGET_WCKRGB: Final = 0x02  # Set WC, Keep RGB
+ZENGGE_DIMMING_TARGET_RGBWC: Final = 0x03  # Set RGB & WC
+ZENGGE_DIMMING_TARGET_RGBOWC: Final = 0x04  # Set RGB, WC Off
+ZENGGE_DIMMING_TARGET_WCORGB: Final = 0x05  # Set WC, RGB Off
+ZENGGE_DIMMING_TARGET_AUTO: Final = 0x06  # Set lights according to situation
+
+ZENGGE_EFFECT_SOLID: Final = "Solid"
+ZENGGE_EFFECT_UNKNOWN: Final = "?FX?"
+
+ZENGGE_EFFECT_LIST: Final = {
+    0x01:   "Seven Color Cross Fade",
+    0x02:   "Red Gradual Change",
+    0x03:   "Green Gradual Change",
+    0x04:   "Blue Gradual Change",
+    0x05:   "Yellow Gradual Change",
+    0x06:   "Cyan Gradual Change",
+    0x07:   "Purple Gradual Change",
+    0x08:   "White Gradual Change",
+    0x09:   "Red/Green Cross Fade",
+    0x0A:   "Red/Blue Cross Fade",
+    0x0B:   "Green/Blue Cross Fade",
+    0x0C:   "Seven Color Strobe",
+    0x0D:   "Red Strobe Flash",
+    0x0E:   "Green Strobe Flash",
+    0x0F:   "Blue Strobe Flash",
+    0x10:   "Yellow Strobe Flash",
+    0x11:   "Cyan Strobe Flash",
+    0x12:   "Purple Strobe Flash",
+    0x13:   "White Strobe Flash",
+    0x14:   "Seven Color Jumping Change",
+ }
 
 ##
 ## Zengge Master
@@ -201,6 +232,8 @@ class ZenggeModel(UniledBleModel):
 
     def color_modes(self, node: ZenggeNode) -> list:
         """Base node feature set"""
+        if node.node_type == ZENGGE_DEVICE_TYPE_PANEL_RGBCCT:
+            return {}       
         if node.node_wiring == ZENGGE_WIRING_CONTROL_RGB_CCT:
             return {
                 COLOR_MODE_RGB,
@@ -255,7 +288,15 @@ class ZenggeModel(UniledBleModel):
                 return False
             elif node.node_type == ZENGGE_DEVICE_TYPE_PANEL_RGBCCT:
                 _LOGGER.warning(f"{node_id}: Panel status: {repr(list(data))}")
-                return False
+                connected = data[1] & 0xFF
+                status = {
+                    ATTR_UL_RSSI: node.rssi,
+                    ATTR_UL_NODE_ID: node_id,
+                    ATTR_UL_MAC_ADDRESS: node.address,
+                    ATTR_UL_STATUS: ZENGGE_STATUS_ONLINE if connected else ZENGGE_STATUS_OFFLINE,
+                }
+                node.status.replace(status, refresh=True)
+                return True
 
             connected = data[1] & 0xFF
             level = data[2] & 0xFF
@@ -276,9 +317,10 @@ class ZenggeModel(UniledBleModel):
                 ATTR_UL_RSSI: node.rssi,
                 ATTR_UL_NODE_ID: node_id,
                 ATTR_UL_MAC_ADDRESS: node.address,
-                ATTR_HA_SUPPORTED_COLOR_MODES: self.color_modes(node),
-                ATTR_UL_LIGHT_MODE_NUMBER: mode,
+                ATTR_UL_STATUS: ZENGGE_STATUS_ONLINE if connected else ZENGGE_STATUS_OFFLINE,
                 ATTR_UL_POWER: power,
+                ATTR_HA_SUPPORTED_COLOR_MODES: self.color_modes(node),
+                ATTR_HA_EFFECT: ZENGGE_EFFECT_SOLID,
                 ATTR_HA_BRIGHTNESS: (
                     brightness if power else node.status.get(ATTR_HA_BRIGHTNESS, 255)
                 ),
@@ -296,31 +338,34 @@ class ZenggeModel(UniledBleModel):
                 )
                 status[ATTR_HA_MAX_MIREDS] = ZENGGE_MAX_MIREDS
                 status[ATTR_HA_MIN_MIREDS] = ZENGGE_MIN_MIREDS
-
             status[ATTR_HA_COLOR_MODE] = COLOR_MODE_BRIGHTNESS
-            if mode == 0:
-                status[ATTR_HA_COLOR_MODE] = COLOR_MODE_RGB
-                rgb = ZenggeColor.decode_rgb(value1)
-                status[ATTR_HA_RGB_COLOR] = (rgb[0], rgb[1], rgb[2])
 
-                h = ZenggeColor.h255_to_h360(value1)
-                s = value2
-                l = level
-                rgb = ZenggeColor.hsv_to_rgb(h, s, l)
-                status["rgb2"] = (rgb[0], rgb[1], rgb[2])
+            if power:
+                if mode == 0:
+                    status[ATTR_HA_COLOR_MODE] = COLOR_MODE_RGB
+                    rgb = ZenggeColor.decode_rgb(value1)
+                    status[ATTR_HA_RGB_COLOR] = (rgb[0], rgb[1], rgb[2])
 
-            elif mode == 1:
-                if (
-                    node.node_wiring == ZENGGE_WIRING_CONNECTION_CCT
-                    or node.node_wiring == ZENGGE_WIRING_CONNECTION_RGB_CCT
-                ):
-                    status[ATTR_HA_COLOR_MODE] = COLOR_MODE_COLOR_TEMP
-                    status[ATTR_HA_COLOR_TEMP] = self.cct_percentage(value1)
-                else:
-                    status[
-                        ATTR_HA_COLOR_MODE
-                    ] = COLOR_MODE_BRIGHTNESS  # COLOR_MODE_WHITE
-                    status[ATTR_HA_WHITE] = status[ATTR_HA_BRIGHTNESS]
+                    h = ZenggeColor.h255_to_h360(value1)
+                    s = value2
+                    l = level
+                    rgb = ZenggeColor.hsv_to_rgb(h, s, l)
+                    status["rgb2"] = (rgb[0], rgb[1], rgb[2])
+
+                elif mode == 1:
+                    if (
+                        node.node_wiring == ZENGGE_WIRING_CONNECTION_CCT
+                        or node.node_wiring == ZENGGE_WIRING_CONNECTION_RGB_CCT
+                    ):
+                        status[ATTR_HA_COLOR_MODE] = COLOR_MODE_COLOR_TEMP
+                        status[ATTR_HA_COLOR_TEMP] = self.cct_percentage(value1)
+                    else:
+                        status[
+                            ATTR_HA_COLOR_MODE
+                        ] = COLOR_MODE_BRIGHTNESS  # COLOR_MODE_WHITE
+                        status[ATTR_HA_WHITE] = status[ATTR_HA_BRIGHTNESS]
+                elif mode == 2:
+                    status[ATTR_HA_EFFECT] = ZENGGE_EFFECT_UNKNOWN
 
             node.status.replace(status, refresh=True)
             return True
@@ -398,8 +443,9 @@ class ZenggeModel(UniledBleModel):
         self, manager: ZenggeManager, node: ZenggeNode, rgb: tuple[int, int, int]
     ) -> bytearray | None:
         """The bytes to send for a color level change"""
-        red, green, blue = rgb
         node.status.set(ATTR_HA_COLOR_MODE, COLOR_MODE_RGB)
+        node.status.set(ATTR_HA_RGB_COLOR, rgb)
+        red, green, blue = rgb
         return self._command(
             manager,
             C_COLOR,
@@ -428,12 +474,42 @@ class ZenggeModel(UniledBleModel):
     def build_white_command(
         self, manager: ZenggeManager, node: ZenggeNode, white: int
     ) -> bytearray | None:
-        level = node.status.get(ATTR_HA_WHITE, white)
+        if (level := node.status.get(ATTR_HA_WHITE, white)) is True:
+            level = white
         node.status.set(ATTR_HA_COLOR_MODE, COLOR_MODE_BRIGHTNESS)
         return self._command(
             manager, C_COLOR, ZENGGE_COLOR_MODE_WARMWHITE, level, dest=node.node_id
         )
 
+    def build_effect_command(
+        self, manager: ZenggeManager, node: ZenggeNode, value: str | int
+    ) -> bytearray:
+        """The bytes to send for an effect change"""
+        if isinstance(value, str):
+            effect = self.int_if_str_in(
+                value, ZENGGE_EFFECT_LIST, 0
+            )
+        elif (effect := int(value)) not in ZENGGE_EFFECT_LIST:
+            return None
+        return self._command(
+            manager, C_COLOR, 0x80, 5, 20, dest=node.node_id
+        )
+
+
+        return self._command(
+            manager,
+            C_PRESET,
+            1,
+            1,
+            2,
+            dest=node.node_id,
+        )
+
+    def fetch_effect_list(
+        self, manager: ZenggeManager, node: ZenggeNode
+    ) -> list:
+        """Return list of effect names"""
+        return list(ZENGGE_EFFECT_LIST.values())
 
 ##
 ## UniLed Zengge Device Manager
