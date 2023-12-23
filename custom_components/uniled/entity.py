@@ -44,6 +44,7 @@ from .const import (
     ATTR_UL_POWER,
     ATTR_UL_SEGMENT_COUNT,
     ATTR_UL_SEGMENT_PIXELS,
+    ATTR_UL_STATUS,
     ATTR_UL_TOTAL_PIXELS,
     UNILED_STATE_CHANGE_LATENCY,
 )
@@ -152,6 +153,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             ATTR_UL_NODE_ID,
             ATTR_UL_SEGMENT_COUNT,
             ATTR_UL_SEGMENT_PIXELS,
+            ATTR_UL_STATUS,
             ATTR_UL_TOTAL_PIXELS,
         }
     )
