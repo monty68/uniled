@@ -92,11 +92,15 @@ MAGICHUE_RPC_GET_MESH_DEVICES: Final = (
 
 MAGICHUE_DEFAULT_COUNTRY: Final = "US"
 
+
 class MagicHue:
     """Magic Hue Cloud Connector"""
+
     _country: str = None
 
-    def __init__(self, username: str, password: str, country: str = MAGICHUE_DEFAULT_COUNTRY):
+    def __init__(
+        self, username: str, password: str, country: str = MAGICHUE_DEFAULT_COUNTRY
+    ):
         """Initialize cloud connector"""
         self._server = "<unknown>"
         self._connect_url = None
@@ -165,7 +169,7 @@ class MagicHue:
                 ) as response:
                     if response.status == 200:
                         response_json = await response.json()
-                        _LOGGER.debug("MagicHue: Server mesh response: " + repr(response_json))
+                        # _LOGGER.debug("MagicHue: Server mesh response: " + repr(response_json))
                         if response_json["ok"] == True:
                             self._mesh_data = response_json["result"]
                         else:
@@ -193,7 +197,10 @@ class MagicHue:
             for mesh in self._mesh_data:
                 placeUniID = mesh["placeUniID"]
 
-                _LOGGER.info("MagicHue: Get devices for: '%s' (%s)", mesh["displayName"], placeUniID)
+                _LOGGER.info(
+                    "MagicHue: Get devices for: '%s'",
+                    mesh["displayName"],
+                )
                 endpoint = MAGICHUE_RPC_GET_MESH_DEVICES.replace(
                     "placeUniID=", "placeUniID=" + placeUniID
                 )
@@ -206,15 +213,16 @@ class MagicHue:
                     ) as response:
                         if response.status == 200:
                             response_json = await response.json()
-                            _LOGGER.debug(
-                                "MagicHue: Server device response: " + repr(response_json)
-                            )
-                            
+                            # _LOGGER.debug(
+                            #    "MagicHue: Server device response: " + repr(response_json)
+                            # )
                             if response_json["ok"] == True:
                                 result_json = response_json["result"]
                                 mesh.update({"deviceList": result_json})
                             else:
-                                self._last_error = f"Get mesh devices failed: No result!"
+                                self._last_error = (
+                                    f"Get mesh devices failed: No result!"
+                                )
                         else:
                             self._last_error = (
                                 "Get mesh devices failed for placeUniID: "
@@ -238,10 +246,9 @@ class MagicHue:
             ) as response:
                 if response.status == 200:
                     response_json = await response.json()
-                    _LOGGER.debug(
-                        "MagicHue: Server bridge response: " + repr(response_json)
-                    )
-                    
+                    # _LOGGER.debug(
+                    #    "MagicHue: Server bridge response: " + repr(response_json)
+                    # )
                     if response_json["ok"] == True:
                         result_json = response.json()["result"]
                         self._bridge_data = result_json
@@ -281,19 +288,25 @@ class MagicHue:
                 ) as response:
                     if response.status == 200:
                         response_json = await response.json()
-                        _LOGGER.debug("MagicHue: Server login response: " + repr(response_json))
+                        # _LOGGER.debug("MagicHue: Server login response: " + repr(response_json))
                         if response_json["ok"] == True:
                             result_json = response_json["result"]
                             self._user_id = result_json["userId"]
                             self._auth_token = result_json["auth_token"]
                             self._device_secret = result_json["deviceSecret"]
-                            self._country = self._country_code(result_json["nationCode"])
+                            self._country = self._country_code(
+                                result_json["nationCode"]
+                            )
                             self._last_error = None
                             return True
                         else:
-                            self._last_error = "Login failed: " + response_json["err_msg"]
+                            self._last_error = (
+                                "Login failed: " + response_json["err_msg"]
+                            )
                     else:
-                        self._last_error = f"Login failed, status code: {response.status}"
+                        self._last_error = (
+                            f"Login failed, status code: {response.status}"
+                        )
         else:
             self._last_error = f"Login failed, no valid cloud server identified."
         _LOGGER.error(f"MagicHue: {self.last_error}")
@@ -315,7 +328,7 @@ class MagicHue:
         if country and country != "" and country != self.country:
             self._server = self._country_server(country)
             self._connect_url = "http://" + self._server
-            _LOGGER.debug("MagicHue: Server set to: " + country + " - " + self._server)
+            # _LOGGER.debug("MagicHue: Server set to: " + country + " - " + self._server)
             return country
         return self.country
 
@@ -328,7 +341,7 @@ class MagicHue:
         return MAGICHUE_COUNTRY_SERVERS[10]["serverApi"]
 
     def _generate_timestamp_checkcode(self):
-        """Generate timestamo and check code"""
+        """Generate timestamp and check code"""
         SECRET_KEY = "0FC154F9C01DFA9656524A0EFABC994F"
         timestamp = str(int(time.time() * 1000))
         value = ("ZG" + timestamp).encode()

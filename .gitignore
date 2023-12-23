@@ -135,5 +135,4 @@ custom_components/uniled/lib/net/__pycache__
 custom_components/uniled/lib/zng/__pycache__
 custom_components/uniled/lib/__pycache__
 custom_components/uniled/__pycache__
-#custom_components/uniled/lib/zng
-#custom_components/zengge_mesh
+custom_components/zengge_mesh

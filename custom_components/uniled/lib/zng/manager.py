@@ -82,18 +82,12 @@ UNILED_TRANSPORT_ZNG: Final = "zng"
 
 CONF_ZNG_ACTIVE_SCAN: Final = "active_scan"
 CONF_ZNG_COUNTRY: Final = "country"
-CONF_ZNG_DEVICES: Final = "devices"
-CONF_ZNG_LOCATION: Final = "location"
-CONF_ZNG_MESH_DATA: Final = "mesh_data"
 CONF_ZNG_MESH_ID: Final = "mesh_id"
-CONF_ZNG_MESH_KEY: Final = "mesh_key"
-CONF_ZNG_MESH_NAME: Final = "mesh_name"
-CONF_ZNG_MESH_PASS: Final = "mesh_pass"
-CONF_ZNG_MESH_TOKEN: Final = "mesh_token"
+CONF_ZNG_MESH_UUID: Final = "mesh_uuid"
 CONF_ZNG_PASSWORD: Final = "password"
 CONF_ZNG_USERNAME: Final = "username"
 
-ZENGGE_UPDATE_SECONDS: Final = 35
+ZENGGE_UPDATE_SECONDS: Final = 40
 
 ZENGGE_MANUFACTURER_ID: Final = 63517
 ZENGGE_MANUFACTURER: Final = "Hao Deng"
@@ -103,7 +97,7 @@ ZENGGE_MASTER_NAME: Final = "Mesh"
 ZENGGE_MESH_ADDRESS_BRIDGE: Final = 255
 ZENGGE_MESH_ADDRESS_NONE: Final = TELINK_MESH_ADDRESS_NONE
 
-ZENGGE_DEFAULT_MESH_ID: Final = 0x0211
+ZENGGE_DEFAULT_MESH_UUID: Final = 0x0211
 ZENGGE_DEFAULT_MESH_KEY: Final = "ZenggeMesh"
 ZENGGE_DEFAULT_MESH_PASS: Final = "ZenggeTechnology"
 ZENGGE_DEFAULT_MESH_TOKEN: Final = None
@@ -154,7 +148,7 @@ class ZenggeMaster(ZenggeNode):
     _manager: ZenggeManager
 
     def __init__(self, manager: ZenggeManager) -> None:
-        super().__init__(manager.mesh_id, 0)
+        super().__init__(manager.mesh_uuid, 0)
         self._manager = manager
 
     @property
@@ -369,7 +363,7 @@ class ZenggeModel(UniledBleModel):
     ):
         """Make command packet"""
         if dest is None:
-            dest = manager.mesh_id
+            dest = manager.mesh_uuid
         packet = pckt.make_command_packet(
             manager.mesh_session, manager.address, dest, command, data
         )
@@ -448,7 +442,7 @@ class ZenggeManager(UniledBleDevice):
     """Zengge Mesh Manager Class"""
 
     @staticmethod
-    def device_mesh_id(
+    def device_mesh_uuid(
         device: BLEDevice, advertisement: AdvertisementData | None = None
     ) -> int | None:
         if ZENGGE_MANUFACTURER_ID not in advertisement.manufacturer_data:
@@ -459,46 +453,50 @@ class ZenggeManager(UniledBleDevice):
         return None
 
     @staticmethod
-    def mesh_id_name(
+    def mesh_uuid_unique(
         device: BLEDevice, advertisement: AdvertisementData | None = None
     ) -> str | None:
-        if (mesh_id := ZenggeManager.device_mesh_id(device, advertisement)) is None:
+        if (mesh_uuid := ZenggeManager.device_mesh_uuid(device, advertisement)) is None:
             return (None, None)
-        return (mesh_id, f"{UNILED_TRANSPORT_ZNG}_mesh_{hex(mesh_id)}")
+        return (mesh_uuid, f"{UNILED_TRANSPORT_ZNG}_mesh_{hex(mesh_uuid)}")
 
     ##
     ## Initialize device instance
     ##
     _nodes: dict(str, ZenggeNode) = dict()
     _starting: bool = False
-    _mesh_session = None
-    _mesh_name = None
     _mesh_id = None
+    _mesh_uuid = None
+    _mesh_user = None
+    _mesh_pass = None
+    _mesh_area = None
     _mesh_key = None
     _mesh_pass = None
     _mesh_token = None
+    _mesh_session = None
 
     def __init__(
         self,
-        config: Any,
-        mesh_name: str,
         mesh_id: str,
-        mesh_key: str,
-        mesh_pass: str,
-        mesh_token: str,
+        mesh_uuid: int,
+        cloud_user: str,
+        cloud_pass: str,
+        cloud_area: str,
+        config: Any,
     ) -> None:
         """Init the UniLED ZNG Model"""
         self._model = ZenggeModel()
         super().__init__(config, None, None, self.model_name)
         self._started = False
-        self._mesh_name = mesh_name
+        self._mesh_key = None
+        self._mesh_pass = None
+        self._mesh_token = None
         self._mesh_id = mesh_id
-        self._mesh_key = mesh_key
-        self._mesh_pass = mesh_pass
-        self._mesh_token = mesh_token
-        self._nodes[mesh_id] = ZenggeMaster(self)
-        if self._config is not None:
-            self.update_nodes(self._config.get(CONF_ZNG_DEVICES, list()))
+        self._mesh_uuid = mesh_uuid
+        self._cloud_user = cloud_user
+        self._cloud_pass = cloud_pass
+        self._cloud_area = cloud_area
+        self._nodes[mesh_uuid] = ZenggeMaster(self) # uuid or bridge ID or mesh_id ?????
 
     @property
     def transport(self) -> str:
@@ -508,7 +506,7 @@ class ZenggeManager(UniledBleDevice):
     @property
     def name(self) -> str:
         """Return the name of the mesh."""
-        return f"{self.transport}{hex(int(self.mesh_id))}".upper()
+        return f"{self.transport}{hex(int(self.mesh_uuid))}".upper()
 
     @property
     def connected(self) -> bool:
@@ -526,14 +524,9 @@ class ZenggeManager(UniledBleDevice):
         return self._mesh_session
 
     @property
-    def mesh_name(self) -> int:
-        """Mesh Name"""
-        return self._mesh_name
-
-    @property
-    def mesh_id(self) -> int:
+    def mesh_uuid(self) -> int:
         """Mesh ID"""
-        return self._mesh_id if self._mesh_id is not None else ZENGGE_DEFAULT_MESH_ID
+        return self._mesh_uuid if self._mesh_uuid is not None else ZENGGE_DEFAULT_MESH_UUID
 
     @property
     def mesh_key(self) -> str:
@@ -561,12 +554,30 @@ class ZenggeManager(UniledBleDevice):
         """Node dictionary"""
         return self._nodes
 
+    async def cloud_refresh(self) -> bool:
+        """Cloud Connect"""
+        _LOGGER.info("%s: Connecting to cloud...", self.name)
+        cloud = MagicHue(self._cloud_user, self._cloud_pass, self._cloud_area)
+        if await cloud.login() is not True:
+            return False
+        if await cloud.get_meshes() is not True:
+            return False
+        if await cloud.get_devices() is not True:
+            return False
+        for location in cloud.meshes:
+            if len(location["deviceList"]):
+                self._mesh_key = location["meshKey"]
+                self._mesh_pass = location["meshPassword"]
+                self._mesh_token = location["meshLTK"]
+                self.update_nodes(location["deviceList"])
+        return True
+
     def update_nodes(self, devicelist) -> None:
         """Extract node information from selected cloud location results"""
         if devicelist is not None:
             for n in devicelist:
                 node_mesh = n.get("meshUUID", 0)
-                if node_mesh != self.mesh_id:
+                if node_mesh != self.mesh_uuid:
                     continue
                 node_id = n.get("meshAddress", TELINK_MESH_ADDRESS_NONE)
                 if node_id == TELINK_MESH_ADDRESS_NONE:
@@ -577,9 +588,8 @@ class ZenggeManager(UniledBleDevice):
                 node_wiring = n.get("wiringType", None)
 
                 if node_id not in self._nodes:
-                    _LOGGER.debug("CREATE NODE: %s", n)
                     node = ZenggeNode(
-                        self.mesh_id,
+                        self.mesh_uuid,
                         node_id,
                         node_type,
                         node_wiring,
@@ -587,35 +597,14 @@ class ZenggeManager(UniledBleDevice):
                         node_name,
                     )
                     self._nodes[node_id] = node
+                    _LOGGER.debug("CREATED NODE: %s", n)
                 else:
-                    _LOGGER.debug("UPDATE NODE: %s", n)
                     node = self._nodes[node_id]
                     node.update(node_type, node_wiring, node_mac, node_name)
+                    _LOGGER.debug("UPDATED NODE: %s", n)
 
         if len(self._nodes) <= 1:
             _LOGGER.warning("%s: No mesh node configuration details found.", self.name)
-
-    async def cloud_refresh(self) -> bool:
-        """Cloud Connect"""
-        _LOGGER.info("%s: Connecting to cloud...", self.name)
-        cloud_username: str = self._config.get(CONF_ZNG_USERNAME, "")
-        cloud_password: str = self._config.get(CONF_ZNG_PASSWORD, "")
-        cloud_county: str = self._config.get(CONF_ZNG_COUNTRY, "")
-        cloud_location: str = self._config.get(CONF_ZNG_LOCATION, "")
-        cloud = MagicHue(cloud_username, cloud_password, cloud_county)
-        if await cloud.login() is not True:
-            return False
-        if await cloud.get_meshes() is not True:
-            return False
-        if await cloud.get_devices() is not True:
-            return False
-        for location in cloud.meshes:
-            if location["placeUniID"] != cloud_location:
-                continue
-            if len(location["deviceList"]):
-                self.update_nodes(location["deviceList"])
-                return True
-        return False
 
     async def startup(self, event=None) -> bool:
         """Startup the mesh."""
@@ -624,7 +613,7 @@ class ZenggeManager(UniledBleDevice):
         _LOGGER.info("%s: Starting mesh...", self.name)
         self._starting = True
         async with self._operation_lock:
-            await self.cloud_refresh()
+            await self.cloud_refresh() # Exception on failure??
             try:
                 success = await self._async_ensure_connected(force=True)
             except Exception as ex:
@@ -713,7 +702,7 @@ class ZenggeManager(UniledBleDevice):
         if node_id == ZENGGE_MESH_ADDRESS_NONE:
             return None
         if node_id not in self._nodes:
-            self._nodes[node_id] = ZenggeNode(self.mesh_id, node_id)
+            self._nodes[node_id] = ZenggeNode(self.mesh_uuid, node_id)
             _LOGGER.info("%s: Notified of new node: %s", self.name, node_id)
         return self._nodes[node_id]
 
@@ -721,19 +710,19 @@ class ZenggeManager(UniledBleDevice):
         self, device: BLEDevice, advert: AdvertisementData
     ) -> None:
         """Update the BLE device/advertisement."""
-        mesh_id, node_id, node_type = ZenggeNode.device_mesh_node_id(device, advert)
-        if mesh_id != self.mesh_id:
+        mesh_uuid, node_id, node_type = ZenggeNode.device_mesh_node_id(device, advert)
+        if mesh_uuid != self.mesh_uuid:
             _LOGGER.debug(
-                "%s: Ignored '%s' advertisement update, as wrong mesh ID: %s; RSSI: %s",
+                "%s: Ignored '%s' advertisement update, as wrong mesh UUID: %s; RSSI: %s",
                 self.name,
                 device.name,
-                hex(mesh_id),
+                hex(mesh_uuid),
                 advert.rssi,
             )
             return
 
         if node_id not in self._nodes:
-            node = ZenggeNode(mesh_id, node_id)
+            node = ZenggeNode(mesh_uuid, node_id)
             self._nodes[node_id] = node
             _LOGGER.info(
                 "%s: Discovered node '%s' (%s), type=%d; RSSI: %s",
@@ -917,7 +906,7 @@ class ZenggeManager(UniledBleDevice):
     async def _async_start_notify(self) -> bool:
         """Start notification."""
         # Huge thanks to '@cocoto' for helping figure this issue out with Zengge!
-        # await self.send_packet(0x01, bytes([]), self.mesh_id, uuid=TELINK_UUID_STATUS_CHAR)
+        # await self.send_packet(0x01, bytes([]), self.mesh_uuid, uuid=TELINK_UUID_STATUS_CHAR)
         await self._async_send_mesh_command(
             0x01, bytes([]), uuid=TELINK_UUID_STATUS_CHAR
         )
@@ -934,7 +923,7 @@ class ZenggeManager(UniledBleDevice):
     ) -> Any:
         """Send mesh command"""
         packet = pckt.make_command_packet(
-            self.mesh_session, self.address, self.mesh_id, command, data
+            self.mesh_session, self.address, self.mesh_uuid, command, data
         )
 
         _LOGGER.debug(

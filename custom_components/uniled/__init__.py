@@ -14,10 +14,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.entity_registry import async_migrate_entries
 from homeassistant.const import (
-    CONF_DEVICE_CLASS,
-    CONF_DEVICE,
     CONF_ADDRESS,
+    CONF_COUNTRY,
     CONF_MODEL,
+    CONF_PASSWORD,
+    CONF_USERNAME,
     EVENT_HOMEASSISTANT_STARTED,
     EVENT_HOMEASSISTANT_STOP,
     Platform,
@@ -25,10 +26,7 @@ from homeassistant.const import (
 from .lib.zng.manager import (
     CONF_ZNG_ACTIVE_SCAN as CONF_ACTIVE_SCAN,
     CONF_ZNG_MESH_ID as CONF_MESH_ID,
-    CONF_ZNG_MESH_KEY as CONF_MESH_KEY,
-    CONF_ZNG_MESH_NAME as CONF_MESH_NAME,
-    CONF_ZNG_MESH_PASS as CONF_MESH_PASS,
-    CONF_ZNG_MESH_TOKEN as CONF_MESH_TOKEN,
+    CONF_ZNG_MESH_UUID as CONF_MESH_UUID,
     UNILED_TRANSPORT_ZNG,
     ZENGGE_MANUFACTURER_ID,
     ZenggeManager,
@@ -78,17 +76,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     transport: str = entry.data.get(CONF_TRANSPORT)
 
     if transport == UNILED_TRANSPORT_ZNG:
-        mesh_name: str = entry.data[CONF_MESH_NAME]
-        mesh_id: str = entry.data[CONF_MESH_ID]
-        mesh_key: str = entry.data[CONF_MESH_KEY]
-        mesh_pass: str = entry.data[CONF_MESH_PASS]
-        mesh_token: str = entry.data[CONF_MESH_TOKEN]
+        mesh_id: str = entry.data.get(CONF_MESH_ID)
+        mesh_uuid: str = entry.data.get(CONF_MESH_UUID, 0)
+        mesh_user: str = entry.data.get(CONF_USERNAME, "")
+        mesh_pass: str = entry.data.get(CONF_PASSWORD, "")
+        mesh_area: str = entry.data.get(CONF_COUNTRY, "")
+        scan_mode = (
+            bluetooth.BluetoothScanningMode.ACTIVE
+            if entry.options.get(CONF_ACTIVE_SCAN, True)
+            else bluetooth.BluetoothScanningMode.PASSIVE
+        )
 
         uniled = ZenggeManager(
-            entry.options, mesh_name, mesh_id, mesh_key, mesh_pass, mesh_token
+            mesh_id, mesh_uuid, mesh_user, mesh_pass, mesh_area, entry.options
         )
+ 
         coordinator = UniledUpdateCoordinator(hass, uniled, entry)
         hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+        
+        _LOGGER.debug(
+            "*** Added UniLED entry for: %s - %s (%s) %s HASS: %s",
+            coordinator.device.name,
+            entry.unique_id,
+            entry.entry_id,
+            scan_mode,
+            hass.state,
+        )
+
         entry.async_on_unload(entry.add_update_listener(_async_update_listener))
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -101,12 +115,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             coordinator.device.set_device_and_advertisement(
                 service_info.device, service_info.advertisement
             )
-
-        scan_mode = (
-            bluetooth.BluetoothScanningMode.ACTIVE
-            if entry.options.get(CONF_ACTIVE_SCAN, True)
-            else bluetooth.BluetoothScanningMode.PASSIVE
-        )
 
         entry.async_on_unload(
             bluetooth.async_register_callback(
@@ -121,15 +129,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.bus.async_listen_once(
                 EVENT_HOMEASSISTANT_STOP, coordinator.device.shutdown
             )
-        )
-
-        _LOGGER.debug(
-            "*** Added UniLED entry for: %s - %s (%s) %s HASS: %s",
-            coordinator.device.name,
-            entry.unique_id,
-            entry.entry_id,
-            scan_mode,
-            hass.state,
         )
 
         if hass.state == CoreState.running:
