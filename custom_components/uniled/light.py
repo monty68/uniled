@@ -325,8 +325,9 @@ class UniledLightEntity(
                 await self.device.async_set_state(self.channel, ATTR_EFFECT, value)
 
             # Process any color temperature changes here to do a kelvin
-            # to cold, warm and brightness conversion first
+            # to cold, warm and brightness conversion first etc.
             #
+            mireds = kwargs.pop(ATTR_COLOR_TEMP, None)
             if (kelvin := kwargs.pop(ATTR_COLOR_TEMP_KELVIN, None)) is not None:
                 if self.channel.has(ATTR_COLOR_TEMP_KELVIN):
                     await self.device.async_set_state(
@@ -344,7 +345,7 @@ class UniledLightEntity(
                         self.channel, ATTR_UL_CCT_COLOR, (cold, warm, level, kelvin)
                     )
                 elif self.channel.has(ATTR_COLOR_TEMP):
-                    if (mireds := kwargs.pop(ATTR_COLOR_TEMP, None)) is not None:
+                    if mireds is not None:
                         await self.device.async_set_state(
                             self.channel, ATTR_COLOR_TEMP, mireds
                         )
