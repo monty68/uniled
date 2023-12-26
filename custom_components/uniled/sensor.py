@@ -88,9 +88,10 @@ class RSSIFeature(SensorAttribute):
 
     def __init__(self) -> None:
         super().__init__(
-            ATTR_UL_RSSI,
+            None,
             "RSSI",
             "mdi:signal",
+            key="rssi",
             group=UniledGroup.DIAGNOSTIC,
             enabled=False,
         )
