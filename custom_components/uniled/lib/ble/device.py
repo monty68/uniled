@@ -219,21 +219,6 @@ class UniledBleDevice(UniledDevice):
     ##
     ## Initialize device instance
     ##
-    _loop = asyncio.get_event_loop()
-    _channels = list()
-    _connect_lock = asyncio.Lock()
-    _operation_lock = asyncio.Lock()
-    _notification_event = asyncio.Event()
-    _expected_disconnect: bool = False
-    _disconnect_timer: asyncio.TimerHandle | None = None
-    _timed_disconnect_task: asyncio.Task[None] | None = None
-    _client: BleakClientWithServiceCache | None = None
-    _read_char: BleakGATTCharacteristic | None = None
-    _write_char: BleakGATTCharacteristic | None = None
-    _notify_char: BleakGATTCharacteristic | None = None
-    _ble_device: BLEDevice | None = None
-    _advertisement_data: AdvertisementData | None = None
-
     def __init__(
         self,
         config: Any,
@@ -244,6 +229,17 @@ class UniledBleDevice(UniledDevice):
         """Init the UniLED BLE Model"""
         self._ble_device = ble_device
         self._advertisement_data = advertisement_data
+        self._loop = asyncio.get_event_loop()
+        self._connect_lock = asyncio.Lock()
+        self._operation_lock = asyncio.Lock()
+        self._notification_event = asyncio.Event()
+        self._expected_disconnect: bool = False
+        self._disconnect_timer: asyncio.TimerHandle | None = None
+        self._timed_disconnect_task: asyncio.Task[None] | None = None
+        self._client: BleakClientWithServiceCache | None = None
+        self._read_char: BleakGATTCharacteristic | None = None
+        self._write_char: BleakGATTCharacteristic | None = None
+        self._notify_char: BleakGATTCharacteristic | None = None
 
         _LOGGER.debug(
             "%s: Inititalizing (%s)...", self.name, model_name if not None else "-?-"
@@ -275,14 +271,14 @@ class UniledBleDevice(UniledDevice):
         """Return the address of the device."""
         if isinstance(self._ble_device, BLEDevice):
             return self._ble_device.address
-        return "??:??:??:??:??:??"
+        return None
 
     @property
     def rssi(self) -> int | None:
         """Get the rssi of the device."""
         if isinstance(self._advertisement_data, AdvertisementData):
             return self._advertisement_data.rssi
-        return -99999
+        return UNILED_BLE_BAD_RSSI
 
     @property
     def available(self) -> bool:
@@ -329,12 +325,17 @@ class UniledBleDevice(UniledDevice):
                         "%s: Update - Failed, notification timeout.", self.name
                     )
                     return False
+                except Exception as ex:
+                    _LOGGER.warning(
+                        "%s: Update - Failed, exception: %s", self.name, str(ex)
+                    )
+                    return False
 
         for channel in self.channel_list:
             _LOGGER.debug(
                 "%s: %s, Status: %s",
                 self.name,
-                channel.title,
+                channel.identity,
                 channel.status.dump(),
             )
         return True
@@ -352,7 +353,8 @@ class UniledBleDevice(UniledDevice):
                 finally:
                     pass
                 self._last_notification_time = None
-        await close_stale_connections(self._ble_device)
+        if isinstance(self._ble_device, BLEDevice):
+            await close_stale_connections(self._ble_device)
         _LOGGER.debug("%s: Stopped", self.name)
 
     ##
@@ -794,9 +796,6 @@ class UniledBleDevice(UniledDevice):
                 self._read_char = self._write_char
             if not self._notify_char:
                 self._notify_char = self._read_char
-        # _LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
-        # _LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
-        # _LOGGER.debug("%s: Notify Characteristic: %s", self.name, self._notify_char)
         return bool(self._read_char and self._write_char and self._notify_char)
 
     ##
@@ -825,10 +824,11 @@ class UniledBleDevice(UniledDevice):
         self._ble_device = ble_device
         self._advertisement_data = advertisement or self._advertisement_data
         _LOGGER.debug(
-            "%s: Updated '%s' advertisement; RSSI: %s",
+            "%s: Updated '%s' advertisement; RSSI: %s\n%s",
             self.name,
             self.address,
             self.rssi,
+            self._advertisement_data,
         )
 
     async def resolve_model(
