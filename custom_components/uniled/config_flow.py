@@ -329,19 +329,19 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         else:
             current_addresses = self._async_current_ids()
             for discovery in async_discovered_service_info(self.hass):
-                mesh_id, mesh_name = ZenggeManager.mesh_id_name(
+                mesh_uuid, mesh_unique = ZenggeManager.mesh_uuid_unique(
                     discovery.device, discovery.advertisement
                 )
-                if mesh_id is not None:
+                if mesh_uuid is not None:
                     _LOGGER.info(
                         "Discovered '%s' mesh '%s' device",
                         discovery.address,
-                        hex(mesh_id),
+                        hex(mesh_uuid),
                     )
-                    if mesh_name in self._async_current_ids():
+                    if mesh_unique in self._async_current_ids():
                         continue
-                    if mesh_name not in self._discovered_zng_meshes:
-                        self._discovered_zng_meshes[mesh_name] = mesh_id
+                    if mesh_unique not in self._discovered_zng_meshes:
+                        self._discovered_zng_meshes[mesh_unique] = mesh_uuid
                     continue
                 elif (
                     discovery.address in current_addresses
