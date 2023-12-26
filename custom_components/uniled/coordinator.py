@@ -28,16 +28,15 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
         self.lock = asyncio.Lock()
         self.title = entry.title
         self.entry = entry
+        cooldown = 0.1 # UNILED_REFRESH_DELAY
         super().__init__(
             hass,
             _LOGGER,
             name=f"{self.device.name}",
             update_method=self._async_update,
             update_interval=timedelta(seconds = device.update_interval),
-            # We don't want an immediate refresh since the device
-            # takes a moment to reflect the state change
             request_refresh_debouncer=Debouncer(
-                hass, _LOGGER, cooldown=UNILED_REFRESH_DELAY, immediate=False
+                hass, _LOGGER, cooldown=cooldown, immediate=True
             ),
         )
 
@@ -71,9 +70,9 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
                     success = await self.device.update(retry)
                 except Exception as ex:
                     raise ConfigEntryError(str(ex)) from ex
-                finally:            
-                    if not success:
-                        raise UpdateFailed("Device update failed")
+            if not success:
+                raise UpdateFailed("Device update failed")
         else:
-            pass 
+            pass
+            # raise UpdateFailed("Device not started")
    
