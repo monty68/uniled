@@ -61,12 +61,12 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
-    Platform.LIGHT,
     Platform.SENSOR,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SWITCH,
     Platform.BUTTON,
+    Platform.LIGHT,
 ]
 
 
@@ -90,10 +90,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         uniled = ZenggeManager(
             mesh_id, mesh_uuid, mesh_user, mesh_pass, mesh_area, entry.options
         )
- 
+
         coordinator = UniledUpdateCoordinator(hass, uniled, entry)
         hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-        
+
         _LOGGER.debug(
             "*** Added UniLED entry for: %s - %s (%s) %s HASS: %s",
             coordinator.device.name,
@@ -103,8 +103,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.state,
         )
 
-        entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        @callback
+        async def _async_startup(event=None) -> None:
+            """Startup"""
+            await coordinator.device.startup()
+            try:
+                await coordinator.async_config_entry_first_refresh()
+                await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+            except ConfigEntryNotReady:
+                _LOGGER.debug(
+                    "%s: First update attempt failed!", coordinator.device.name
+                )
+                await _async_shutdown_coordinator(hass, coordinator)
+                if hass.state != CoreState.running:
+                    raise
 
         @callback
         def _async_ble_sniffer(
@@ -131,12 +143,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         )
 
+        entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
         if hass.state == CoreState.running:
-            await coordinator.device.startup()
+            await _async_startup()
         else:
-            hass.bus.async_listen_once(
-                EVENT_HOMEASSISTANT_STARTED, coordinator.device.startup
-            )
+            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _async_startup)
 
         return True
     elif transport == UNILED_TRANSPORT_BLE:
@@ -218,6 +230,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     coordinator = UniledUpdateCoordinator(hass, uniled, entry)
+    if not await coordinator.device.startup():
+        raise ConfigEntryNotReady("Failed to startup")
 
     if not coordinator.device.available:
         ## Device is not available, so attempt first connection
@@ -232,7 +246,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             await coordinator.async_config_entry_first_refresh()
         except ConfigEntryNotReady:
-            _LOGGER.debug("%s: First update attempt failed!", coordinator.device.name)
+            _LOGGER.warning("%s: First update attempt failed!", coordinator.device.name)
             cancel_first_update()
             await _async_shutdown_coordinator(hass, coordinator)
             del coordinator
@@ -261,14 +275,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def _async_stop(event: Event) -> None:
         """Close the connection."""
-        await coordinator.device.shutdown()
-        if (
-            coordinator.device.transport != UNILED_TRANSPORT_NET
-            and coordinator.device.address
-        ):
-            bluetooth.async_rediscover_address(hass, coordinator.device.address)
-
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, coordinator.device.startup)
+        await _async_shutdown_coordinator(hass, coordinator)
 
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
@@ -288,8 +295,11 @@ async def _async_shutdown_coordinator(
     hass: HomeAssistant, coordinator: UniledUpdateCoordinator
 ) -> None:
     """Shutdown coordinator device"""
-    await coordinator.device.stop()
-    if coordinator.device.transport != UNILED_TRANSPORT_NET:
+    await coordinator.device.shutdown()
+    if (
+        coordinator.device.transport != UNILED_TRANSPORT_NET
+        and coordinator.device.address
+    ):
         bluetooth.async_rediscover_address(hass, coordinator.device.address)
 
 
@@ -299,8 +309,6 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     _LOGGER.info(
         "%s: Reloading due to config/options update...", coordinator.device.name
     )
-    # if entry.title != coordinator.title:
-    # await hass.config_entries.async_reload(entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
@@ -336,6 +344,8 @@ async def async_migrate_entry(hass, entry):
     """Migrate old entry."""
     if entry.version == 1:
         # Miserable, but needed :-(
-        _LOGGER.error("UniLED is unable to migrate this entities configuration, remove and re-install.")
+        _LOGGER.error(
+            "UniLED is unable to migrate this entities configuration, remove and re-install."
+        )
         return False
     return True
