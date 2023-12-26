@@ -7,8 +7,8 @@
 # ![HA][ha-logo] UniLED v2.1 Beta - The Universal Light Controller
 ### 💥Breaking Changes
 
-This release is unable to automactically migrate entities from v1 or v2.0
-versions and once installed, any entities previously created, will not function and must be deleted, rediscovered and reinstalled.
+This release is unable to automatically migrate entities from v1 or v2.0
+versions and once installed, any entities previously created, will not function and must be deleted, rediscovered, and reinstalled.
 
 ---
 
