@@ -8,8 +8,8 @@ from ..channel import UniledChannel
 from ..features import (
     UniledAttribute,
     UniledGroup,
-    UniledButton,
-    UniledSelect,
+    ButtonAttribute,
+    SelectAttribute,
     LightStripFeature,
     SceneLoopFeature,
     EffectTypeFeature,
@@ -142,26 +142,25 @@ ATTR_UL_SCENE_SAVE_SELECT: Final = "scene_to_save"
 ATTR_UL_SCENE_SAVE_BUTTON: Final = "scene_save"
 
 
-class SceneSaveSelect(UniledSelect):
+class SceneSaveSelect(SelectAttribute):
     def __init__(self):
         super().__init__(
-            UniledGroup.CONFIGURATION,
-            False,
             ATTR_UL_SCENE_SAVE_SELECT,
             "Save to which scene",
             "mdi:star-settings",
-            None,
+            group=UniledGroup.CONFIGURATION,
+            enabled=False,
         )
 
 
-class SceneSaveButton(UniledButton):
+class SceneSaveButton(ButtonAttribute):
     def __init__(self):
         super().__init__(
-            UniledGroup.CONFIGURATION,
-            False,
             ATTR_UL_SCENE_SAVE_BUTTON,
             "Save to Scene",
             "mdi:star-plus",
+            group=UniledGroup.CONFIGURATION,
+            enabled=False,
         )
 
 
@@ -388,23 +387,22 @@ class BanlanX60X(UniledBleModel):
 
                 if not device.master.features:
                     device.master.features = [
-                        LightStripFeature(),
+                        LightStripFeature(extra=[
+                            ATTR_UL_SCENE_LOOP
+                        ]),
                         SceneLoopFeature(),
                         #SceneSaveSelect(),
                         #SceneSaveButton(),
-                        UniledAttribute(ATTR_UL_SCENE_LOOP),
                     ]
 
                     for b in range(BANLANX60X_MAX_SCENES):
                         device.master.features.append(
-                            UniledButton(
-                                UniledGroup.STANDARD,
-                                True,
+                            ButtonAttribute(
                                 ATTR_UL_SCENE,
                                 f"Scene {b + 1}",
                                 "mdi:star",
-                                f"scene_{b + 1}",
                                 int(b),
+                                f"scene_{b + 1}",
                             )
                         )
 
