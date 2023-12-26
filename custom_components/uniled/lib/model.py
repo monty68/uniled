@@ -75,7 +75,7 @@ class UniledModel:
         _LOGGER.info(
             "%s: %s, command: %s = %s (%s)",
             self.model_name,
-            channel.name,
+            channel.identity or channel.name or f"{channel.number}",
             attr,
             value,
             channel.status.get(attr),
@@ -133,4 +133,3 @@ class UniledModel:
             if value == string:
                 return key
         return default
-        # return [k for k in dikt.items() if k[1] == string][0][0]
