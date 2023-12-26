@@ -254,80 +254,16 @@ class BanlanX3(UniledBleModel):
         #
         _LOGGER.debug("%s: Good Status Message: %s", device.name, data.hex())
 
-        level = data[1]
-        speed = data[2]
-        chip_order = data[3]
-        effect = data[4]
-        mode = data[5]
-        input = data[message_length - 3]
-        cold = data[message_length - 2]
-        # warm = data[message_length - 1]
-
-        device.master.status.replace(
-            {
-                ATTR_UL_DEVICE_FORCE_REFRESH: True,
-                ATTR_UL_POWER: data[0] == 1,
-                ATTR_UL_LIGHT_MODE_NUMBER: mode,
-                ATTR_UL_LIGHT_MODE: self.str_if_key_in(
-                    mode, BANLANX3_LIGHT_MODES, UNILED_UNKNOWN
-                ),
-                ATTR_HA_EFFECT: self.str_if_key_in(
-                    effect, BANLANX3_EFFECTS_RGBW_SOUND, UNILED_UNKNOWN
-                ),
-                ATTR_UL_EFFECT_NUMBER: effect,
-                ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
-                ATTR_UL_EFFECT_LOOP: True if mode != 0 else False,
-            }
-        )
-
-        if mode == BANLANX3_LIGHT_MODE_SINGULAR:
-            if self.colors == 4:
-                order_type = UNILED_CHIP_ORDER_RGBW
-                if effect == BANLANX3_EFFECT_WHITE:
-                    device.master.status.set(ATTR_HA_BRIGHTNESS, cold)
-            else:
-                order_type = UNILED_CHIP_ORDER_RGB
-
-            if effect in BANLANX3_COLORABLE_EFFECTS:
-                device.master.status.set(ATTR_HA_RGB_COLOR, (data[6], data[7], data[8]))
-                device.master.status.set(ATTR_HA_BRIGHTNESS, level)
-            elif self.colors == 4 and effect != BANLANX3_EFFECT_WHITE:
-                device.master.status.set(ATTR_HA_WHITE, cold)
-
-            device.master.status.set(
-                ATTR_UL_CHIP_ORDER, self.chip_order_name(order_type, chip_order)
-            )
-
-            if effect == BANLANX3_EFFECT_SOLID or effect == BANLANX3_EFFECT_WHITE:
-                device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_STATIC)
-            elif effect >= BANLANX3_EFFECT_SOUND and effect < BANLANX3_EFFECT_WHITE:
-                device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
-                device.master.status.set(ATTR_UL_SENSITIVITY, data[9])
-                device.master.status.set(
-                    ATTR_UL_AUDIO_INPUT,
-                    self.str_if_key_in(input, BANLANX3_AUDIO_INPUTS, UNILED_UNKNOWN),
-                )
-            else:
-                device.master.status.set(ATTR_UL_EFFECT_SPEED, speed)
-                device.master.status.set(
-                    ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC
-                )
-        elif mode == BANLANX3_LIGHT_MODE_AUTO_DYNAMIC:
-            device.master.status.set(ATTR_UL_EFFECT_SPEED, speed)
-            device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC)
-        elif mode == BANLANX3_LIGHT_MODE_AUTO_SOUND:
-            device.master.status.set(ATTR_HA_BRIGHTNESS, None)
-            device.master.status.set(ATTR_UL_SENSITIVITY, data[9])
-            device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
-
         if not device.master.features:
             features = [
-                LightStripFeature(extra=(
-                    ATTR_UL_LIGHT_MODE,
-                    ATTR_UL_LIGHT_MODE_NUMBER,
-                    ATTR_UL_EFFECT_NUMBER,
-                    ATTR_UL_EFFECT_SPEED,
-                )),
+                LightStripFeature(
+                    extra=(
+                        ATTR_UL_LIGHT_MODE,
+                        ATTR_UL_LIGHT_MODE_NUMBER,
+                        ATTR_UL_EFFECT_NUMBER,
+                        ATTR_UL_EFFECT_SPEED,
+                    )
+                ),
                 EffectTypeFeature(),
                 EffectSpeedFeature(BANLANX3_MAX_EFFECT_SPEED),
                 ChipOrderFeature(),
@@ -341,6 +277,88 @@ class BanlanX3(UniledBleModel):
                 features.append(EffectLoopFeature())
             device.master.features = features
 
+        level = data[1]
+        speed = data[2]
+        chip_order = data[3]
+        effect = data[4]
+        mode = data[5]
+        input = data[message_length - 3]
+        cold = data[message_length - 2]
+        # warm = data[message_length - 1]
+
+        device.master.status.replace(
+            {
+                ATTR_UL_DEVICE_FORCE_REFRESH: True,
+                ATTR_UL_POWER: data[0] == 1,
+                ATTR_HA_SUPPORTED_COLOR_MODES: [COLOR_MODE_BRIGHTNESS],
+                ATTR_HA_COLOR_MODE: COLOR_MODE_BRIGHTNESS,
+                ATTR_UL_CHIP_ORDER: self.chip_order_name(
+                    UNILED_CHIP_ORDER_RGBW
+                    if self.colors == 4
+                    else UNILED_CHIP_ORDER_RGB,
+                    chip_order,
+                ),
+                ATTR_UL_LIGHT_MODE_NUMBER: mode,
+                ATTR_UL_LIGHT_MODE: self.str_if_key_in(
+                    mode, BANLANX3_LIGHT_MODES, UNILED_UNKNOWN
+                ),
+                ATTR_UL_EFFECT_NUMBER: 0,
+                ATTR_HA_EFFECT: UNILED_UNKNOWN,
+                ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
+                ATTR_UL_EFFECT_LOOP: True if mode != 0 else False,
+                ATTR_HA_BRIGHTNESS: level,
+                ATTR_HA_RGB_COLOR: (data[6], data[7], data[8]),
+            }
+        )
+
+        if mode == BANLANX3_LIGHT_MODE_SINGULAR:
+            device.master.set(ATTR_UL_EFFECT_NUMBER, effect)
+            device.master.set(
+                ATTR_HA_EFFECT,
+                self.str_if_key_in(effect, BANLANX3_EFFECTS_RGBW_SOUND, UNILED_UNKNOWN),
+            )
+            if self.colors == 4:
+                device.master.set(ATTR_HA_WHITE, cold)
+                device.master.set(
+                    ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_RGB, COLOR_MODE_WHITE]
+                )
+            else:
+                device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_RGB])
+
+            if effect >= BANLANX3_EFFECT_SOUND and effect < BANLANX3_EFFECT_WHITE:
+                device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
+                device.master.set(ATTR_UL_SENSITIVITY, data[9])
+                device.master.set(
+                    ATTR_UL_AUDIO_INPUT,
+                    self.str_if_key_in(input, BANLANX3_AUDIO_INPUTS, UNILED_UNKNOWN),
+                )
+            elif effect == BANLANX3_EFFECT_SOLID or effect == BANLANX3_EFFECT_WHITE:
+                device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_STATIC)
+                if effect == BANLANX3_EFFECT_WHITE:
+                    device.master.set(
+                        ATTR_HA_SUPPORTED_COLOR_MODES,
+                        [COLOR_MODE_RGB, COLOR_MODE_WHITE],
+                    )
+                    device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_WHITE)
+                    device.master.set(ATTR_HA_BRIGHTNESS, cold)
+                    device.master.set(ATTR_UL_COLOR_LEVEL, level)
+                    return True
+            else:
+                device.master.set(ATTR_UL_EFFECT_SPEED, speed)
+                device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC)
+
+            if effect in BANLANX3_COLORABLE_EFFECTS:
+                device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_RGB)
+
+        elif mode == BANLANX3_LIGHT_MODE_AUTO_DYNAMIC:
+            device.master.set(ATTR_UL_EFFECT_SPEED, speed)
+            device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC)
+        elif mode == BANLANX3_LIGHT_MODE_AUTO_SOUND:
+            device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_ONOFF])
+            device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_ONOFF)
+            device.master.set(ATTR_HA_BRIGHTNESS, None)
+            device.master.set(ATTR_UL_SENSITIVITY, data[9])
+            device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
         return True
 
     def build_on_connect(self, device: UniledBleDevice) -> list[bytearray] | None:
@@ -376,26 +394,26 @@ class BanlanX3(UniledBleModel):
         return bytearray([0x0F, 0x01, 0x01 if state else 0x00])
 
     def build_white_command(
-        self, device: UniledBleDevice, channel: UniledChannel, level: int
+        self, device: UniledBleDevice, channel: UniledChannel, white: int
     ) -> bytearray | None:
-        """The bytes to send for a white level change."""
-        if level is None:
-            level = 0x01
-        return bytearray([0x21, 0x02, level & 0xFF, 0xFF])
+        """The bytes to send for a white mode change."""
+        if channel.status.effect_number != BANLANX3_EFFECT_WHITE:
+            return self.build_effect_command(device, channel, BANLANX3_EFFECT_WHITE)
+        return None
 
     def build_brightness_command(
         self, device: UniledBleDevice, channel: UniledChannel, level: int
     ) -> bytearray:
         """The bytes to send for a brightness level change"""
         if channel.status.effect_number == BANLANX3_EFFECT_WHITE:
-            return self.build_white_command(device, channel, level)
+            return bytearray([0x21, 0x02, level & 0xFF, 0xFF])
         return bytearray([0x12, 0x01, level & 0xFF])
 
     def build_rgb_color_command(
         self, device: UniledBleDevice, channel: UniledChannel, rgb: tuple[int, int, int]
     ) -> bytearray | None:
         """The bytes to send for an RGB color change"""
-        red, green, blue = rgb
+        channel.set(ATTR_HA_RGB_COLOR, rgb)
         commands = []
 
         if channel.status.effect_number not in BANLANX3_COLORABLE_EFFECTS:
@@ -403,9 +421,9 @@ class BanlanX3(UniledBleModel):
                 self.build_effect_command(device, channel, BANLANX3_EFFECT_SOLID)
             )
 
-        level = channel.status.get(ATTR_HA_BRIGHTNESS, 0xFF)
+        red, green, blue = rgb
+        level = channel.get(ATTR_UL_COLOR_LEVEL, channel.get(ATTR_HA_BRIGHTNESS, 0xFF))
         commands.append(bytearray([0x13, 0x04, red, green, blue, level]))
-
         return commands
 
     def build_effect_command(
@@ -418,14 +436,17 @@ class BanlanX3(UniledBleModel):
             )
         elif (effect := int(value)) not in BANLANX3_EFFECTS_RGBW_SOUND:
             return None
+        if effect == BANLANX3_EFFECT_WHITE:
+            channel.set(ATTR_HA_COLOR_MODE, COLOR_MODE_WHITE)
+            channel.set(ATTR_HA_BRIGHTNESS, channel.get(ATTR_HA_WHITE, 0xFF))
+        elif effect == BANLANX3_EFFECT_SOLID:
+            channel.set(ATTR_HA_COLOR_MODE, COLOR_MODE_RGB)
         return bytearray([0x15, 0x01, effect])
 
     def fetch_effect_list(
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:
         """Return list of effect names"""
-        if channel.status.light_mode_number != BANLANX3_LIGHT_MODE_SINGULAR:
-            return None
         if not self.intmic:
             if self.colors == 4:
                 return list(BANLANX3_EFFECTS_RGBW.values())
@@ -511,7 +532,9 @@ SP614E = BanlanX3(
     id=0x614E,
     name="SP614E",
     info="PWM RGBW (Music) Controller",
-    data=[b"\x0a\x00", b"\x0a\x21"],
+    # Fix: Issue #42 - Second byte can be different so only check first byte is '0x0a'
+    data=b"\x0a",
+    # data=[b"\x0a\x00", b"\x0a\x21"],
     colors=4,
     intmic=True,
 )
