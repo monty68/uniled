@@ -5,8 +5,8 @@ from enum import IntEnum
 from .helpers import StrEnum
 
 UNILED_DEVICE_TIMEOUT: Final = 40
-UNILED_REFRESH_DELAY: Final = 2.0
-UNILED_DISCONNECT_DELAY: Final = 20 # 8.5? - Connections can take a lot longer!
+UNILED_REFRESH_DELAY: Final = 1.0
+UNILED_DISCONNECT_DELAY: Final = 10.0 # 8.5? - Connections can take a lot longer!
 UNILED_COMMAND_SETTLE_DELAY: Final = 0.3
 UNILED_STATE_CHANGE_LATENCY: Final = 2.0
 
@@ -100,6 +100,7 @@ ATTR_UL_INFO_FIRMWARE = "info_firmware"
 ATTR_UL_INFO_HARDWARE = "info_hardware"
 ATTR_UL_INFO_MODEL_NAME = "info_model_name"
 ATTR_UL_INFO_MANUFACTURER = "info_manufacturer"
+ATTR_UL_COLOR_LEVEL = "color_level"
 ATTR_UL_LIGHT_MODE = "light_mode"
 ATTR_UL_LIGHT_MODE_NUMBER = "light_mode_number"
 ATTR_UL_LIGHT_TYPE = "light_type"
@@ -121,3 +122,4 @@ ATTR_UL_SEGMENT_PIXELS = "segment_pixels"
 ATTR_UL_SENSITIVITY = "sensitivity"
 ATTR_UL_STATUS = "status"
 ATTR_UL_TOTAL_PIXELS = "total_pixels"
+ATTR_UL_TRANSITION_TIME = "transition_time"
