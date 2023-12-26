@@ -62,14 +62,14 @@ class UniledStatus:
         self._status.clear()
         self._status.update(status)
         if refresh:
-            _LOGGER.debug("%s: Status (%s) replace:\n%s", self._channel.title, hex(id(self._status)), self._status)
+            _LOGGER.debug("%s: Status (%s) replace:\n%s", self._channel.identity, hex(id(self._status)), self._status)
             self.refresh()
 
     def update(self, status: dict(str, Any), refresh: bool = False) -> None:
         """Update the status attributes"""
         self._status.update(status)
         if refresh:
-            _LOGGER.debug("%s: Status (%s) update:\n%s", self._channel.title, hex(id(self._status)), self._status)
+            _LOGGER.debug("%s: Status (%s) update:\n%s", self._channel.identity, hex(id(self._status)), self._status)
             self.refresh()
 
     def refresh(self) -> None:
@@ -95,12 +95,12 @@ class UniledChannel:
     def __init__(self, number: int) -> None:
         self._number = number
         self._status = UniledStatus(self)
-        _LOGGER.debug("Inititalized: %s (%s)", self.title, hex(id(self._status)))
+        _LOGGER.debug("Inititalized: %s (%s)", self.identity, hex(id(self._status)))
 
     def __del__(self):
         self._status = None
         self._callbacks.clear()
-        _LOGGER.debug("Deleted: %s", self.title)
+        _LOGGER.debug("Deleted: %s", self.identity)
 
     @property
     def is_on(self) -> bool:
@@ -110,12 +110,12 @@ class UniledChannel:
     @property
     def name(self) -> str:
         """Returns the channel name."""
-        return self.title
+        return f"{CHANNEL} {self.number}"
 
     @property
-    def title(self) -> str:
-        """Returns the channel title."""
-        return f"{CHANNEL} {self.number}"
+    def identity(self) -> str:
+        """Returns the channel identity string."""
+        return f"{CHANNEL.lower()}_{self.number}"
 
     @property
     def number(self) -> int:
@@ -168,7 +168,7 @@ class UniledChannel:
 
     def refresh(self) -> None:
         """Refresh channels status."""
-        # _LOGGER.debug("%s: Refresh", self.title)
+        # _LOGGER.debug("%s: Refresh", self.identity)
         self._fire_callbacks()
 
     def register_callback(
