@@ -19,7 +19,7 @@ from .entity import (
 
 from .lib.attributes import (
     UniledAttribute,
-    UniledSelect,
+    SelectAttribute,
 )
 
 import logging
@@ -56,7 +56,7 @@ class UniledSelectEntity(
         self,
         coordinator: UniledUpdateCoordinator,
         channel: UniledChannel,
-        feature: UniledSelect,
+        feature: SelectAttribute,
     ) -> None:
         """Initialize a UniLED select control."""
         super().__init__(coordinator, channel, feature)

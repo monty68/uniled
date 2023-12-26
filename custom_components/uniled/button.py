@@ -19,7 +19,7 @@ from .entity import (
 
 from .lib.attributes import (
     UniledAttribute,
-    UniledButton,
+    ButtonAttribute,
 )
 
 import logging
@@ -56,7 +56,7 @@ class UniledButtonEntity(
         self,
         coordinator: UniledUpdateCoordinator,
         channel: UniledChannel,
-        feature: UniledButton,
+        feature: ButtonAttribute,
     ) -> None:
         """Initialize a UniLED button control."""
         super().__init__(coordinator, channel, feature)

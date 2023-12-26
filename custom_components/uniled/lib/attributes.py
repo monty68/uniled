@@ -6,8 +6,6 @@ from enum import IntEnum
 from .const import *
 
 dataclass(frozen=True)
-
-
 class UniledGroup(IntEnum):
     """UniLED Attribute Group"""
 
@@ -18,27 +16,32 @@ class UniledGroup(IntEnum):
 
 
 class UniledAttribute:
-    """UniLED Base Feature Class"""
-
-    _reload: bool = False
-    _enabled: bool = True
-    _group: UniledGroup = UniledGroup.STANDARD
-    _type: str
-    _attr: str
-    _name: str | None = None
-    _icon: str | None = None
-    _key: str | None = None
-    _extra: list | None = None
+    """UniLED Base Attribute Class"""
 
     def __init__(
         self,
+        platform: str,
         attr: str,
-        name: str | None = None,
-        key: str | None = None,
+        name: str | None,
+        icon: str | None,
+        key: str | None,
+        enabled: bool = True,
+        group: UniledGroup = UniledGroup.STANDARD,
+        extra: list | None = None,
     ) -> None:
+        self._platform = platform
         self._attr = attr
         self._name = name
+        self._icon = icon
         self._key = key
+        self._enabled = enabled
+        self._group = group
+        self._extra = extra
+        self._reload: bool = False
+
+    @property
+    def platform(self) -> str:
+        return self._platform
 
     @property
     def reload(self) -> bool:
@@ -51,10 +54,6 @@ class UniledAttribute:
     @property
     def group(self) -> UniledGroup:
         return self._group
-
-    @property
-    def type(self) -> str:
-        return self._type
 
     @property
     def attr(self) -> str:
@@ -77,112 +76,120 @@ class UniledAttribute:
         return self._extra
 
 
-class UniledSensor(UniledAttribute):
-    """UniLED Sensor Feature Class"""
+class SensorAttribute(UniledAttribute):
+    """UniLED Sensor Attribute Class"""
 
     def __init__(
         self,
-        group: UniledGroup,
-        enabled: bool,
         attr: str,
         name: str,
         icon: str,
-        key: str | None,
+        key: str | None = None,
+        enabled: bool = True,
+        group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        self._type = "sensor"
-        self._enabled = enabled
-        self._group = group
-        self._attr = attr
-        self._name = name
-        self._icon = icon
-        self._key = key
-        self._extra = extra
+        super().__init__(
+           "sensor",
+           attr,
+           name,
+           icon,
+           key,
+           enabled,
+           group,
+           extra 
+        )
 
 
-class UniledSelect(UniledAttribute):
-    """UniLED Select Feature Class"""
+class SelectAttribute(UniledAttribute):
+    """UniLED Select Attribute Class"""
 
     def __init__(
         self,
-        group: UniledGroup,
-        enabled: bool,
         attr: str,
         name: str,
         icon: str,
-        key: str | None,
+        key: str | None = None,
+        enabled: bool = True,
+        group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        self._type = "select"
-        self._enabled = enabled
-        self._group = group
-        self._attr = attr
-        self._name = name
-        self._icon = icon
-        self._key = key
-        self._extra = extra
+        super().__init__(
+           "select",
+           attr,
+           name,
+           icon,
+           key,
+           enabled,
+           group,
+           extra 
+        )
 
 
-class UniledSwitch(UniledAttribute):
-    """UniLED Switch Feature Class"""
+class SwitchAttribute(UniledAttribute):
+    """UniLED Switch Attribute Class"""
 
     def __init__(
         self,
-        group: UniledGroup,
-        enabled: bool,
         attr: str,
         name: str,
         icon_on: str,
         icon_off: str | None = None,
         key: str | None = None,
+        enabled: bool = True,
+        group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        self._type = "switch"
-        self._enabled = enabled
-        self._group = group
-        self._attr = attr
-        self._name = name
-        self._icon = icon_on
+        super().__init__(
+           "switch",
+           attr,
+           name,
+           icon_on,
+           key,
+           enabled,
+           group,
+           extra 
+        )
         self._icon2 = icon_off
-        self._key = key
-        self._extra = extra
 
     def state_icon(self, state: bool = True) -> str:
         """Return icon depending on state"""
         return self._icon if state or not self._icon2 else self._icon2
 
 
-class UniledButton(UniledAttribute):
-    """UniLED Sensor Feature Class"""
+class ButtonAttribute(UniledAttribute):
+    """UniLED Sensor Attribute Class"""
 
     def __init__(
         self,
-        group: UniledGroup,
-        enabled: bool,
         attr: str,
         name: str,
-        icon: str | None = None,
-        key: str | None = None,
+        icon: str,
         value: Any = True,
+        key: str | None = None,
+        enabled: bool = True,
+        group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        self._type = "button"
-        self._enabled = enabled
-        self._group = group
-        self._attr = attr
-        self._name = name
-        self._icon = icon
-        self._key = key
+        super().__init__(
+           "button",
+           attr,
+           name,
+           icon,
+           key,
+           enabled,
+           group,
+           extra 
+        )
         self._value = value
-        self._extra = extra
 
     @property
     def value(self) -> int:
         return self._value
 
 
-class UniledNumber(UniledAttribute):
-    """UniLED Number Feature Class"""
+class NumberAttribute(UniledAttribute):
+    """UniLED Number Attribute Class"""
 
     _min: int
     _max: int
@@ -190,28 +197,30 @@ class UniledNumber(UniledAttribute):
 
     def __init__(
         self,
-        group: UniledGroup,
-        enabled: bool,
         attr: str,
         name: str,
         icon: str,
-        key: str | None,
         max: int,
         min: int = 1,
         inc: int = 1,
+        key: str | None = None,
+        enabled: bool = True,
+        group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        self._type = "number"
-        self._enabled = enabled
-        self._group = group
-        self._attr = attr
-        self._name = name
-        self._icon = icon
-        self._key = key
+        super().__init__(
+           "number",
+           attr,
+           name,
+           icon,
+           key,
+           enabled,
+           group,
+           extra 
+        )
         self._max = max
         self._min = min
         self._inc = inc
-        self._extra = extra
 
     @property
     def min_value(self) -> int:

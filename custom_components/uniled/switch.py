@@ -19,7 +19,7 @@ from .entity import (
 
 from .lib.attributes import (
     UniledAttribute,
-    UniledSwitch,
+    SwitchAttribute,
 )
 
 import logging
@@ -61,7 +61,7 @@ class UniledSwitchEntity(
         self,
         coordinator: UniledUpdateCoordinator,
         channel: UniledChannel,
-        feature: UniledSwitch,
+        feature: SwitchAttribute,
     ) -> None:
         """Initialize a UniLED switch control."""
         super().__init__(coordinator, channel, feature)

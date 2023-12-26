@@ -1,10 +1,12 @@
 """Platform for UniLED light integration."""
 from __future__ import annotations
 from typing import Any
+from datetime import datetime, timedelta
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback, CALLBACK_TYPE
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import entity_platform
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from homeassistant.util.color import (
@@ -74,7 +76,7 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-PARALLEL_UPDATES = 1
+# PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -132,17 +134,25 @@ class UniledLightEntity(
     ) -> None:
         """Initialize a UniLED light control."""
         super().__init__(coordinator, channel, feature)
+        self.postponed_update: CALLBACK_TYPE | None = None
 
     @callback
     def _async_update_attrs(self, first: bool = False) -> None:
         """Handle updating _attr values."""
         super()._async_update_attrs()
 
+    @property
+    def color_mode(self) -> ColorMode | str | None:
+        """Return the color mode of the light."""
+        if self.channel.has(ATTR_COLOR_MODE):
+            return self.channel.get(ATTR_COLOR_MODE, ColorMode.ONOFF)
+        return self._attr_color_mode
+
+    @property
+    def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
+        """Flag supported color modes."""
         if self.channel.has(ATTR_SUPPORTED_COLOR_MODES):
-            self._attr_supported_color_modes = self.channel.get(
-                ATTR_SUPPORTED_COLOR_MODES, {ColorMode.ONOFF}
-            )
-            self._attr_color_mode = self.channel.get(ATTR_COLOR_MODE, ColorMode.ONOFF)
+            return self.channel.get(ATTR_SUPPORTED_COLOR_MODES, {ColorMode.ONOFF})
         elif self.channel.has(ATTR_RGBWW_COLOR):
             self._attr_supported_color_modes = {ColorMode.RGBWW}
             self._attr_color_mode = ColorMode.RGBWW
@@ -165,12 +175,17 @@ class UniledLightEntity(
         else:
             self._attr_supported_color_modes = {ColorMode.ONOFF}
             self._attr_color_mode = ColorMode.ONOFF
+        return self._attr_supported_color_modes
 
+    @property
+    def supported_features(self) -> LightEntityFeature:
+        """Flag supported features."""
         self._attr_supported_features = 0
         if self.channel.has(ATTR_EFFECT):
             self._attr_supported_features |= LightEntityFeature.EFFECT
         if self.channel.has(ATTR_TRANSITION):
             self._attr_supported_features |= LightEntityFeature.TRANSITION
+        return self._attr_supported_features
 
     @property
     def is_on(self) -> bool:
@@ -290,9 +305,12 @@ class UniledLightEntity(
 
     async def async_set_state(self, **kwargs: Any) -> None:
         """Control a light"""
-        self.coordinator.async_set_updated_data(None)
-
         async with self.coordinator.lock:
+            if ATTR_TRANSITION in kwargs:
+                gradual = int(kwargs[ATTR_TRANSITION] * 1000)
+            else:
+                gradual = 0
+
             # Process power state first, in case device needs on before
             # processing any other commands.
             #
@@ -354,21 +372,41 @@ class UniledLightEntity(
             #
             if len(kwargs):
                 await self.device.async_set_multi_state(self.channel, **kwargs)
+            # self.coordinator.async_set_updated_data(None)
+            await self.update_during_transition(gradual)
 
-        if self.channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False):
+        if self.channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False) and not gradual:
             await self.coordinator.async_request_refresh()
 
-    ## May not be needed now?
-    def _clamp_to_rangeof(
-        self, value: int, rangeof: tuple(int, int, int) | None
-    ) -> int | None:
-        """Clamp a value to a specified range"""
-        try:
-            if value < rangeof[0]:
-                return rangeof[0]
-            if value > rangeof[1]:
-                return rangeof[1]
-            return value
-        except TypeError:
-            pass
-        return None
+    async def update_during_transition(self, when: int) -> None:
+        """Update state at the start and end of a transition."""
+        self._cancel_postponed_update()
+
+        # Transition has started
+        self.async_write_ha_state()
+
+        # Transition has ended
+        if when > 0:
+            _LOGGER.debug("Schedule refresh: %s", when)
+            await self.coordinator.async_request_refresh()
+            async def _async_refresh(now: datetime) -> None:
+                """Refresh the state."""
+                _LOGGER.debug("%s: Firing postponed update", self.channel.name)
+                await self.coordinator.async_refresh()
+
+            self.postponed_update = async_call_later(
+                self.hass,
+                timedelta(milliseconds=when),
+                _async_refresh,
+            )
+
+    def _cancel_postponed_update(self) -> None:
+        """Cancel postponed update, if applicable."""
+        if self.postponed_update:
+            self.postponed_update()
+            self.postponed_update = None
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        self._cancel_postponed_update()
+        return await super().async_will_remove_from_hass()

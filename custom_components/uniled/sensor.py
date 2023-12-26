@@ -19,7 +19,7 @@ from homeassistant.const import (
 from .lib.attributes import (
     UniledAttribute,
     UniledGroup,
-    UniledSensor,
+    SensorAttribute,
 )
 from .entity import (
     UniledUpdateCoordinator,
@@ -29,6 +29,8 @@ from .entity import (
     AddEntitiesCallback,
     async_uniled_entity_setup,
 )
+from .const import ATTR_UL_RSSI
+
 from .lib.net.device import UNILED_TRANSPORT_NET
 
 EXTRA_ATTRIBUTE_MAC_ADDRESS = "mac_address"
@@ -70,7 +72,7 @@ class UniledSensorEntity(
         self,
         coordinator: UniledUpdateCoordinator,
         channel: UniledChannel,
-        feature: UniledSensor,
+        feature: SensorAttribute,
     ) -> None:
         """Initialize a UniLED sensor."""
         super().__init__(coordinator, channel, feature)
@@ -81,17 +83,16 @@ class UniledSensorEntity(
         return self.device.get_state(self.channel, self.feature.attr)
 
 @dataclass
-class UniledRSSI(UniledSensor):
+class RSSIFeature(SensorAttribute):
     """UniLED RSSI Feature Class"""
 
     def __init__(self) -> None:
         super().__init__(
-            UniledGroup.DIAGNOSTIC,
-            False,
-            None,
+            ATTR_UL_RSSI,
             "RSSI",
             "mdi:signal",
-            "rssi",
+            group=UniledGroup.DIAGNOSTIC,
+            enabled=False,
         )
 
 
@@ -112,7 +113,7 @@ class UniledSignalSensor(
         channel: UniledChannel,
     ) -> None:
         """Initialize a UniLED effect speed control."""
-        super().__init__(coordinator, channel, UniledRSSI())
+        super().__init__(coordinator, channel, RSSIFeature())
 
     @callback
     def _async_update_attrs(self, first: bool = False) -> None:

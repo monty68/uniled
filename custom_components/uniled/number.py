@@ -19,7 +19,7 @@ from .entity import (
 
 from .lib.attributes import (
     UniledAttribute,
-    UniledNumber,
+    NumberAttribute,
 )
 
 import logging
@@ -56,7 +56,7 @@ class UniledNumberEntity(
         self,
         coordinator: UniledUpdateCoordinator,
         channel: UniledChannel,
-        feature: UniledNumber,
+        feature: NumberAttribute,
     ) -> None:
         """Initialize a UniLED number control."""
         self._attr_mode = NumberMode.AUTO

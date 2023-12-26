@@ -25,6 +25,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
+    ATTR_HA_TRANSITION,
     ATTR_UL_INFO_FIRMWARE,
     ATTR_UL_INFO_HARDWARE,
     ATTR_UL_INFO_MODEL_NAME,
@@ -126,7 +127,7 @@ def async_uniled_entity_update(
             continue
 
         for feature in channel.features:
-            if not feature.type.startswith(platform):
+            if not feature.platform.startswith(platform):
                 continue
             if entity := async_add_entity(coordinator, channel, feature):
                 new_entities.append(entity)
@@ -140,8 +141,11 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
 
     _unrecorded_attributes = frozenset(
         {
-            ATTR_UL_LIGHT_MODE,
-            ATTR_UL_LIGHT_MODE_NUMBER,
+            ATTR_HA_TRANSITION,
+            ATTR_UL_INFO_FIRMWARE,
+            ATTR_UL_INFO_HARDWARE,
+            ATTR_UL_INFO_MODEL_NAME,
+            ATTR_UL_INFO_MANUFACTURER,
             ATTR_UL_EFFECT,
             ATTR_UL_EFFECT_NUMBER,
             ATTR_UL_EFFECT_LOOP,
@@ -149,6 +153,8 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             ATTR_UL_EFFECT_SPEED,
             ATTR_UL_EFFECT_LENGTH,
             ATTR_UL_EFFECT_DIRECTION,
+            ATTR_UL_LIGHT_MODE,
+            ATTR_UL_LIGHT_MODE_NUMBER,
             ATTR_UL_MAC_ADDRESS,
             ATTR_UL_NODE_ID,
             ATTR_UL_SEGMENT_COUNT,
@@ -169,24 +175,30 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         self._device: UniledDevice = coordinator.device
         self._channel: UniledChannel = channel
         self._feature: UniledAttribute = feature
-
-        if channel.name:
-            if channel.name.upper().startswith(
-                feature.name.upper()
-            ) or channel.name.upper().endswith(feature.name.upper()):
-                self._attr_name = f"{channel.name}"
-            else:
-                self._attr_name = f"{channel.name} {feature.name}"
-        else:
-            self._attr_name = f"{feature.name}"
         self._attr_has_entity_name = True
 
-        mangled_name = channel.title.replace(" ", "_").lower()
+        if channel.name:
+            if feature.name.lower() not in channel.name.lower():
+                self._attr_name = f"{channel.name} {feature.name}"
+            else:
+                self._attr_name = f"{channel.name}"
+        else:
+            self._attr_name = f"{feature.name}"
+
+        if self._attr_name.lower() == feature.platform:
+            self._attr_name = None
+
         base_unique_id = coordinator.entry.unique_id or coordinator.entry.entry_id
-        self._attr_unique_id = f"_{base_unique_id}_{mangled_name}"
+        self._attr_unique_id = f"_{base_unique_id}"
+
+        if channel.identity is not None:
+            if mangled_name := channel.identity.replace(" ", "_").lower():
+                self._attr_unique_id = f"{self._attr_unique_id}_{mangled_name}"
 
         if (key := getattr(feature, "key", None)) is not None:
-            self._attr_unique_id = f"_{self._attr_unique_id}_{key}"
+            self._attr_unique_id = f"{self._attr_unique_id}_{key}"
+
+        # _LOGGER.debug("%s: %s (%s)", self._attr_unique_id, self._attr_name, channel.name)
 
         self._attr_entity_registry_enabled_default = feature.enabled
         self._attr_entity_category = None
