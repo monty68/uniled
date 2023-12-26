@@ -334,6 +334,10 @@ class BanlanX3(UniledBleModel):
                     ATTR_UL_AUDIO_INPUT,
                     self.str_if_key_in(input, BANLANX3_AUDIO_INPUTS, UNILED_UNKNOWN),
                 )
+                device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_ONOFF])
+                device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_ONOFF)
+                device.master.set(ATTR_UL_COLOR_LEVEL, level)
+                device.master.set(ATTR_HA_BRIGHTNESS, None)
             elif effect == BANLANX3_EFFECT_SOLID or effect == BANLANX3_EFFECT_WHITE:
                 device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_STATIC)
                 if effect == BANLANX3_EFFECT_WHITE:
@@ -353,14 +357,15 @@ class BanlanX3(UniledBleModel):
                 device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_RGB)
 
         elif mode == BANLANX3_LIGHT_MODE_AUTO_DYNAMIC:
-            device.master.set(ATTR_UL_EFFECT_SPEED, speed)
             device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC)
+            device.master.set(ATTR_UL_EFFECT_SPEED, speed)
         elif mode == BANLANX3_LIGHT_MODE_AUTO_SOUND:
+            device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
+            device.master.set(ATTR_UL_SENSITIVITY, gain)
             device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_ONOFF])
             device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_ONOFF)
+            device.master.set(ATTR_UL_COLOR_LEVEL, level)
             device.master.set(ATTR_HA_BRIGHTNESS, None)
-            device.master.set(ATTR_UL_SENSITIVITY, gain)
-            device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
         return True
 
     def build_on_connect(self, device: UniledBleDevice) -> list[bytearray] | None:

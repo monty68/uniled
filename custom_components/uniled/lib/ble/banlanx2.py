@@ -482,6 +482,10 @@ class BanlanX2(UniledBleModel):
                     ATTR_UL_AUDIO_INPUT,
                     self.str_if_key_in(input, BANLANX2_AUDIO_INPUTS, UNILED_UNKNOWN),
                 )
+                device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_ONOFF])
+                device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_ONOFF)
+                device.master.set(ATTR_UL_COLOR_LEVEL, level)
+                device.master.set(ATTR_HA_BRIGHTNESS, None)
             elif effect == BANLANX2_EFFECT_SOLID or effect == BANLANX2_EFFECT_WHITE:
                 device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_STATIC)
                 if effect == BANLANX2_EFFECT_WHITE:
@@ -495,7 +499,7 @@ class BanlanX2(UniledBleModel):
                     return True
             else:
                 device.master.set(ATTR_UL_EFFECT_SPEED, speed)
-                device.master.status.set(ATTR_UL_EFFECT_LENGTH, length)
+                device.master.set(ATTR_UL_EFFECT_LENGTH, length)
                 device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC)
 
             if effect in BANLANX2_COLORABLE_EFFECTS:
@@ -503,80 +507,15 @@ class BanlanX2(UniledBleModel):
 
         elif mode == BANLANX2_LIGHT_MODE_AUTO_DYNAMIC:
             device.master.set(ATTR_UL_EFFECT_SPEED, speed)
-            device.master.status.set(ATTR_UL_EFFECT_LENGTH, length)
+            device.master.set(ATTR_UL_EFFECT_LENGTH, length)
             device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC)
         elif mode == BANLANX2_LIGHT_MODE_AUTO_SOUND:
             device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_ONOFF])
             device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_ONOFF)
+            device.master.set(ATTR_UL_COLOR_LEVEL, level)
             device.master.set(ATTR_HA_BRIGHTNESS, None)
             device.master.set(ATTR_UL_SENSITIVITY, gain)
             device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
-        return True
-
-
-
-
-
-        device.master.status.replace(
-            {
-                ATTR_UL_DEVICE_FORCE_REFRESH: True,
-                ATTR_UL_POWER: data[0] == 1,
-                ATTR_UL_LIGHT_MODE_NUMBER: mode,
-                ATTR_UL_LIGHT_MODE: self.str_if_key_in(
-                    mode, BANLANX2_LIGHT_MODES, UNILED_UNKNOWN
-                ),
-                ATTR_HA_EFFECT: self.str_if_key_in(
-                    effect, BANLANX2_EFFECTS_RGBW_SOUND, UNILED_UNKNOWN
-                ),
-                ATTR_UL_EFFECT_NUMBER: effect,
-                ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
-                ATTR_UL_EFFECT_LOOP: True if mode != 0 else False,
-            }
-        )
-
-        if mode == BANLANX2_LIGHT_MODE_SINGULAR:
-            if self.colors == 4:
-                order_type = UNILED_CHIP_ORDER_RGBW
-                if effect == BANLANX2_EFFECT_WHITE:
-                    device.master.status.set(ATTR_HA_BRIGHTNESS, cold)
-            else:
-                order_type = UNILED_CHIP_ORDER_RGB
-
-            if effect in BANLANX2_COLORABLE_EFFECTS:
-                device.master.status.set(ATTR_HA_RGB_COLOR, (data[7], data[8], data[9]))
-                device.master.status.set(ATTR_HA_BRIGHTNESS, level)
-            elif self.colors == 4 and effect != BANLANX2_EFFECT_WHITE:
-                device.master.status.set(ATTR_HA_WHITE, cold)
-
-            device.master.status.set(
-                ATTR_UL_CHIP_ORDER, self.chip_order_name(order_type, chip_order)
-            )
-
-            if effect == BANLANX2_EFFECT_SOLID or effect == BANLANX2_EFFECT_WHITE:
-                device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_STATIC)
-
-            elif effect in BANLANX2_EFFECTS_SOUND:
-                device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
-                device.master.status.set(ATTR_UL_SENSITIVITY, gain)
-                device.master.status.set(
-                    ATTR_UL_AUDIO_INPUT,
-                    self.str_if_key_in(input, BANLANX2_AUDIO_INPUTS, UNILED_UNKNOWN),
-                )
-            else:
-                device.master.status.set(ATTR_UL_EFFECT_SPEED, speed)
-                device.master.status.set(ATTR_UL_EFFECT_LENGTH, length)
-                device.master.status.set(
-                    ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC
-                )
-        elif mode == BANLANX2_LIGHT_MODE_AUTO_DYNAMIC:
-            device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC)
-            device.master.status.set(ATTR_UL_EFFECT_SPEED, speed)
-            device.master.status.set(ATTR_UL_EFFECT_LENGTH, length)
-        elif mode == BANLANX2_LIGHT_MODE_AUTO_SOUND:
-            device.master.status.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
-            device.master.status.set(ATTR_HA_BRIGHTNESS, None)
-            device.master.status.set(ATTR_UL_SENSITIVITY, gain)
-
         return True
 
     def build_on_connect(self, device: UniledBleDevice) -> list[bytearray] | None:
