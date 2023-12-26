@@ -45,13 +45,22 @@ class UniledMaster(UniledChannel):
         super().__init__(0)
 
     @property
-    def name(self) -> str:
+    def name(self) -> str | None:
         """Returns the channel name."""
         if self.device.channels == 1:
             return ""
         if self.device.channels > 1 and self._name is not None:
             return self._name
         return super().name
+
+    @property
+    def identity(self) -> str | None:
+        """Returns the channel identity."""
+        if self.device.channels == 1:
+            return None       
+        if self.device.channels > 1 and self._name is not None:
+            return self._name.replace(" ", "_").lower()
+        return super().identity
 
     @property
     def device(self) -> UniledDevice:
@@ -66,16 +75,15 @@ class UniledMaster(UniledChannel):
 class UniledDevice:
     """UniLED Base Device Class"""
 
-    _model: UniledModel | None = None
-    _config = None
-    _started = True
-    _channels: list[UniledChannel] = list()
-    _callbacks: list[Callable[[UniledChannel], None]] = list()
-    _last_notification_data: bytearray = ()
-    _last_notification_time = None
-
     def __init__(self, config: Any) -> None:
         """Init the UniLED Base Driver"""
+        self._model: UniledModel | None = None
+        self._config = None
+        self._started = True
+        self._channels: list[UniledChannel] = list()
+        self._callbacks: list[Callable[[UniledChannel], None]] = list()
+        self._last_notification_data: bytearray = ()
+        self._last_notification_time = None
         if isinstance(config, dict) or isinstance(config, MappingProxyType):
             self._config = config
 
@@ -192,9 +200,10 @@ class UniledDevice:
         """Started."""
         return self._started
     
-    async def startup(self, event = None) -> None:
+    async def startup(self, event = None) -> bool:
         """Startup the device."""
         self._started = True
+        return True
 
     async def shutdown(self, event = None) -> None:
         """Shutdown the device."""
