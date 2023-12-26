@@ -10,19 +10,10 @@ from typing import Any, Final
 from os import urandom
 
 from . import packetutils as pckt
-from .telink import *
+from .zengge import *
 from .cloud import MagicHue
-from .node import (
-    ZENGGE_DEVICE_TYPE_LIGHT_BULB,
-    ZENGGE_DEVICE_TYPE_LIGHT_STRIP,
-    ZENGGE_DEVICE_TYPE_PANEL_RGBCCT,
-    ZenggeNode,
-)
-from .color import (
-    ZENGGE_MIN_MIREDS,
-    ZENGGE_MAX_MIREDS,
-    ZenggeColor,
-)
+from .color import ZenggeColor
+from .node import ZenggeNode
 from ..ble.device import (
     UNILED_BLE_NOTFICATION_TIMEOUT,
     UNILED_BLE_BAD_RSSI,
@@ -44,14 +35,13 @@ from ..const import (
     COLOR_MODE_WHITE,
     ATTR_HA_BRIGHTNESS,
     ATTR_HA_COLOR_MODE,
-    ATTR_HA_COLOR_TEMP,
+    ATTR_HA_COLOR_TEMP_KELVIN,
     ATTR_HA_EFFECT,
-    ATTR_HA_MAX_MIREDS,
-    ATTR_HA_MIN_MIREDS,
+    ATTR_HA_MAX_COLOR_TEMP_KELVIN,
+    ATTR_HA_MIN_COLOR_TEMP_KELVIN,
     ATTR_HA_RGB_COLOR,
-    ATTR_HA_RGBW_COLOR,
-    ATTR_HA_RGBWW_COLOR,
     ATTR_HA_SUPPORTED_COLOR_MODES,
+    ATTR_HA_TRANSITION,
     ATTR_HA_WHITE,
     ATTR_UL_DEVICE_FORCE_REFRESH,
     ATTR_UL_LIGHT_MODE_NUMBER,
@@ -64,6 +54,7 @@ from ..const import (
     ATTR_UL_STATUS,
 )
 
+import math
 import time
 import struct
 import asyncio
@@ -72,14 +63,6 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-# Device 'bd2c53ed2e7c15ff' (F8:1D:78:68:28:43)
-#   11 02 43 28 68 78
-#   11 02 43 28 68 78 02 02 01 02 00 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
-#
-# Device 'bd2c53ed2e7c15ff' (F8:1D:78:68:44:C1)
-#   11 02 c1 44 68 78
-#   11 02 c1 44 68 78 02 02 01 03 00 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
-#
 UNILED_TRANSPORT_ZNG: Final = "zng"
 
 CONF_ZNG_ACTIVE_SCAN: Final = "active_scan"
@@ -91,84 +74,6 @@ CONF_ZNG_USERNAME: Final = "username"
 
 ZENGGE_UPDATE_SECONDS: Final = 40
 
-ZENGGE_MANUFACTURER_ID: Final = 63517
-ZENGGE_MANUFACTURER: Final = "Hao Deng"
-ZENGGE_DESCRIPTION: Final = "Zengge Mesh"
-ZENGGE_MODEL_NAME: Final = "ZENGGE"
-ZENGGE_MASTER_NAME: Final = "Mesh"
-ZENGGE_MESH_ADDRESS_BRIDGE: Final = 255
-ZENGGE_MESH_ADDRESS_NONE: Final = TELINK_MESH_ADDRESS_NONE
-
-ZENGGE_DEFAULT_MESH_UUID: Final = 0x0211
-ZENGGE_DEFAULT_MESH_KEY: Final = "ZenggeMesh"
-ZENGGE_DEFAULT_MESH_PASS: Final = "ZenggeTechnology"
-ZENGGE_DEFAULT_MESH_TOKEN: Final = None
-
-ZENGGE_STATUS_ONLINE: Final = "Online"
-ZENGGE_STATUS_OFFLINE: Final = "Offline"
-
-ZENGGE_WIRING_CONNECTION_NONE: Final = 0
-ZENGGE_WIRING_CONNECTION_RGB: Final = 1
-ZENGGE_WIRING_CONNECTION_RGB_W: Final = 2
-ZENGGE_WIRING_CONNECTION_RGBW: Final = 3
-ZENGGE_WIRING_CONNECTION_RGB_CCT: Final = 4
-ZENGGE_WIRING_CONNECTION_RGBCCT: Final = 5
-ZENGGE_WIRING_CONNECTION_DIM: Final = 6
-ZENGGE_WIRING_CONNECTION_CCT: Final = 7
-
-ZENGGE_WIRING_CONTROL_NONE: Final = 0
-ZENGGE_WIRING_CONTROL_RGB: Final = 1
-ZENGGE_WIRING_CONTROL_RGB_W: Final = 2  # RGB / W
-ZENGGE_WIRING_CONTROL_RGBW: Final = 3  # RGB & W
-ZENGGE_WIRING_CONTROL_RGB_CCT: Final = 4
-ZENGGE_WIRING_CONTROL_RGBCCT: Final = 5
-ZENGGE_WIRING_CONTROL_WARM: Final = 6
-ZENGGE_WIRING_CONTROL_COLD: Final = 7
-ZENGGE_WIRING_CONTROL_CCT: Final = 8
-
-# STATEACTION_POWER = 0x01
-# STATEACTION_BRIGHTNESS = 0x02
-# STATEACTION_INCREASEBRIGHTNESS = 0x03
-# STATEACTION_DECREASEBRIGHTNESS = 0x04
-
-ZENGGE_COLOR_MODE_RGB: Final = 0x60
-ZENGGE_COLOR_MODE_WARMWHITE: Final = 0x61
-ZENGGE_COLOR_MODE_CCT: Final = 0x62
-ZENGGE_COLOR_MODE_AUX: Final = 0x63
-ZENGGE_COLOR_MODE_CCTAUX: Final = 0x64
-
-ZENGGE_DIMMING_TARGET_RGBKWC: Final = 0x01  # Set RGB, Keep WC
-ZENGGE_DIMMING_TARGET_WCKRGB: Final = 0x02  # Set WC, Keep RGB
-ZENGGE_DIMMING_TARGET_RGBWC: Final = 0x03  # Set RGB & WC
-ZENGGE_DIMMING_TARGET_RGBOWC: Final = 0x04  # Set RGB, WC Off
-ZENGGE_DIMMING_TARGET_WCORGB: Final = 0x05  # Set WC, RGB Off
-ZENGGE_DIMMING_TARGET_AUTO: Final = 0x06  # Set lights according to situation
-
-ZENGGE_EFFECT_SOLID: Final = "Solid"
-ZENGGE_EFFECT_UNKNOWN: Final = "?FX?"
-
-ZENGGE_EFFECT_LIST: Final = {
-    0x01:   "Seven Color Cross Fade",
-    0x02:   "Red Gradual Change",
-    0x03:   "Green Gradual Change",
-    0x04:   "Blue Gradual Change",
-    0x05:   "Yellow Gradual Change",
-    0x06:   "Cyan Gradual Change",
-    0x07:   "Purple Gradual Change",
-    0x08:   "White Gradual Change",
-    0x09:   "Red/Green Cross Fade",
-    0x0A:   "Red/Blue Cross Fade",
-    0x0B:   "Green/Blue Cross Fade",
-    0x0C:   "Seven Color Strobe",
-    0x0D:   "Red Strobe Flash",
-    0x0E:   "Green Strobe Flash",
-    0x0F:   "Blue Strobe Flash",
-    0x10:   "Yellow Strobe Flash",
-    0x11:   "Cyan Strobe Flash",
-    0x12:   "Purple Strobe Flash",
-    0x13:   "White Strobe Flash",
-    0x14:   "Seven Color Jumping Change",
- }
 
 ##
 ## Zengge Master
@@ -185,12 +90,12 @@ class ZenggeMaster(ZenggeNode):
     @property
     def name(self) -> str:
         """Returns the channel name."""
-        return ZENGGE_MASTER_NAME
+        return ""
 
     @property
-    def title(self) -> str:
+    def identity(self) -> str:
         """Returns the channel title."""
-        return ZENGGE_DESCRIPTION
+        return ZENGGE_MASTER_IDENTITY
 
     @property
     def manager(self) -> ZenggeManager:
@@ -224,16 +129,16 @@ class ZenggeModel(UniledBleModel):
             channels=0,
             ble_manufacturer_data=None,
             ble_manufacturer_id=ZENGGE_MANUFACTURER_ID,
-            ble_service_uuids=[TELINK_UUID_SERVICE],
-            ble_notify_uuids=[TELINK_UUID_STATUS_CHAR],
-            ble_write_uuids=[TELINK_UUID_COMMAND_CHAR],
-            ble_read_uuids=[TELINK_UUID_COMMAND_CHAR],
+            ble_service_uuids=[ZENGGE_UUID_SERVICE],
+            ble_notify_uuids=[ZENGGE_UUID_STATUS_CHAR],
+            ble_write_uuids=[ZENGGE_UUID_WRITE_CHAR],
+            ble_read_uuids=[ZENGGE_UUID_READ_CHAR],
         )
 
     def color_modes(self, node: ZenggeNode) -> list:
         """Base node feature set"""
         if node.node_type == ZENGGE_DEVICE_TYPE_PANEL_RGBCCT:
-            return {}       
+            return {}
         if node.node_wiring == ZENGGE_WIRING_CONTROL_RGB_CCT:
             return {
                 COLOR_MODE_RGB,
@@ -255,19 +160,18 @@ class ZenggeModel(UniledBleModel):
         return int(round((percent * 255) / 100.0)) & 0xFF
 
     def cct_percentage(self, percent: int) -> int:
-        """Convert cct percentage to mireds, note % inversion"""
-        percent = 100 - percent
+        """Convert cct percentage to kelvin, note % inversion"""
         return (
-            ZENGGE_MIN_MIREDS
-            + int(round((percent * (ZENGGE_MAX_MIREDS - ZENGGE_MIN_MIREDS)) / 100.0))
+            ZENGGE_MIN_KELVIN
+            + int(round((percent * (ZENGGE_MAX_KELVIN - ZENGGE_MIN_KELVIN)) / 100.0))
             & 0xFFFF
         )
 
-    def percentage_cct(self, mireds) -> int:
+    def percentage_cct(self, temp) -> int:
         """Convert mireds to cct percentage, note % inversion"""
-        whole = ZENGGE_MAX_MIREDS - ZENGGE_MIN_MIREDS
-        part = mireds - ZENGGE_MIN_MIREDS
-        return 100 - int(self.percentage(part, whole)) & 0xFF
+        whole = ZENGGE_MAX_KELVIN - ZENGGE_MIN_KELVIN
+        part = temp - ZENGGE_MIN_KELVIN
+        return int(self.percentage(part, whole)) & 0xFF
 
     def parse_notifications(
         self,
@@ -287,13 +191,15 @@ class ZenggeModel(UniledBleModel):
                 _LOGGER.warning(f"{node_id}: Bridge status: {repr(list(data))}")
                 return False
             elif node.node_type == ZENGGE_DEVICE_TYPE_PANEL_RGBCCT:
-                _LOGGER.warning(f"{node_id}: Panel status: {repr(list(data))}")
+                # _LOGGER.debug(f"{node_id}: Panel status: {repr(list(data))}")
                 connected = data[1] & 0xFF
                 status = {
-                    ATTR_UL_RSSI: node.rssi,
                     ATTR_UL_NODE_ID: node_id,
                     ATTR_UL_MAC_ADDRESS: node.address,
-                    ATTR_UL_STATUS: ZENGGE_STATUS_ONLINE if connected else ZENGGE_STATUS_OFFLINE,
+                    ATTR_UL_RSSI: node.rssi,
+                    ATTR_UL_STATUS: ZENGGE_STATUS_ONLINE
+                    if connected
+                    else ZENGGE_STATUS_OFFLINE,
                 }
                 node.status.replace(status, refresh=True)
                 return True
@@ -302,22 +208,20 @@ class ZenggeModel(UniledBleModel):
             level = data[2] & 0xFF
             power = level != 0 if connected != 0 else None
             mode = data[3] >> 6 & 0xFF
-            value1 = data[4]
+            value1 = data[4] & 0xFF
             value2 = data[3] & 0x3F
             brightness = self.byte_percentage(level)
 
             status = {
-                "type": node.node_type,
-                "wiring": node.node_wiring,
-                "mode": mode,
-                "val1": value1,
-                "val2": value2,
-                "360?": value1+value2,
-                ATTR_UL_DEVICE_FORCE_REFRESH: True,
-                ATTR_UL_RSSI: node.rssi,
                 ATTR_UL_NODE_ID: node_id,
                 ATTR_UL_MAC_ADDRESS: node.address,
-                ATTR_UL_STATUS: ZENGGE_STATUS_ONLINE if connected else ZENGGE_STATUS_OFFLINE,
+                ATTR_UL_RSSI: node.rssi,
+                ATTR_UL_STATUS: ZENGGE_STATUS_ONLINE
+                if connected
+                else ZENGGE_STATUS_OFFLINE,
+                ATTR_UL_NODE_TYPE: node.node_type,
+                ATTR_UL_NODE_WIRING: node.node_wiring,
+                ATTR_UL_LIGHT_MODE_NUMBER: mode,
                 ATTR_UL_POWER: power,
                 ATTR_HA_SUPPORTED_COLOR_MODES: self.color_modes(node),
                 ATTR_HA_EFFECT: ZENGGE_EFFECT_SOLID,
@@ -333,32 +237,27 @@ class ZenggeModel(UniledBleModel):
             if COLOR_MODE_WHITE in status[ATTR_HA_SUPPORTED_COLOR_MODES]:
                 status[ATTR_HA_WHITE] = node.status.get(ATTR_HA_WHITE, True)
             if COLOR_MODE_COLOR_TEMP in status[ATTR_HA_SUPPORTED_COLOR_MODES]:
-                status[COLOR_MODE_COLOR_TEMP] = node.status.get(
-                    COLOR_MODE_COLOR_TEMP, ZENGGE_MAX_MIREDS
+                status[ATTR_HA_COLOR_TEMP_KELVIN] = node.status.get(
+                    ATTR_HA_COLOR_TEMP_KELVIN, ZENGGE_MAX_KELVIN
                 )
-                status[ATTR_HA_MAX_MIREDS] = ZENGGE_MAX_MIREDS
-                status[ATTR_HA_MIN_MIREDS] = ZENGGE_MIN_MIREDS
+                status[ATTR_HA_MAX_COLOR_TEMP_KELVIN] = ZENGGE_MAX_KELVIN
+                status[ATTR_HA_MIN_COLOR_TEMP_KELVIN] = ZENGGE_MIN_KELVIN
+
+            status[ATTR_HA_TRANSITION] = node.status.get(ATTR_HA_TRANSITION, 0.2)
             status[ATTR_HA_COLOR_MODE] = COLOR_MODE_BRIGHTNESS
 
             if power:
                 if mode == 0:
                     status[ATTR_HA_COLOR_MODE] = COLOR_MODE_RGB
-                    rgb = ZenggeColor.decode_rgb(value1)
+                    rgb = ZenggeColor.decode_hsv_rgb(value1, value2, 1.0)
                     status[ATTR_HA_RGB_COLOR] = (rgb[0], rgb[1], rgb[2])
-
-                    h = ZenggeColor.h255_to_h360(value1)
-                    s = value2
-                    l = level
-                    rgb = ZenggeColor.hsv_to_rgb(h, s, l)
-                    status["rgb2"] = (rgb[0], rgb[1], rgb[2])
-
                 elif mode == 1:
                     if (
                         node.node_wiring == ZENGGE_WIRING_CONNECTION_CCT
                         or node.node_wiring == ZENGGE_WIRING_CONNECTION_RGB_CCT
                     ):
                         status[ATTR_HA_COLOR_MODE] = COLOR_MODE_COLOR_TEMP
-                        status[ATTR_HA_COLOR_TEMP] = self.cct_percentage(value1)
+                        status[ATTR_HA_COLOR_TEMP_KELVIN] = self.cct_percentage(value1)
                     else:
                         status[
                             ATTR_HA_COLOR_MODE
@@ -370,8 +269,8 @@ class ZenggeModel(UniledBleModel):
             node.status.replace(status, refresh=True)
             return True
 
-        if (node := manager.notified_new_node(node_id)) is not None:
-            node.status.replace(status, refresh=True)
+        # if (node := manager.notified_new_node(node_id)) is not None:
+        #    node.status.replace(status, refresh=True)
         return True
 
     def _command(
@@ -456,11 +355,14 @@ class ZenggeModel(UniledBleModel):
             dest=node.node_id,
         )
 
-    def build_color_temp_command(
+    def build_color_temp_kelvin_command(
         self, manager: ZenggeManager, node: ZenggeNode, temp: int
     ) -> bytearray | None:
         cct = self.percentage_cct(temp)
+
+        #  bArr[3] = (byte) ((f3 + 0.005f) * 100.0f);
         level = self.percentage(node.status.get(ATTR_HA_BRIGHTNESS, 255), 255)
+
         node.status.set(ATTR_HA_COLOR_MODE, COLOR_MODE_COLOR_TEMP)
         return self._command(
             manager,
@@ -486,30 +388,20 @@ class ZenggeModel(UniledBleModel):
     ) -> bytearray:
         """The bytes to send for an effect change"""
         if isinstance(value, str):
-            effect = self.int_if_str_in(
-                value, ZENGGE_EFFECT_LIST, 0
-            )
+            effect = self.int_if_str_in(value, ZENGGE_EFFECT_LIST, 0)
         elif (effect := int(value)) not in ZENGGE_EFFECT_LIST:
             return None
-        return self._command(
-            manager, C_COLOR, 0x80, 5, 20, dest=node.node_id
+        # Effect, Speed (lower value = Faster FX), Level
+        speed = 0
+        level = 100
+        return self._command_packet(
+            manager, 0xED, bytearray([0xFF, effect, speed, level]), dest=node.node_id
         )
 
-
-        return self._command(
-            manager,
-            C_PRESET,
-            1,
-            1,
-            2,
-            dest=node.node_id,
-        )
-
-    def fetch_effect_list(
-        self, manager: ZenggeManager, node: ZenggeNode
-    ) -> list:
+    def fetch_effect_list(self, manager: ZenggeManager, node: ZenggeNode) -> list:
         """Return list of effect names"""
         return list(ZENGGE_EFFECT_LIST.values())
+
 
 ##
 ## UniLed Zengge Device Manager
@@ -572,7 +464,9 @@ class ZenggeManager(UniledBleDevice):
         self._cloud_user = cloud_user
         self._cloud_pass = cloud_pass
         self._cloud_area = cloud_area
-        self._nodes[mesh_uuid] = ZenggeMaster(self) # uuid or bridge ID or mesh_id ?????
+        self._nodes[mesh_uuid] = ZenggeMaster(
+            self
+        )  # uuid or bridge ID or mesh_id ?????
 
     @property
     def transport(self) -> str:
@@ -602,7 +496,9 @@ class ZenggeManager(UniledBleDevice):
     @property
     def mesh_uuid(self) -> int:
         """Mesh ID"""
-        return self._mesh_uuid if self._mesh_uuid is not None else ZENGGE_DEFAULT_MESH_UUID
+        return (
+            self._mesh_uuid if self._mesh_uuid is not None else ZENGGE_DEFAULT_MESH_UUID
+        )
 
     @property
     def mesh_key(self) -> str:
@@ -645,39 +541,31 @@ class ZenggeManager(UniledBleDevice):
                 self._mesh_key = location["meshKey"]
                 self._mesh_pass = location["meshPassword"]
                 self._mesh_token = location["meshLTK"]
-                self.update_nodes(location["deviceList"])
+                self.update_nodes(location)
         return True
 
-    def update_nodes(self, devicelist) -> None:
+    def update_nodes(self, location) -> None:
         """Extract node information from selected cloud location results"""
+        devicelist = location.get("deviceList", None)
         if devicelist is not None:
-            for n in devicelist:
-                node_mesh = n.get("meshUUID", 0)
+            for data in devicelist:
+                node_mesh = data.get("meshUUID", 0)
                 if node_mesh != self.mesh_uuid:
                     continue
-                node_id = n.get("meshAddress", TELINK_MESH_ADDRESS_NONE)
-                if node_id == TELINK_MESH_ADDRESS_NONE:
+                node_id = data.get("meshAddress", ZENGGE_MESH_ADDRESS_NONE)
+                if node_id == ZENGGE_MESH_ADDRESS_NONE:
                     continue
-                node_mac = n.get("macAddress", None)
-                node_name = n.get("displayName", None)
-                node_type = n.get("deviceType", None)
-                node_wiring = n.get("wiringType", None)
+                data["deviceArea"] = location.get("displayName")
+                data["meshKey"] = location.get("meshKey")
+                data["meshPassword"] = location.get("meshPassword")
+                data["meshLTK"] = location.get("meshLTK")
 
                 if node_id not in self._nodes:
-                    node = ZenggeNode(
-                        self.mesh_uuid,
-                        node_id,
-                        node_type,
-                        node_wiring,
-                        node_mac,
-                        node_name,
-                    )
+                    node = ZenggeNode(node_mesh, node_id, data)
                     self._nodes[node_id] = node
-                    _LOGGER.debug("CREATED NODE: %s", n)
                 else:
                     node = self._nodes[node_id]
-                    node.update(node_type, node_wiring, node_mac, node_name)
-                    _LOGGER.debug("UPDATED NODE: %s", n)
+                    node.update_data(data)
 
         if len(self._nodes) <= 1:
             _LOGGER.warning("%s: No mesh node configuration details found.", self.name)
@@ -689,7 +577,7 @@ class ZenggeManager(UniledBleDevice):
         _LOGGER.info("%s: Starting mesh...", self.name)
         self._starting = True
         async with self._operation_lock:
-            await self.cloud_refresh() # Exception on failure??
+            await self.cloud_refresh()  # Exception on failure??
             try:
                 success = await self._async_ensure_connected(force=True)
             except Exception as ex:
@@ -699,10 +587,8 @@ class ZenggeManager(UniledBleDevice):
                 success = False
         _LOGGER.debug("Mesh startup state: %s", success)
         self._started = True
-        if success:
-            await self.update()
         self._starting = False
-        return self._started
+        return success
 
     async def shutdown(self, event=None) -> None:
         """Shutdown the mesh."""
@@ -798,8 +684,6 @@ class ZenggeManager(UniledBleDevice):
             return
 
         if node_id not in self._nodes:
-            node = ZenggeNode(mesh_uuid, node_id)
-            self._nodes[node_id] = node
             _LOGGER.info(
                 "%s: Discovered node '%s' (%s), type=%d; RSSI: %s",
                 self.name,
@@ -808,6 +692,8 @@ class ZenggeManager(UniledBleDevice):
                 node_type,
                 advert.rssi,
             )
+            node = ZenggeNode(mesh_uuid, node_id, {"deviceType": node_type})
+            self._nodes[node_id] = node
 
         if isinstance(self._nodes[node_id], ZenggeNode):
             self._nodes[node_id].update_device(device, advert)
@@ -877,10 +763,10 @@ class ZenggeManager(UniledBleDevice):
             self.mesh_key.encode(), self.mesh_pass.encode(), session_random
         )
         pairReply = await self._async_write_characteristic(
-            bytes(message), uuid=TELINK_UUID_PAIR_CHAR, withResponse=True
+            bytes(message), uuid=ZENGGE_UUID_PAIR_CHAR, withResponse=True
         )
         await asyncio.sleep(0.3)
-        reply = await self._async_read_characteristic(uuid=TELINK_UUID_PAIR_CHAR)
+        reply = await self._async_read_characteristic(uuid=ZENGGE_UUID_PAIR_CHAR)
 
         if reply[0] == 0x0D:
             self._mesh_session = pckt.make_session_key(
@@ -984,7 +870,7 @@ class ZenggeManager(UniledBleDevice):
         # Huge thanks to '@cocoto' for helping figure this issue out with Zengge!
         # await self.send_packet(0x01, bytes([]), self.mesh_uuid, uuid=TELINK_UUID_STATUS_CHAR)
         await self._async_send_mesh_command(
-            0x01, bytes([]), uuid=TELINK_UUID_STATUS_CHAR
+            0x01, bytes([]), uuid=ZENGGE_UUID_STATUS_CHAR
         )
         await asyncio.sleep(0.3)
         return await super()._async_start_notify()
@@ -995,7 +881,7 @@ class ZenggeManager(UniledBleDevice):
         data: bytes,
         withResponse: bool = True,
         retry: int = 0,
-        uuid=TELINK_UUID_COMMAND_CHAR,
+        uuid=ZENGGE_UUID_COMMAND_CHAR,
     ) -> Any:
         """Send mesh command"""
         packet = pckt.make_command_packet(
@@ -1015,7 +901,7 @@ class ZenggeManager(UniledBleDevice):
     async def _async_write_characteristic(
         self,
         data,
-        uuid=TELINK_UUID_COMMAND_CHAR,
+        uuid=ZENGGE_UUID_COMMAND_CHAR,
         withResponse: bool | None = None,
     ) -> Any:
         """Write GATT Characteristic"""
@@ -1039,7 +925,7 @@ class ZenggeManager(UniledBleDevice):
         return reply
 
     async def _async_read_characteristic(
-        self, uuid=TELINK_UUID_COMMAND_CHAR, timeout: int = 0
+        self, uuid=ZENGGE_UUID_COMMAND_CHAR, timeout: int = 0
     ) -> Any:
         """Read GATT Characteristic"""
         try:

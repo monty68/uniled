@@ -10,9 +10,6 @@ TELINK_UUID_PAIR_CHAR: Final = "00010203-0405-0607-0809-0a0b0c0d1914"
 TELINK_MANUFACTURER_ID: Final = 529
 TELINK_MESH_ADDRESS_NONE: Final = 0x00
 
-#: Data : None
-C_MESH_RESET = 0xE3
-
 #: Data : one byte
 C_LIGHT_MODE = 0x33
 
@@ -44,7 +41,10 @@ C_NOTIFICATION_RECEIVED = 0xDC
 C_MESH_ADDRESS = 0xE0
 
 #: 4 bytes : 0x4 red green blue
-C_COLOR = 0xE2
+C_COLOR = 0xE2 # -30
+
+#: Data : None
+C_MESH_RESET = 0xE3
 
 #: 7 bytes
 C_TIME = 0xE4

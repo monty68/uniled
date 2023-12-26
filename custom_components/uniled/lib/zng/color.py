@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import Final
 import colorsys
 import math
+import logging
 
-ZENGGE_MIN_KELVIN: Final = 2700
-ZENGGE_MAX_KELVIN: Final = 6500
-ZENGGE_MIN_MIREDS: Final = 153
-ZENGGE_MAX_MIREDS: Final = 370
+_LOGGER = logging.getLogger(__name__)
 
 class ZenggeColor:
     def __new__():
@@ -26,13 +24,15 @@ class ZenggeColor:
     @staticmethod
     def _saturate(value):
         return ZenggeColor._clamp(value, 0.0, 1.0)
-    
+       
     @staticmethod
-    def hue_to_rgb(h):
-        r = abs(h * 6.0 - 3.0) - 1.0
-        g = 2.0 - abs(h * 6.0 - 2.0)
-        b = 2.0 - abs(h * 6.0 - 4.0)
-        return ZenggeColor._saturate(r), ZenggeColor._saturate(g), ZenggeColor._saturate(b)
+    def normalize(value, min_from, max_from, min_to, max_to) -> int:
+        normalized = (value - min_from) / (max_from - min_from)
+        new_value = min(
+            round((normalized * (max_to - min_to)) + min_to),
+            max_to,
+        )
+        return max(new_value, min_to)
     
     @staticmethod
     def h360_to_h255(h360):
@@ -47,6 +47,13 @@ class ZenggeColor:
             return ZenggeColor._normal_round((h255*360)/254)
         else:
             return ZenggeColor._normal_round((h255*360)/255)
+
+    @staticmethod
+    def hue_to_rgb(h):
+        r = abs(h * 6.0 - 3.0) - 1.0
+        g = 2.0 - abs(h * 6.0 - 2.0)
+        b = 2.0 - abs(h * 6.0 - 4.0)
+        return ZenggeColor._saturate(r), ZenggeColor._saturate(g), ZenggeColor._saturate(b)
 
     @staticmethod
     def hsl_to_rgb(h, s=1, l=.5):
@@ -65,25 +72,14 @@ class ZenggeColor:
         return round(r), round(g), round(b)
     
     @staticmethod
-    def hsv_to_rgb(iH: float, iS: float, iV: float) -> tuple[int, int, int]:
-        """Convert an hsv color into its rgb representation.
-
-        Hue is scaled 0-360
-        Sat is scaled 0-100
-        Val is scaled 0-100
-        """
-        fRGB = colorsys.hsv_to_rgb(iH / 360, iS / 100, iV / 100)
-        return (int(fRGB[0] * 255), int(fRGB[1] * 255), int(fRGB[2] * 255))
-    
-    @staticmethod
-    def decode_rgb(h, s=1, l=0.5):
+    def decode_hsl_rgb(h, s=1, l=0.5):
         return ZenggeColor.hsl_to_rgb(ZenggeColor.h255_to_h360(h), s, l)
 
     @staticmethod
-    def normalize(value, min_from, max_from, min_to, max_to) -> int:
-        normalized = (value - min_from) / (max_from - min_from)
-        new_value = min(
-            round((normalized * (max_to - min_to)) + min_to),
-            max_to,
-        )
-        return max(new_value, min_to)
+    def decode_hsv_rgb(h, s, v=1):
+        return ZenggeColor.hsv_to_rgb(h / 255, s / 63, v)
+        return ZenggeColor.hsv_to_rgb(ZenggeColor.h255_to_h360(h) / 360, s / 63, v)
+   
+    @staticmethod
+    def hsv_to_rgb(h: float, s: float, v: float = 1.0) -> tuple[int, int, int]:
+        return tuple(round(i * 255) for i in colorsys.hsv_to_rgb(h,s,v))

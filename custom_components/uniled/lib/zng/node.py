@@ -12,6 +12,7 @@ from ..attributes import (
     UniledGroup,
 )
 from ..const import (
+    ATTR_HA_TRANSITION,
     ATTR_UL_LIGHT_MODE_NUMBER,
     ATTR_UL_MAC_ADDRESS,
     ATTR_UL_NODE_ID,
@@ -19,11 +20,7 @@ from ..const import (
     ATTR_UL_RSSI,
     ATTR_UL_STATUS,
 )
-from .telink import TELINK_MANUFACTURER_ID, TELINK_MESH_ADDRESS_NONE
-
-ZENGGE_DEVICE_TYPE_LIGHT_STRIP: Final = 2
-ZENGGE_DEVICE_TYPE_LIGHT_BULB: Final = 5
-ZENGGE_DEVICE_TYPE_PANEL_RGBCCT: Final = 35  # Powered RGB/CCT 4 Group Panel!
+from .zengge import *
 
 import logging
 
@@ -38,10 +35,11 @@ class ZenggeFeature(UniledAttribute):
 
     def __init__(self, node: ZenggeNode) -> None:
         self._extra = (
-            ATTR_UL_LIGHT_MODE_NUMBER,
-            ATTR_UL_MAC_ADDRESS,
             ATTR_UL_NODE_ID,
+            ATTR_UL_MAC_ADDRESS,
             ATTR_UL_RSSI,
+            ATTR_UL_LIGHT_MODE_NUMBER,
+            ATTR_HA_TRANSITION,
         )
         self._attr = ATTR_UL_POWER
         self._node = node
@@ -64,6 +62,8 @@ class ZenggeFeature(UniledAttribute):
             return "Panel"
         if self.node.node_type == ZENGGE_DEVICE_TYPE_LIGHT_STRIP:
             return "Strip"
+        if self.node.node_type == ZENGGE_DEVICE_TYPE_LIGHT_BULB:
+            return "Bulb"
         return "Light"
 
     @property
@@ -90,27 +90,16 @@ class ZenggeFeature(UniledAttribute):
 class ZenggeNode(UniledChannel):
     """Zengge Mesh Node"""
 
-    # _device: BLEDevice | None = None
-    # _advert: AdvertisementData | None
-    # _mesh_id: int
-
-    def __init__(
-        self,
-        mesh_id: int,
-        node_id: int,
-        node_type: int = 0,
-        node_wiring: int = 0,
-        node_mac: str | None = None,
-        node_name: str | None = None,
-    ):
+    def __init__(self, mesh_uuid: int, node_id: int, data: dict = {}):
         """Initialise Zengge Mesh Node"""
         self._device = None
         self._advert = None
-        self._mesh_id = mesh_id
-        if node_id != 0:
-            self._features = [ZenggeFeature(self)]
-        self.update(node_type, node_wiring, node_mac, node_name)
+        self._data: dict = {
+            "meshAddress": node_id,
+            "meshUUID": mesh_uuid,
+        }
         super().__init__(node_id)
+        self.update_data(data)
 
     @staticmethod
     def device_mesh_node_id(device: BLEDevice, advert: AdvertisementData):
@@ -127,33 +116,66 @@ class ZenggeNode(UniledChannel):
         """Update BLE device details"""
         self._device = device
         self._advert = advert
-        self._mesh_id, self._number, self._type = ZenggeNode.device_mesh_node_id(
-            device, advert
-        )
+        mesh_id, self._number, type = ZenggeNode.device_mesh_node_id(device, advert)
+        self._data["deviceType"] = type
 
-    def update(
-        self,
-        node_type: int = 0,
-        node_wiring: int = 0,
-        node_mac: str | None = None,
-        node_name: str | None = None,
-    ) -> None:
+    def update_data(self, data: dict) -> None:
         """Update Zengge Mesh Node"""
-        self._type = node_type
-        self._wiring = node_wiring
-        self._address = node_mac
-        self._name = node_name
+        if not data:
+            return
+        self._data = {**data, **self._data}
+        if self.number != 0:
+            self._features = [ZenggeFeature(self)]
+        _LOGGER.debug("Node %s data: %s", self.node_id, self._data)
+
+    @property
+    def mesh_uuid(self) -> int:
+        """Return nodes mesh ID"""
+        return self._data.get("meshUUID", ZENGGE_DEFAULT_MESH_UUID)
+
+    @property
+    def mesh_key(self) -> str:
+        """Mesh Key"""
+        return self._data.get("meshKey", ZENGGE_DEFAULT_MESH_KEY)
+
+    @property
+    def mesh_pass(self) -> str:
+        """Mesh Password"""
+        return self._data.get("meshPassword", ZENGGE_DEFAULT_MESH_PASS)
+
+    @property
+    def mesh_token(self) -> str:
+        """Mesh Long Term Token"""
+        return self._data.get("meshLTK", ZENGGE_DEFAULT_MESH_TOKEN)
+
+    @property
+    def node_id(self) -> int:
+        """Return nodes ID"""
+        return self._data.get("meshAddress", 0)
+
+    @property
+    def node_area(self) -> int:
+        """Return nodes area (location)"""
+        return self._data.get("deviceArea", None)
+
+    @property
+    def node_type(self) -> int:
+        """Return nodes type"""
+        return self._data.get("deviceType", 0)
+
+    @property
+    def node_wiring(self) -> int:
+        """Return nodes wiring"""
+        return self._data.get("wiringType", 0)
 
     @property
     def name(self) -> str:
         """Returns the nodes (display) name."""
-        if self._name is not None:
-            return self._name
-        return self.title
+        return self._data.get("displayName", f"Node {self.number}")
 
     @property
-    def title(self) -> str:
-        """Returns the nodes title."""
+    def identity(self) -> str:
+        """Returns the nodes identity string."""
         return f"Node {self.number}"
 
     @property
@@ -166,9 +188,7 @@ class ZenggeNode(UniledChannel):
         """Return attached BLE device address"""
         if isinstance(self.device, BLEDevice):
             return self.device.address
-        if not self._address:
-            return "??:??:??:??:??:??"
-        return self._address
+        return self._data.get("macAddress", "??:??:??:??:??:??")
 
     @property
     def advert(self) -> AdvertisementData:
@@ -181,23 +201,3 @@ class ZenggeNode(UniledChannel):
         if isinstance(self._advert, AdvertisementData):
             return self._advert.rssi
         return UNILED_BLE_BAD_RSSI
-
-    @property
-    def mesh_id(self) -> int:
-        """Return nodes mesh ID"""
-        return self._mesh_id
-
-    @property
-    def node_id(self) -> int:
-        """Return nodes ID"""
-        return self._number
-
-    @property
-    def node_type(self) -> int:
-        """Return nodes type"""
-        return self._type
-
-    @property
-    def node_wiring(self) -> int:
-        """Return nodes wiring"""
-        return self._wiring
