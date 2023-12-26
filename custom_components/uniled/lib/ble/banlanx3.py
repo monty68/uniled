@@ -282,6 +282,8 @@ class BanlanX3(UniledBleModel):
         chip_order = data[3]
         effect = data[4]
         mode = data[5]
+        rgb = (data[6], data[7], data[8])
+        gain = data[9]
         input = data[message_length - 3]
         cold = data[message_length - 2]
         # warm = data[message_length - 1]
@@ -307,7 +309,7 @@ class BanlanX3(UniledBleModel):
                 ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
                 ATTR_UL_EFFECT_LOOP: True if mode != 0 else False,
                 ATTR_HA_BRIGHTNESS: level,
-                ATTR_HA_RGB_COLOR: (data[6], data[7], data[8]),
+                ATTR_HA_RGB_COLOR: rgb,
             }
         )
 
@@ -327,7 +329,7 @@ class BanlanX3(UniledBleModel):
 
             if effect >= BANLANX3_EFFECT_SOUND and effect < BANLANX3_EFFECT_WHITE:
                 device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
-                device.master.set(ATTR_UL_SENSITIVITY, data[9])
+                device.master.set(ATTR_UL_SENSITIVITY, gain)
                 device.master.set(
                     ATTR_UL_AUDIO_INPUT,
                     self.str_if_key_in(input, BANLANX3_AUDIO_INPUTS, UNILED_UNKNOWN),
@@ -357,7 +359,7 @@ class BanlanX3(UniledBleModel):
             device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_ONOFF])
             device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_ONOFF)
             device.master.set(ATTR_HA_BRIGHTNESS, None)
-            device.master.set(ATTR_UL_SENSITIVITY, data[9])
+            device.master.set(ATTR_UL_SENSITIVITY, gain)
             device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
         return True
 
