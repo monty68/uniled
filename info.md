@@ -43,9 +43,12 @@ versions and once installed, any entities previously created, will not function 
   - **SP639E** / **SP649E** - SPI RGBW Controllers
   - **SP63AE** / **SP64AE** - SPI RGBCCT Controllers
 
+#### 💡Hints and Tips
+1. For those devices that support "Effect Length", set the length to the number of LEDS.
+   
 #### 🧐 Notes:
 1. These devices only support a single bluetooth connection at any one time. If you connect via the app, then HA will not be able to connect and visa versa, when HA is connected and controlling the device, you will not be able to connect to it via the app.
-2. For those controllers that support custom effects, such as the SP630E, UniLED only supports selecting the custom effect, you will have to disable the device in HA and use the android or IOS app to configure it first, then renable in HA.
+2. For those devices that support custom effects, such as the SP630E, UniLED only supports selecting the custom effect, you will have to disable the device in HA and use the android or IOS app to configure it first, then renable in HA.
 3. HA will report certain entities, such as Effect Speed as being unavailable when the chosen effect does not support it, for example when using a solid effect, the effect speed will show as unavailable until a dynamic effect is selected. 
 
 ### 📱Hao Deng
