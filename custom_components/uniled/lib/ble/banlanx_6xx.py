@@ -829,6 +829,8 @@ class SP6xxEProxy(UniledBleModel):
         self, device: BLEDevice, advertisement: AdvertisementData | None = None
     ) -> UniledBleModel | None:
         """Match to one of the SP6xxE devices"""
+        if not hasattr(advertisement, "manufacturer_data"):
+            return None
         for mid, data in advertisement.manufacturer_data.items():
             if mid != self.ble_manufacturer_id or data[1] != 0x10:
                 continue

@@ -77,6 +77,8 @@ class UniledBleModel(UniledModel):
         self, device: BLEDevice, advertisement: AdvertisementData | None = None
     ) -> bool:
         """Is a BLE device supported by UniLED."""
+        if not hasattr(advertisement, "manufacturer_data"):
+            return False
         for mid, data in advertisement.manufacturer_data.items():
             if isinstance(self.ble_manufacturer_id, list):
                 if mid not in self.ble_manufacturer_id:
@@ -146,12 +148,15 @@ class UniledBleDevice(UniledDevice):
         """Test if a BLE device is supported"""
         from .models import UNILED_BLE_MODELS
 
-        #_LOGGER.debug(
-        #    "Checking support for: '%s' (%s)... %s",
-        #    device.address,
-        #    device.name,
-        #    advertisement,
-        #)
+        if not device:
+            return None
+        
+        _LOGGER.debug(
+            "Checking support for: '%s' (%s)... %s",
+            device.address,
+            device.name,
+            advertisement,
+        )
 
         found = None
         for model in UNILED_BLE_MODELS:
@@ -189,7 +194,7 @@ class UniledBleDevice(UniledDevice):
         if found is None:
             _LOGGER.debug(
                 "Device '%s' (%s) not supported!",
-                device.address,
+                device.address or "??:??:??:??:??:??",
                 device.name,
             )
         else:
