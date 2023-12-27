@@ -557,7 +557,7 @@ class UniledBleDevice(UniledDevice):
             self._client = client
 
             if not self._resolve_characteristics(client.services):
-                _LOGGER.debug(
+                _LOGGER.warning(
                     "%s: Characteristic(s) missing, clearing cache.", self.name
                 )
                 await client.clear_cache()
@@ -782,17 +782,21 @@ class UniledBleDevice(UniledDevice):
     ##
     def _resolve_characteristics(self, services: BleakGATTServiceCollection) -> bool:
         """Resolve characteristics."""
+        _LOGGER.debug("%s: Test Characteristics: %s", self.name, self._model)
         if self._model:
             for characteristic in self._model.ble_write_uuids:
+                _LOGGER.debug("%s: Test Write Characteristic: %s", self.name, characteristic)
                 if char := services.get_characteristic(characteristic):
                     self._write_char = char
                     break
             if self._model.ble_read_uuids:
+                _LOGGER.debug("%s: Test Read Characteristic: %s", self.name, characteristic)
                 for characteristic in self._model.ble_read_uuids:
                     if char := services.get_characteristic(characteristic):
                         self._read_char = char
                         break
             if self._model.ble_notify_uuids:
+                _LOGGER.debug("%s: Test Notify Characteristic: %s", self.name, characteristic)
                 for characteristic in self._model.ble_notify_uuids:
                     if char := services.get_characteristic(characteristic):
                         self._notify_char = char
@@ -801,6 +805,9 @@ class UniledBleDevice(UniledDevice):
                 self._read_char = self._write_char
             if not self._notify_char:
                 self._notify_char = self._read_char
+        _LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
+        _LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
+        _LOGGER.debug("%s: Notify Characteristic: %s", self.name, self._notify_char)
         return bool(self._read_char and self._write_char and self._notify_char)
 
     ##
