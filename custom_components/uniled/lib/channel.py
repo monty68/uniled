@@ -17,14 +17,11 @@ _LOGGER = logging.getLogger(__name__)
 class UniledStatus:
     """UniLED Channel Status Class"""
 
-    _channel: UniledChannel
-    _status: dict(str, Any)
-
     def __init__(self, channel: UniledChannel, status: dict(str, Any) = {}) -> None:
-        self._channel = channel
-        self._status = dict()
+        self._channel: UniledChannel = channel
+        self._status: dict(str, Any) = dict()
         self._status.update(status)
-        
+
     def __getattr__(self, attr):
         if str(attr).startswith("_"):
             if attr in self.__dict__:
@@ -86,15 +83,12 @@ class UniledStatus:
 class UniledChannel:
     """UniLED Channel Class"""
 
-    _number: int = 0
-    _status: UniledStatus
-    _features: list[UniledAttribute] = []
-    _callbacks: list[Callable[[UniledChannel], None]] = []
-    _context: Any
-
     def __init__(self, number: int) -> None:
         self._number = number
         self._status = UniledStatus(self)
+        self._features: list[UniledAttribute] = []
+        self._callbacks: list[Callable[[UniledChannel], None]] = []
+        self._context: Any
         _LOGGER.debug("Inititalized: %s (%s)", self.identity, hex(id(self._status)))
 
     def __del__(self):
