@@ -223,13 +223,13 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         device_info: DeviceInfo = {
             ATTR_IDENTIFIERS: {(DOMAIN, entry.entry_id)},
             ATTR_NAME: device.name,
-            ATTR_MODEL: device.master.get(ATTR_UL_INFO_MODEL_NAME, device.model_name),
+            ATTR_MODEL: device.master.get(
+                ATTR_UL_INFO_HARDWARE, device.description
+            ),
             ATTR_MANUFACTURER: device.master.get(
                 ATTR_UL_INFO_MANUFACTURER, device.manufacturer
             ),
-            ATTR_HW_VERSION: device.master.get(
-                ATTR_UL_INFO_HARDWARE, device.description
-            ),
+            ATTR_HW_VERSION: device.master.get(ATTR_UL_INFO_MODEL_NAME, device.model_name),
             ATTR_SW_VERSION: device.master.get(ATTR_UL_INFO_FIRMWARE, None),
         }
 
