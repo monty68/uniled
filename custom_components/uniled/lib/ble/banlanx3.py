@@ -510,7 +510,9 @@ SP614E = BanlanX3(
     id=0x614E,
     name="SP614E",
     info="PWM RGBW (Music) Controller",
-    data=[b"\x0a\x00", b"\x0a\x21"],
+    # Fix: Issue #42 - Second byte can be different so only check first byte is '0x0a'
+    data=b"\x0a",
+    # data=[b"\x0a\x00", b"\x0a\x21"],
     colors=4,
     intmic=True,
 )
