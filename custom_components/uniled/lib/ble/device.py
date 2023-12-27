@@ -782,7 +782,6 @@ class UniledBleDevice(UniledDevice):
     ##
     def _resolve_characteristics(self, services: BleakGATTServiceCollection) -> bool:
         """Resolve characteristics."""
-        _LOGGER.debug("%s: Test Characteristics: %s", self.name, self._model)
         if self._model:
             for characteristic in self._model.ble_write_uuids:
                 _LOGGER.debug("%s: Test Write Characteristic: %s", self.name, characteristic)
@@ -805,9 +804,9 @@ class UniledBleDevice(UniledDevice):
                 self._read_char = self._write_char
             if not self._notify_char:
                 self._notify_char = self._read_char
-        _LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
-        _LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
-        _LOGGER.debug("%s: Notify Characteristic: %s", self.name, self._notify_char)
+        #_LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
+        #_LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
+        #_LOGGER.debug("%s: Notify Characteristic: %s", self.name, self._notify_char)
         return bool(self._read_char and self._write_char and self._notify_char)
 
     ##
