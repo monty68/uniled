@@ -43,7 +43,7 @@ from ..const import (
     ATTR_HA_SUPPORTED_COLOR_MODES,
     ATTR_HA_TRANSITION,
     ATTR_HA_WHITE,
-    ATTR_UL_DEVICE_FORCE_REFRESH,
+    ATTR_UL_COLOR_LEVEL,
     ATTR_UL_LIGHT_MODE_NUMBER,
     ATTR_UL_MAC_ADDRESS,
     ATTR_UL_NODE_ID,
@@ -160,7 +160,7 @@ class ZenggeModel(UniledBleModel):
         return int(round((percent * 255) / 100.0)) & 0xFF
 
     def cct_percentage(self, percent: int) -> int:
-        """Convert cct percentage to kelvin, note % inversion"""
+        """Convert cct percentage to kelvin"""
         return (
             ZENGGE_MIN_KELVIN
             + int(round((percent * (ZENGGE_MAX_KELVIN - ZENGGE_MIN_KELVIN)) / 100.0))
@@ -168,7 +168,7 @@ class ZenggeModel(UniledBleModel):
         )
 
     def percentage_cct(self, temp) -> int:
-        """Convert mireds to cct percentage, note % inversion"""
+        """Convert kelvins to cct percentage"""
         whole = ZENGGE_MAX_KELVIN - ZENGGE_MIN_KELVIN
         part = temp - ZENGGE_MIN_KELVIN
         return int(self.percentage(part, whole)) & 0xFF
@@ -251,6 +251,7 @@ class ZenggeModel(UniledBleModel):
                     status[ATTR_HA_COLOR_MODE] = COLOR_MODE_RGB
                     rgb = ZenggeColor.decode_hsv_rgb(value1, value2, 1.0)
                     status[ATTR_HA_RGB_COLOR] = (rgb[0], rgb[1], rgb[2])
+                    status[ATTR_UL_COLOR_LEVEL] = brightness
                 elif mode == 1:
                     if (
                         node.node_wiring == ZENGGE_WIRING_CONNECTION_CCT
@@ -259,9 +260,8 @@ class ZenggeModel(UniledBleModel):
                         status[ATTR_HA_COLOR_MODE] = COLOR_MODE_COLOR_TEMP
                         status[ATTR_HA_COLOR_TEMP_KELVIN] = self.cct_percentage(value1)
                     else:
-                        status[
-                            ATTR_HA_COLOR_MODE
-                        ] = COLOR_MODE_BRIGHTNESS  # COLOR_MODE_WHITE
+                        # COLOR_MODE_WHITE?
+                        status[ATTR_HA_COLOR_MODE] = COLOR_MODE_BRIGHTNESS
                         status[ATTR_HA_WHITE] = status[ATTR_HA_BRIGHTNESS]
                 elif mode == 2:
                     status[ATTR_HA_EFFECT] = ZENGGE_EFFECT_UNKNOWN
@@ -485,14 +485,14 @@ class ZenggeManager(UniledBleDevice):
         return f"{self.transport}{hex(int(self.mesh_uuid))}".upper()
 
     @property
-    def connected(self) -> bool:
-        """Return if the mesh is connected."""
-        return self.available and self.mesh_session is not None
-
-    @property
     def channel_list(self) -> list[ZenggeNode]:
         """Return the number of channels"""
         return list(self._nodes.values())
+
+    @property
+    def connected(self) -> bool:
+        """Return if the mesh is connected."""
+        return self.available and self.mesh_session is not None
 
     @property
     def mesh_session(self) -> int:
@@ -735,14 +735,13 @@ class ZenggeManager(UniledBleDevice):
             )
             self._ble_device = node.device
             self._advertisement_data = node.advert
-            if await super()._async_ensure_connected():
+            if await super()._async_ensure_connected(node):
                 self._cancel_disconnect_timer()
                 if self.connected:
                     _LOGGER.info(
-                        "%s: Connected to node '%s' (%s), RSSI: %s",
+                        "%s: Connected to node '%s', RSSI: %s",
                         self.name,
                         node.number,
-                        node.address,
                         node.rssi,
                     )
                     return True
@@ -759,9 +758,9 @@ class ZenggeManager(UniledBleDevice):
     ##
     ## Pair with device
     ##
-    async def _async_pair_with_device(self) -> bool:
+    async def _async_pair_with_device(self, node: ZenggeNode) -> bool:
         """Login/Pair device"""
-        _LOGGER.info("%s: Pairing with node '%s'...", self.name, self.address)
+        _LOGGER.info("%s: Pairing with node '%s'...", self.name, node.number)
         assert self._connect_lock.locked(), "Lock not held"
         assert self.available, "Not connected"
         session_random = urandom(8)
@@ -776,8 +775,8 @@ class ZenggeManager(UniledBleDevice):
 
         if reply[0] == 0x0D:
             self._mesh_session = pckt.make_session_key(
-                self.mesh_key.encode(),
-                self.mesh_pass.encode(),
+                node.mesh_key.encode(),     # self.mesh_key.encode(),
+                node.mesh_pass.encode(),    # self.mesh_pass.encode(),
                 session_random,
                 reply[1:9],
             )
@@ -871,14 +870,14 @@ class ZenggeManager(UniledBleDevice):
                 exc_info=True,
             )
 
-    async def _async_start_notify(self) -> bool:
+    async def _async_start_notify(self, node: ZenggeNode) -> bool:
         """Start notification."""
         # Huge thanks to '@cocoto' for helping figure this issue out with Zengge!
         # await self.send_packet(0x01, bytes([]), self.mesh_uuid, uuid=TELINK_UUID_STATUS_CHAR)
         await self._async_send_mesh_command(
             0x01, bytes([]), uuid=ZENGGE_UUID_STATUS_CHAR
         )
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.2)
         return await super()._async_start_notify()
 
     async def _async_send_mesh_command(

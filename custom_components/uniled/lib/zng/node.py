@@ -207,3 +207,11 @@ class ZenggeNode(UniledChannel):
         if isinstance(self._advert, AdvertisementData):
             return self._advert.rssi
         return UNILED_BLE_BAD_RSSI
+
+    @property
+    def data(self) -> dict:
+        """Return device (cloud) data"""
+        if isinstance(self._data, dict):
+            return self._data
+        return {}
+    
