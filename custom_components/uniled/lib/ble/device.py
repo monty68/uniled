@@ -516,7 +516,7 @@ class UniledBleDevice(UniledDevice):
     ##
     ## Ensure Connected
     ##
-    async def _async_ensure_connected(self) -> bool:
+    async def _async_ensure_connected(self, context: Any = None) -> bool:
         """Ensure connection to device is established."""
         if self._connect_lock.locked():
             _LOGGER.debug(
@@ -570,7 +570,7 @@ class UniledBleDevice(UniledDevice):
             self._last_notification_data = ()
             self._reset_disconnect_timer()
 
-            if not await self._async_pair_with_device():
+            if not await self._async_pair_with_device(context):
                 _LOGGER.warning(
                     "%s: Pairing with '%s' failed!", self.name, client.address
                 )
@@ -578,16 +578,16 @@ class UniledBleDevice(UniledDevice):
                 await self._async_execute_disconnect_with_lock()
                 return False
 
-            return await self._async_start_notify()
+            return await self._async_start_notify(context)
 
     ##
     ## Pair & Notify
     ##
-    async def _async_pair_with_device(self) -> bool:
+    async def _async_pair_with_device(self, context: Any = None) -> bool:
         """Login/Pair device"""
         return True
 
-    async def _async_start_notify(self) -> bool:
+    async def _async_start_notify(self, context: Any = None) -> bool:
         """Start notification."""
         _LOGGER.debug(
             "%s: Subscribe to '%s' notifications: %s",
