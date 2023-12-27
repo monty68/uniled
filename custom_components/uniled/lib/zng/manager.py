@@ -410,6 +410,13 @@ class ZenggeManager(UniledBleDevice):
     """Zengge Mesh Manager Class"""
 
     @staticmethod
+    def match_model_name(model_name: str) -> ZenggeModel | None:
+        """Lookup model from name"""
+        if model_name == ZenggeModel().model_name:
+            return ZenggeModel()
+        return None
+
+    @staticmethod
     def device_mesh_uuid(
         device: BLEDevice, advertisement: AdvertisementData | None = None
     ) -> int | None:
@@ -453,8 +460,7 @@ class ZenggeManager(UniledBleDevice):
         config: Any,
     ) -> None:
         """Init the UniLED ZNG Model"""
-        self._model = ZenggeModel()
-        super().__init__(config, None, None, self.model_name)
+        super().__init__(config, None, None, ZenggeModel().model_name)
         self._started = False
         self._mesh_key = None
         self._mesh_pass = None
