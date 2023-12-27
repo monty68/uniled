@@ -784,18 +784,15 @@ class UniledBleDevice(UniledDevice):
         """Resolve characteristics."""
         if self._model:
             for characteristic in self._model.ble_write_uuids:
-                _LOGGER.debug("%s: Test Write Characteristic: %s", self.name, characteristic)
                 if char := services.get_characteristic(characteristic):
                     self._write_char = char
                     break
             if self._model.ble_read_uuids:
-                _LOGGER.debug("%s: Test Read Characteristic: %s", self.name, characteristic)
                 for characteristic in self._model.ble_read_uuids:
                     if char := services.get_characteristic(characteristic):
                         self._read_char = char
                         break
             if self._model.ble_notify_uuids:
-                _LOGGER.debug("%s: Test Notify Characteristic: %s", self.name, characteristic)
                 for characteristic in self._model.ble_notify_uuids:
                     if char := services.get_characteristic(characteristic):
                         self._notify_char = char
