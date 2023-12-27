@@ -34,15 +34,21 @@ class ZenggeFeature(UniledAttribute):
     """UniLED Light Feature Class"""
 
     def __init__(self, node: ZenggeNode) -> None:
-        self._extra = (
-            ATTR_UL_NODE_ID,
-            ATTR_UL_MAC_ADDRESS,
-            ATTR_UL_RSSI,
-            ATTR_UL_LIGHT_MODE_NUMBER,
-            ATTR_HA_TRANSITION,
-        )
-        self._attr = ATTR_UL_POWER
         self._node = node
+        super().__init__(
+            "light",
+            ATTR_UL_POWER,
+            None,
+            None,
+            None,
+            extra=(
+                ATTR_UL_NODE_ID,
+                ATTR_UL_MAC_ADDRESS,
+                ATTR_UL_RSSI,
+                ATTR_UL_LIGHT_MODE_NUMBER,
+                ATTR_HA_TRANSITION,
+            ),
+        )
 
     @property
     def attr(self) -> str:
@@ -51,7 +57,7 @@ class ZenggeFeature(UniledAttribute):
         return self._attr
 
     @property
-    def type(self) -> str:
+    def platform(self) -> str:
         if self.node.node_type == ZENGGE_DEVICE_TYPE_PANEL_RGBCCT:
             return "sensor"
         return "light"
