@@ -51,7 +51,9 @@ _LOGGER = logging.getLogger(__name__)
 
 BANLANX6XX_MANUFACTURER: Final = "SPLED (BanlanX)"
 BANLANX6XX_MANUFACTURER_ID: Final = 20563
-BANLANX6XX_UUID_SERVICE = [BANLANX6XX_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]]
+BANLANX6XX_UUID_SERVICE = [
+    BANLANX6XX_UUID_FORMAT.format(part) for part in ["e0ff", "ffe0"]
+]
 BANLANX6XX_UUID_WRITE = [BANLANX6XX_UUID_FORMAT.format(part) for part in ["ffe1"]]
 BANLANX6XX_UUID_READ = []
 
@@ -94,6 +96,11 @@ DICTOF_MODES: Final = {
     MODE_SOUND_WHITE: "Sound - White",
     MODE_CUSTOM_COLOR: "Custom",
 }
+
+LISTOF_DYNAMIC_MODES: Final = [
+    MODE_DYNAMIC_COLOR,
+    MODE_DYNAMIC_WHITE,
+]
 
 LISTOF_STATIC_MODES: Final = [
     MODE_STATIC_COLOR,
@@ -475,6 +482,7 @@ class _CONFIG:
                 effects[fx] = fxlist[fx].name
             return effects
 
+
 ##
 ## Light Type Configurations
 ##
@@ -649,16 +657,22 @@ class CFG_8C(CFG_89):
         self.cct = True
         self.order = UNILED_CHIP_ORDER_RGBCW
 
+
 ##
 ## Device Signatures
 ##
 dataclass(frozen=True)
-class Signature():
+
+
+class Signature:
     info: str
-    conf: Any   #dict(int, Any)
+    conf: Any  # dict(int, Any)
     ids: dict(int, str)
 
+
 dataclass(frozen=True)
+
+
 class SP630E(Signature):
     info = "RGB(CW) SPI/PWM (Music) Controller"
     conf = {
@@ -681,7 +695,10 @@ class SP630E(Signature):
         0x1F: "SP630E",
     }
 
+
 dataclass(frozen=True)
+
+
 class SP631E_SP641E(Signature):
     info = "PWM Single Color (Music) Controller"
     conf = {
@@ -692,106 +709,104 @@ class SP631E_SP641E(Signature):
         0x2C: "SP641E",
     }
 
+
 dataclass(frozen=True)
+
+
 class SP632E_SP642E(Signature):
     info = "PWM CCT (Music) Controller"
     conf = {
         0x03: CFG_83(),
     }
-    ids = {
-        0x21: "SP632E",
-        0x2D: "SP642E"
-    }
+    ids = {0x21: "SP632E", 0x2D: "SP642E"}
+
 
 dataclass(frozen=True)
+
+
 class SP633E_SP643E(Signature):
     info = "PWM RGB (Music) Controller"
     conf = {
         0x05: CFG_85(),
     }
-    ids = {
-        0x22: "SP633E",
-        0x2E: "SP643E"
-    }
+    ids = {0x22: "SP633E", 0x2E: "SP643E"}
+
 
 dataclass(frozen=True)
+
+
 class SP634E_SP644E(Signature):
     info = "PWM RGBW (Music) Controller"
     conf = {
         0x07: CFG_87(),
     }
-    ids = {
-        0x23: "SP634E",
-        0x2F: "SP644E"
-    }
+    ids = {0x23: "SP634E", 0x2F: "SP644E"}
+
 
 dataclass(frozen=True)
+
+
 class SP635E_SP645E(Signature):
     info = "PWM RGBCCT (Music) Controller"
     conf = {
         0x0A: CFG_8A(),
     }
-    ids = {
-        0x24: "SP635E",
-        0x30: "SP645E"
-    }
+    ids = {0x24: "SP635E", 0x30: "SP645E"}
+
 
 dataclass(frozen=True)
+
+
 class SP636E_SP646E(Signature):
     info = "SPI Single Color (Music) Controller"
     conf = {
         0x02: CFG_82(),
     }
-    ids = {
-        0x25: "SP636E",
-        0x31: "SP646E"
-    }
+    ids = {0x25: "SP636E", 0x31: "SP646E"}
+
 
 dataclass(frozen=True)
+
+
 class SP637E_SP647E(Signature):
     info = "SPI CCT (Music) Controller"
-    conf = {
-        0x04: CFG_84(),
-        0x0D: CFG_8D()
-    }
-    ids = {
-        0x26: "SP637E",
-        0x32: "SP647E"
-    }
+    conf = {0x04: CFG_84(), 0x0D: CFG_8D()}
+    ids = {0x26: "SP637E", 0x32: "SP647E"}
+
 
 dataclass(frozen=True)
+
+
 class SP638E_SP648E(Signature):
     info = "SPI RGB (Music) Controller"
     conf = {
         0x06: CFG_86(),
     }
-    ids = {
-        0x27: "SP638E",
-        0x33: "SP648E"
-    }
+    ids = {0x27: "SP638E", 0x33: "SP648E"}
+
 
 dataclass(frozen=True)
+
+
 class SP639E_SP649E(Signature):
     info = "SPI RGBW (Music) Controller"
     conf = {
         0x08: CFG_88(),
     }
-    ids = {
-        0x28: "SP639E",
-        0x34: "SP649E"
-    }
+    ids = {0x28: "SP639E", 0x34: "SP649E"}
+
 
 dataclass(frozen=True)
+
+
 class SP63AE_SP64AE(Signature):
     info = "SPI RGBCCT (Music) Controller"
     conf = {
         0x0B: CFG_8B(),
         0x0E: CFG_8E(),
     }
-    ids = {
-        0x29: "SP63AE",
-        0x35: "SP64AE"
-    }
+    ids = {0x29: "SP63AE", 0x35: "SP64AE"}
+
 
 MODEL_SIGNATURE_LIST: Final = [
     SP630E,
@@ -806,6 +821,7 @@ MODEL_SIGNATURE_LIST: Final = [
     SP639E_SP649E,
 ]
 
+
 ##
 ## BanlanX SP63XE Proxy Model
 ##
@@ -818,10 +834,7 @@ class SP6xxEProxy(UniledBleModel):
                 if model != name:
                     continue
                 return BanlanX6xx(
-                    id = id,
-                    name = name,
-                    info = signature.info,
-                    conf = signature.conf
+                    id=id, name=name, info=signature.info, conf=signature.conf
                 )
         return None
 
@@ -839,28 +852,26 @@ class SP6xxEProxy(UniledBleModel):
                     if id != data[0]:
                         continue
                     return BanlanX6xx(
-                        id = id,
-                        name = name,
-                        info = signature.info,
-                        conf = signature.conf
+                        id=id, name=name, info=signature.info, conf=signature.conf
                     )
         return None
-    
+
     def __init__(self, id: int, name: str, info: str):
         """Initialise class"""
         super().__init__(
-            model_num = id,
-            model_name = name,
-            description = info,
-            manufacturer = BANLANX6XX_MANUFACTURER,
+            model_num=id,
+            model_name=name,
+            description=info,
+            manufacturer=BANLANX6XX_MANUFACTURER,
             channels=1,
-            ble_manufacturer_id = BANLANX6XX_MANUFACTURER_ID,
-            ble_service_uuids = BANLANX6XX_UUID_SERVICE,
-            ble_write_uuids = BANLANX6XX_UUID_WRITE,
-            ble_read_uuids = BANLANX6XX_UUID_READ,
+            ble_manufacturer_id=BANLANX6XX_MANUFACTURER_ID,
+            ble_service_uuids=BANLANX6XX_UUID_SERVICE,
+            ble_write_uuids=BANLANX6XX_UUID_WRITE,
+            ble_read_uuids=BANLANX6XX_UUID_READ,
             ble_notify_uuids=[],
-            ble_manufacturer_data = bytearray([id & 0xFF, 0x10]),
+            ble_manufacturer_data=bytearray([id & 0xFF, 0x10]),
         )
+
 
 ##
 ## BanlanX SP6xxE Protocol Implementation
@@ -877,13 +888,11 @@ class BanlanX6xx(SP6xxEProxy):
 
     configs: dict(int, _CONFIG) | None
 
-    def __init__(
-        self, id: int, name: str, info: str, conf: dict(int, _CONFIG)
-    ):
+    def __init__(self, id: int, name: str, info: str, conf: dict(int, _CONFIG)):
         """Initialise class"""
         super().__init__(id, name, info)
         self.configs = conf
- 
+
     def __decoder(self, encoded: bytearray) -> bytearray | None:
         """Decode BanlanX Message."""
 
@@ -934,139 +943,168 @@ class BanlanX6xx(SP6xxEProxy):
             return False
 
         cfg: _CONFIG = self.match_light_type_config(data[19])
+        device.master.context = cfg
         if not cfg:
             raise ParseNotificationError("Missing light type config!")
 
-        device.master.context = cfg
-
+        firmware = data[11:18].decode("utf-8")
         onoff_effect = self.str_if_key_in(data[20], DICTOF_ONOFF_EFFECTS)
         onoff_speed = self.str_if_key_in(data[21], DICTOF_ONOFF_SPEEDS)
+        onoff_pixels = int.from_bytes(data[22:24], byteorder="big")
         on_power = self.str_if_key_in(data[25], DICTOF_ON_POWER_STATES)
+        coexistence = data[24] if cfg.coexistence else None
         power = True if data[29] > 0x00 else False
+        mode = data[32]
+        effect = data[33]
+        play = data[34]
+        color_level = data[35]
+        white_level = data[36]
+        speed = data[42]
+        length = data[43]
+        direction = data[44]
+        gain = data[45]
+        input = data[46]
 
         device.master.status.replace(
             {
                 "chip_order_number": data[31],
-                ATTR_UL_DEVICE_FORCE_REFRESH: True,
-                ATTR_UL_INFO_FIRMWARE: data[11:18].decode("utf-8"),
-                ATTR_UL_ONOFF_EFFECT: onoff_effect,
-                ATTR_UL_ONOFF_SPEED: onoff_speed,
-                ATTR_UL_ONOFF_PIXELS: int.from_bytes(data[22:24], byteorder="big"),
-                ATTR_UL_ON_POWER: on_power,
                 "diy_mode": data[52],
                 "debug_extra": bytearray([data[8], data[10], data[26], data[28]]),
+                ATTR_UL_DEVICE_FORCE_REFRESH: True,
+                ATTR_UL_INFO_FIRMWARE: firmware,
+                ATTR_UL_ONOFF_EFFECT: onoff_effect,
+                ATTR_UL_ONOFF_SPEED: onoff_speed,
+                ATTR_UL_ONOFF_PIXELS: onoff_pixels,
+                ATTR_UL_ON_POWER: on_power,
                 ATTR_UL_POWER: power,
+                ATTR_UL_LIGHT_MODE_NUMBER: mode,
+                ATTR_UL_LIGHT_MODE: UNILED_UNKNOWN
+                if mode not in DICTOF_MODES
+                else DICTOF_MODES[mode],
+                ATTR_UL_EFFECT_NUMBER: effect,
+                ATTR_UL_EFFECT: UNILED_UNKNOWN,
+                ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
             }
         )
 
-        mode = data[32]
-        coexistence = data[24] if cfg.coexistence else None
-
         if (fxlist := cfg.dictof_mode_effects(mode)) is not None:
-            if mode in DICTOF_MODES:
-                device.master.status.set(ATTR_UL_LIGHT_MODE, DICTOF_MODES[mode])
-                device.master.status.set(ATTR_UL_LIGHT_MODE_NUMBER, mode)
-            effect = data[33]
             if fxattr := None if effect not in fxlist else fxlist[effect]:
-                # _LOGGER.debug("%s: FXATTR: (%s) %s", device.name, cfg.name, fxattr)
-                device.master.status.set(ATTR_HA_EFFECT, str(fxattr.name))
-                device.master.status.set(ATTR_UL_EFFECT_NUMBER, effect)
+                # _LOGGER.warn("%s: FXATTR: (%s) %s", device.name, cfg.name, fxattr)
+                device.master.set(ATTR_HA_EFFECT, str(fxattr.name))
 
-                device.master.status.set(
+                device.master.set(
                     ATTR_UL_EFFECT_TYPE,
                     str(self.match_channel_effect_type(device.master, effect, mode)),
                 )
-                device.master.status.set(
+                device.master.set(
                     ATTR_UL_EFFECT_LOOP,
                     bool(data[30]) if self.is_loop_mode(mode) else None,
                 )
-                device.master.status.set(
-                    ATTR_UL_EFFECT_PLAY, bool(data[34]) if fxattr.pausable else None
+                device.master.set(
+                    ATTR_UL_EFFECT_PLAY, bool(play) if fxattr.pausable else None
                 )
-                device.master.status.set(
-                    ATTR_UL_EFFECT_SPEED, data[42] if fxattr.speedable else None
+                device.master.set(
+                    ATTR_UL_EFFECT_SPEED, speed if fxattr.speedable else None
                 )
-                device.master.status.set(
-                    ATTR_UL_EFFECT_LENGTH, data[43] if fxattr.sizeable else None
+                device.master.set(
+                    ATTR_UL_EFFECT_LENGTH, length if fxattr.sizeable else None
                 )
-                device.master.status.set(
+                device.master.set(
                     ATTR_UL_EFFECT_DIRECTION,
-                    bool(data[44]) if fxattr.directional else None,
+                    bool(direction) if fxattr.directional else None,
                 )
 
-                brightness = white = cold = warm = rgb = None
-                rgb1 = (data[37], data[38], data[39])
-                rgb2 = (data[47], data[48], data[49])
-
-                if self.is_sound_mode(mode):
-                    if self.is_color_mode(mode) and fxattr.colorable:
-                        rgb = rgb2
-                    if self.is_white_mode(mode) and fxattr.colorable:
-                        brightness = data[36] if cfg.white else None
-                        cold = data[50] if cfg.cct else None
-                        warm = data[51] if cfg.cct else None
-                elif self.is_static_mode(mode) and coexistence:
-                    white = data[36] if cfg.white else None
-                    cold = data[40] if cfg.cct else None
-                    warm = data[41] if cfg.cct else None
-                    rgb = rgb1
-                    brightness = (
-                        white if self.is_white_mode(mode) and white else data[35]
-                    )
-                elif self.is_white_mode(mode) and fxattr.colorable:
-                    cold = (
-                        data[40 if self.is_static_mode(mode) else 50]
-                        if cfg.cct
-                        else None
-                    )
-                    warm = (
-                        data[41 if self.is_static_mode(mode) else 51]
-                        if cfg.cct
-                        else None
-                    )
-                    brightness = white = data[36] if cfg.white else None
-                elif self.is_color_mode(mode) and fxattr.colorable:
-                    rgb = rgb1 if self.is_static_mode(mode) else rgb2
-                    brightness = data[35]
-
-                if rgb is not None:
-                    if cold is not None and warm is not None:
-                        device.master.status.set(
-                            ATTR_HA_RGBWW_COLOR, rgb + (cold, warm)
-                        )
-                    elif white is not None:
-                        device.master.status.set(ATTR_HA_RGBW_COLOR, rgb + (white))
-                    else:
-                        device.master.status.set(ATTR_HA_RGB_COLOR, rgb)
-                elif cold is not None and warm is not None:
-                    device.master.status.set(
-                        ATTR_UL_CCT_COLOR, (cold, warm, white, None)
-                    )
-                device.master.status.set(ATTR_HA_WHITE, white)
-                device.master.status.set(ATTR_HA_BRIGHTNESS, brightness)
-
-                input = (
-                    self.str_if_key_in(data[46], DICTOF_AUDIO_INPUTS)
+                audio_input = (
+                    self.str_if_key_in(input, DICTOF_AUDIO_INPUTS)
                     if power and self.is_sound_mode(mode)
                     else None
                 )
-                device.master.status.set(ATTR_UL_AUDIO_INPUT, input)
-                device.master.status.set(
-                    ATTR_UL_SENSITIVITY, data[45] if input is not None else None
+                device.master.set(ATTR_UL_AUDIO_INPUT, audio_input)
+                device.master.set(
+                    ATTR_UL_SENSITIVITY, gain if audio_input is not None else None
                 )
+
+                if self.is_sound_mode(mode):
+                    # In sound modes, irrespective of coexistence setting
+                    # the color and white(s) are separatly controlled when
+                    # supported by the effect, but brightness changes are
+                    # not supported.
+                    #
+                    if self.is_white_mode(mode) and fxattr.colorable and cfg.cct:
+                        device.master.set(ATTR_HA_BRIGHTNESS, 255)
+                        device.master.set(ATTR_HA_WHITE, 255)
+                        device.master.set(
+                            ATTR_UL_CCT_COLOR, (data[50], data[51], 255, None)
+                        )
+                    elif self.is_color_mode(mode) and fxattr.colorable and cfg.hue:
+                        device.master.set(ATTR_HA_BRIGHTNESS, 255)
+                        device.master.set(
+                            ATTR_HA_RGB_COLOR, (data[47], data[48], data[49])
+                        )
+                elif self.is_dynamic_mode(mode):
+                    # In dynamic modes, irrespective of coexistence setting
+                    # the color and white(s) are separatly controlled when
+                    # supported by the effect, brightness changes are also
+                    # supported.
+                    #
+                    if self.is_white_mode(mode) and fxattr.colorable and cfg.cct:
+                        device.master.set(
+                            ATTR_UL_CCT_COLOR, (data[50], data[51], white_level, None)
+                        )
+                    elif self.is_color_mode(mode) and fxattr.colorable and cfg.hue:
+                        device.master.set(
+                            ATTR_HA_RGB_COLOR, (data[47], data[48], data[49])
+                        )
+                    device.master.set(
+                        ATTR_HA_BRIGHTNESS,
+                        white_level if self.is_white_mode(mode) else color_level
+                    )
+                elif self.is_static_mode(mode):
+                    if cfg.hue and cfg.cct and coexistence:
+                        device.master.set(ATTR_HA_RGBWW_COLOR, (data[37], data[38], data[39], data[40], data[41]))
+                    elif cfg.hue and cfg.white and coexistence:
+                        device.master.set(ATTR_HA_RGBW_COLOR, (data[37], data[38], data[39], white_level))
+                    elif cfg.hue or cfg.cct or cfg.white:
+                        white_mode = COLOR_MODE_BRIGHTNESS
+                        supported_color_modes = []
+
+                        if cfg.hue:
+                            device.master.set(ATTR_HA_RGB_COLOR, (data[37], data[38], data[39]))
+                            supported_color_modes.append(COLOR_MODE_RGB)
+                        if cfg.cct:
+                            device.master.set(ATTR_UL_CCT_COLOR, (data[40], data[41], white_level, None))
+                            white_mode = COLOR_MODE_COLOR_TEMP
+                            supported_color_modes.append(white_mode)
+                        elif cfg.white and cfg.hue:
+                            device.master.set(ATTR_HA_WHITE, white_level)
+                            white_mode = COLOR_MODE_WHITE
+                            supported_color_modes.append(white_mode)
+                        else:
+                            supported_color_modes = [white_mode]
+                        device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, supported_color_modes)
+                        device.master.set(ATTR_HA_COLOR_MODE, 
+                            COLOR_MODE_RGB 
+                            if self.is_color_mode(mode) 
+                            else white_mode
+                        )
+                    device.master.set(ATTR_HA_BRIGHTNESS, white_level if self.is_white_mode(mode) else color_level)
+                elif mode == MODE_CUSTOM_COLOR:
+                    device.master.set(ATTR_HA_BRIGHTNESS, color_level)
 
         if cfg:
             features = [
-                LightStripFeature(extra=(
-                    ATTR_UL_LIGHT_MODE,
-                    ATTR_UL_LIGHT_MODE_NUMBER,
-                    ATTR_UL_EFFECT_NUMBER,
-                    ATTR_UL_EFFECT_LOOP,
-                    ATTR_UL_EFFECT_PLAY,
-                    ATTR_UL_EFFECT_SPEED,
-                    ATTR_UL_EFFECT_LENGTH,
-                    ATTR_UL_EFFECT_DIRECTION,
-                )),
+                LightStripFeature(
+                    extra=(
+                        ATTR_UL_LIGHT_MODE,
+                        ATTR_UL_LIGHT_MODE_NUMBER,
+                        ATTR_UL_EFFECT_NUMBER,
+                        ATTR_UL_EFFECT_LOOP,
+                        ATTR_UL_EFFECT_PLAY,
+                        ATTR_UL_EFFECT_SPEED,
+                        ATTR_UL_EFFECT_LENGTH,
+                        ATTR_UL_EFFECT_DIRECTION,
+                    )
+                ),
                 LightModeFeature(),
                 EffectTypeFeature(),
                 EffectLoopFeature(),
@@ -1206,10 +1244,30 @@ class BanlanX6xx(SP6xxEProxy):
         """Build power on/off state message(s)"""
         return self.__encoder(0x50, bytearray([0x01 if state else 0x00]))
 
+    def build_white_command(
+        self, device: UniledBleDevice, channel: UniledChannel, level: int
+    ) -> bytearray | None:
+        """The bytes to send for a change to white mode"""
+        if self.is_white_mode(channel.status.light_mode_number):
+            _LOGGER.warn("Skip white mode change as already white")
+            return None
+        if self.is_sound_mode(channel.status.light_mode_number):
+            mode = MODE_SOUND_WHITE
+        elif self.is_dynamic_mode(channel.status.light_mode_number):
+            mode = MODE_DYNAMIC_WHITE
+        else:
+            mode = MODE_STATIC_WHITE
+        channel.status.set(ATTR_HA_COLOR_MODE, COLOR_MODE_WHITE)
+        return self.build_light_mode_command(device, channel, mode)
+
     def build_brightness_command(
         self, device: UniledBleDevice, channel: UniledChannel, level: int
     ) -> bytearray | None:
         """The bytes to send for a brightness level change"""
+        if self.is_sound_mode(channel.status.light_mode_number):
+            _LOGGER.info("Ignore brightness change in sound mode")
+            channel.status.set(ATTR_HA_BRIGHTNESS, 255)
+            return None
         which = 0x00 if self.is_color_mode(channel.status.light_mode_number) else 0x01
         return self.__encoder(0x51, bytearray([which, level]))
 
@@ -1233,8 +1291,10 @@ class BanlanX6xx(SP6xxEProxy):
     ) -> bytearray | None:
         """The bytes to send for a color level change"""
         red, green, blue, white = rgbw
-        ## ?????
-        return self.__encoder(0x52, bytearray([red, green, blue, white]))
+        return [
+            self.build_rgb_color_command(device, channel, (red, green, blue)),
+            self.__encoder(0x51, bytearray([0x01, white])),
+        ]
 
     def build_rgbww_color_command(
         self,
@@ -1278,7 +1338,7 @@ class BanlanX6xx(SP6xxEProxy):
                 value, DICTOF_MODES, channel.status.light_mode_number
             )
         elif (mode := int(value)) not in DICTOF_MODES:
-            return None           
+            return None
         if not cfg or (fxlist := cfg.dictof_mode_effects(mode)) is None:
             return None
         if effect is None:
@@ -1403,13 +1463,17 @@ class BanlanX6xx(SP6xxEProxy):
         self, device: UniledBleDevice, channel: UniledChannel, value: str
     ) -> list[bytearray]:
         """Build light type message(s)"""
-        if (light := self.int_if_str_in(str(value), self.fetch_light_type_dict())) is None:
+        if (
+            light := self.int_if_str_in(str(value), self.fetch_light_type_dict())
+        ) is None:
             return None
         cfg: _CONFIG = self.match_light_type_config(light)
         if cfg is None:
             return None
         channel.context = cfg
-        order = self.fetch_chip_order_code(channel)
+        order = None if cfg.order is None else self.chip_order_index(cfg.order, channel.status.chip_order)
+        if order is None:
+            order = 0x00
         mode = channel.status.light_mode_number
         effect = channel.status.effect_number
 
@@ -1468,7 +1532,7 @@ class BanlanX6xx(SP6xxEProxy):
         """Light type dictionary"""
         if self.configs is not None:
             if light_type in self.configs:
-                return self.configs[light_type]           
+                return self.configs[light_type]
             if len(self.configs) > 1:
                 return next(iter(self.configs))
         return None
@@ -1490,6 +1554,12 @@ class BanlanX6xx(SP6xxEProxy):
         if self.is_sound_mode(mode):
             return UNILEDEffectType.SOUND
         return UNILEDEffectType.DYNAMIC
+
+    def is_dynamic_mode(self, mode: int | None) -> bool:
+        """Is a dynamic mode"""
+        if (mode is not None) and mode in LISTOF_DYNAMIC_MODES:
+            return True
+        return False
 
     def is_static_mode(self, mode: int | None) -> bool:
         """Is a static mode"""
@@ -1521,11 +1591,10 @@ class BanlanX6xx(SP6xxEProxy):
             return True
         return False
 
+
 ##
 ## SP6xxE
 ##
 SP6XXE = SP6xxEProxy(
-    id = 0xFF,
-    name = "SP6xxE",
-    info = "SP63xE and SP64xE PWM/SPI Controllers"
+    id=0xFF, name="SP6xxE", info="SP63xE and SP64xE PWM/SPI Controllers"
 )
