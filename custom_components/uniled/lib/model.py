@@ -5,15 +5,14 @@ from abc import abstractmethod
 from typing import Any, Final
 
 from .channel import UniledChannel
+from .chips import UniledChips
 
-import itertools
 import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-
 @dataclass(frozen=True)
-class UniledModel:
+class UniledModel(UniledChips):
     """UniLED Base Model Class"""
 
     model_num: int  # The model number
@@ -21,38 +20,6 @@ class UniledModel:
     description: str  # Description of the model ({type} {color_mode})
     manufacturer: str  # The manufacturers name
     channels: int  # The number of supported channels
-
-    def chip_order_list(self, sequence: str, suffix: str = "") -> list:
-        """Generate list of chip order combinations"""
-        combos = list()
-        letters = len(sequence)
-        if sequence and letters <= 3:
-            for combo in itertools.permutations(sequence, len(sequence)):
-                combos.append("".join(combo) + suffix)
-        elif letters <= 5:
-            combos = self.chip_order_list(sequence[:3], sequence[3:])
-            for combo in itertools.permutations(sequence, len(sequence)):
-                order = "".join(combo) + suffix
-                if order not in combos:
-                    combos.append(order)
-        return combos
-
-    def chip_order_name(self, sequence: str, value: int) -> str:
-        """Generate list of chip order combinations"""
-        order = None
-        if orders := self.chip_order_list(sequence):
-            try:
-                order = orders[value]
-            except IndexError:
-                pass
-        return order
-
-    def chip_order_index(self, sequence: str, value: str) -> int:
-        """Generate list of chip order combinations"""
-        if orders := self.chip_order_list(sequence):
-            if value in orders:
-                return orders.index(value)
-        return None
 
     @abstractmethod
     def parse_notifications(self, device: Any, sender: int, data: bytearray) -> bool:
@@ -113,23 +80,3 @@ class UniledModel:
             return list_fetcher(device, channel)
         _LOGGER.warning("%s: Method '%s' not found.", self.model_name, list_method)
         return []
-
-    ##
-    ## Helpers
-    ##
-    def str_if_key_in(self, key, dikt: dict, default: str | None = None) -> str | None:
-        """Return dictionary string value from key"""
-        if not dikt or not isinstance(dikt, dict):
-            return default
-        return default if key not in dikt else str(dikt[key])
-
-    def int_if_str_in(
-        self, string: str, dikt: dict, default: int | None = None
-    ) -> int | None:
-        """Return dictionary key value from string lookup"""
-        if not dikt or not isinstance(dikt, dict):
-            return default
-        for key, value in dikt.items():
-            if value == string:
-                return key
-        return default
