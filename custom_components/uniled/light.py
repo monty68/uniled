@@ -135,6 +135,8 @@ class UniledLightEntity(
         """Initialize a UniLED light control."""
         super().__init__(coordinator, channel, feature)
         self.postponed_update: CALLBACK_TYPE | None = None
+        self._attr_max_color_temp_kelvin = UNILED_DEFAULT_MAX_KELVIN
+        self._attr_min_color_temp_kelvin = UNILED_DEFAULT_MIN_KELVIN
 
     @callback
     def _async_update_attrs(self, first: bool = False) -> None:
@@ -227,16 +229,12 @@ class UniledLightEntity(
     @property
     def max_mireds(self) -> int:
         """Return the warmest color_temp that this light supports."""
-        if self.channel.has(ATTR_HA_MAX_MIREDS):
-            return self.channel.get(ATTR_HA_MAX_MIREDS)
-        return self._attr_max_mireds
+        return self.channel.get(ATTR_HA_MAX_MIREDS, UNILED_DEFAULT_MAX_MIREDS)
 
     @property
     def min_mireds(self) -> int:
         """Return the coldest color_temp that this light supports."""
-        if self.channel.has(ATTR_HA_MIN_MIREDS):
-            return self.channel.get(ATTR_HA_MIN_MIREDS)
-        return self._attr_min_mireds
+        return self.channel.get(ATTR_HA_MIN_MIREDS, UNILED_DEFAULT_MIN_MIREDS)
 
     @property
     def color_temp_kelvin(self) -> int | None:
