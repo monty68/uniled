@@ -276,7 +276,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             self._async_update_attrs()
         if self.feature.reload and success:
             ## TODO Can we warn the user there will be a reload??
-            self._async_delayed_reload(self.hass, self.coordinator.entry)
+            await self._async_delayed_reload(self.hass, self.coordinator.entry)
 
     @property
     def extra_state_attributes(self):
