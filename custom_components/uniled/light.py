@@ -192,7 +192,7 @@ class UniledLightEntity(
     @property
     def is_on(self) -> bool:
         """Is the switch currently on or not."""
-        return self.device.get_state(self.channel, self.feature.attr)
+        return self.device.get_state(self.channel, self.feature.attr, False)
 
     @property
     def brightness(self) -> int | None:
@@ -303,11 +303,12 @@ class UniledLightEntity(
 
     async def async_set_state(self, **kwargs: Any) -> None:
         """Control a light"""
+        success = False
         async with self.coordinator.lock:
-            if ATTR_TRANSITION in kwargs:
-                gradual = int(kwargs[ATTR_TRANSITION] * 1000)
-            else:
-                gradual = 0
+            # Any transition time
+            #
+            if gradual := kwargs.pop(ATTR_TRANSITION, 0):
+                gradual = gradual * 1000
 
             # Process power state first, in case device needs on before
             # processing any other commands.
@@ -315,22 +316,34 @@ class UniledLightEntity(
             if self.feature.attr in kwargs:
                 power = kwargs.pop(self.feature.attr, not self.is_on)
                 if not power:
-                    await self.device.async_set_state(
+                    success = await self.device.async_set_state(
                         self.channel, self.feature.attr, False
                     )
                     kwargs.clear()
                     # return
                 if not self.is_on:
                     if power or (kwargs and self.channel.status.device_needs_on):
-                        await self.device.async_set_state(
+                        success = await self.device.async_set_state(
                             self.channel, self.feature.attr, True
                         )
+
+            # If we only have a brightness change to do and the command
+            # fails (likely due to unsupported mode), then don't force
+            # a device update, as nothing changed.
+            #
+            if ATTR_BRIGHTNESS in kwargs and len(kwargs) == 1:
+                level = kwargs.pop(ATTR_BRIGHTNESS)
+                success = await self.device.async_set_state(
+                    self.channel, ATTR_BRIGHTNESS, level
+                )
+                if not success:
+                    self.channel.refresh()
 
             # Set the light mode before we set any effects as some devices use
             # the same effect numbering for different effects etc.
             #
             if (value := kwargs.pop(ATTR_UL_LIGHT_MODE, None)) is not None:
-                await self.device.async_set_state(
+                success = await self.device.async_set_state(
                     self.channel, ATTR_UL_LIGHT_MODE, value
                 )
 
@@ -338,7 +351,7 @@ class UniledLightEntity(
             # different commands depending on what effect is in use.
             #
             if (value := kwargs.pop(ATTR_EFFECT, None)) is not None:
-                await self.device.async_set_state(self.channel, ATTR_EFFECT, value)
+                success = await self.device.async_set_state(self.channel, ATTR_EFFECT, value)
 
             # Process any color temperature changes here to do a kelvin
             # to cold, warm and brightness conversion first etc.
@@ -346,18 +359,18 @@ class UniledLightEntity(
             mireds = kwargs.pop(ATTR_COLOR_TEMP, None)
             if (kelvin := kwargs.pop(ATTR_COLOR_TEMP_KELVIN, None)) is not None:
                 if self.channel.has(ATTR_COLOR_TEMP_KELVIN):
-                    await self.device.async_set_state(
+                    success = await self.device.async_set_state(
                         self.channel, ATTR_COLOR_TEMP_KELVIN, kelvin
                     )
                 elif self.channel.has(ATTR_UL_CCT_COLOR):
-                    level = self.white
+                    level = self.white or self.brightness or 255
                     _, _, _, cold, warm = color_temperature_to_rgbww(
                         kelvin,
                         level,
                         self.min_color_temp_kelvin,
                         self.max_color_temp_kelvin,
                     )
-                    await self.device.async_set_state(
+                    success = await self.device.async_set_state(
                         self.channel, ATTR_UL_CCT_COLOR, (cold, warm, level, kelvin)
                     )
                 elif self.channel.has(ATTR_COLOR_TEMP):
@@ -369,11 +382,14 @@ class UniledLightEntity(
             # Process any other commands
             #
             if len(kwargs):
-                await self.device.async_set_multi_state(self.channel, **kwargs)
+                if await self.device.async_set_multi_state(self.channel, **kwargs) and not success:
+                    success = True
+                
+            if success:
+                await self.update_during_transition(gradual)
             # self.coordinator.async_set_updated_data(None)
-            await self.update_during_transition(gradual)
 
-        if self.channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False) and not gradual:
+        if self.channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False) and success and not gradual:
             await self.coordinator.async_request_refresh()
 
     async def update_during_transition(self, when: int) -> None:
@@ -387,6 +403,7 @@ class UniledLightEntity(
         if when > 0:
             _LOGGER.debug("Schedule refresh: %s", when)
             await self.coordinator.async_request_refresh()
+
             async def _async_refresh(now: datetime) -> None:
                 """Refresh the state."""
                 _LOGGER.debug("%s: Firing postponed update", self.channel.name)
