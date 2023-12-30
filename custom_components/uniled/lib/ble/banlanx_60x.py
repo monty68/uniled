@@ -9,6 +9,7 @@ from ..features import (
     UniledAttribute,
     UniledGroup,
     ButtonAttribute,
+    SceneAttribute,
     SelectAttribute,
     LightStripFeature,
     SceneLoopFeature,
@@ -339,12 +340,7 @@ class BanlanX60X(UniledBleModel):
 
                         if not channel.features:
                             channel.features = [
-                                LightStripFeature(extra=(
-                                    ATTR_UL_EFFECT_NUMBER,
-                                    ATTR_UL_EFFECT_SPEED,
-                                    ATTR_UL_EFFECT_LENGTH,
-                                    ATTR_UL_EFFECT_DIRECTION,
-                                )),
+                                LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
                                 EffectTypeFeature(),
                                 EffectSpeedFeature(BANLANX60X_MAX_EFFECT_SPEED),
                                 EffectLengthFeature(BANLANX60X_MAX_EFFECT_LENGTH),
@@ -374,10 +370,10 @@ class BanlanX60X(UniledBleModel):
                     {
                         ATTR_UL_DEVICE_FORCE_REFRESH: True,
                         ATTR_UL_POWER: True if master_power != 0 else False,
-                        ATTR_UL_SCENE: True if master_power != 0 else False,
+                        ATTR_UL_SCENE: True,
                         ATTR_UL_SCENE_LOOP: loop,
-                        ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
-                        ATTR_UL_SCENE_SAVE_BUTTON: False,
+                        # ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
+                        # ATTR_UL_SCENE_SAVE_BUTTON: False,
                     }
                 )
 
@@ -387,23 +383,15 @@ class BanlanX60X(UniledBleModel):
 
                 if not device.master.features:
                     device.master.features = [
-                        LightStripFeature(extra=[
-                            ATTR_UL_SCENE_LOOP
-                        ]),
+                        LightStripFeature(extra=[ATTR_UL_SCENE_LOOP]),
                         SceneLoopFeature(),
-                        #SceneSaveSelect(),
-                        #SceneSaveButton(),
+                        # SceneSaveSelect(),
+                        # SceneSaveButton(),
                     ]
 
                     for b in range(BANLANX60X_MAX_SCENES):
                         device.master.features.append(
-                            ButtonAttribute(
-                                ATTR_UL_SCENE,
-                                f"Scene {b + 1}",
-                                "mdi:star",
-                                int(b),
-                                f"scene_{b + 1}",
-                            )
+                            SceneAttribute(b, UNILED_CONTROL_ATTRIBUTES)
                         )
 
                     if self.model_num > 0x601E:
@@ -552,10 +540,12 @@ class BanlanX60X(UniledBleModel):
     ) -> list[bytearray]:
         """Build chip order message(s)"""
         cnum = device.channels - 1 if not channel.number else channel.number - 1
-        if (order := self.chip_order_index(UNILED_CHIP_ORDER_RGB, str(value))) is not None:
+        if (
+            order := self.chip_order_index(UNILED_CHIP_ORDER_RGB, str(value))
+        ) is not None:
             return bytearray([0xAA, 0x24, 0x02, cnum, order])
         return None
-    
+
     def fetch_chip_order_list(
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:
