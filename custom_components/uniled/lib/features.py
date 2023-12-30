@@ -8,6 +8,7 @@ from .attributes import (
     # BinaryAttribute,
     ButtonAttribute,
     NumberAttribute,
+    SceneAttribute,
     SelectAttribute,
     SensorAttribute,
     SwitchAttribute,
