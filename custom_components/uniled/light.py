@@ -142,12 +142,16 @@ class UniledLightEntity(
     def _async_update_attrs(self, first: bool = False) -> None:
         """Handle updating _attr values."""
         super()._async_update_attrs()
-    
+
     @property
     def color_mode(self) -> ColorMode | str | None:
         """Return the color mode of the light."""
         if self.channel.has(ATTR_COLOR_MODE):
             return self.channel.get(ATTR_COLOR_MODE, ColorMode.ONOFF)
+        if not self._attr_color_mode:
+            supported = self.supported_color_modes()
+            if supported and len(supported) and not self._attr_color_mode:
+                return supported[0]
         return self._attr_color_mode
 
     @property
@@ -351,7 +355,9 @@ class UniledLightEntity(
             # different commands depending on what effect is in use.
             #
             if (value := kwargs.pop(ATTR_EFFECT, None)) is not None:
-                success = await self.device.async_set_state(self.channel, ATTR_EFFECT, value)
+                success = await self.device.async_set_state(
+                    self.channel, ATTR_EFFECT, value
+                )
 
             # Process any color temperature changes here to do a kelvin
             # to cold, warm and brightness conversion first etc.
@@ -382,14 +388,21 @@ class UniledLightEntity(
             # Process any other commands
             #
             if len(kwargs):
-                if await self.device.async_set_multi_state(self.channel, **kwargs) and not success:
+                if (
+                    await self.device.async_set_multi_state(self.channel, **kwargs)
+                    and not success
+                ):
                     success = True
-                
+
             if success:
                 await self.update_during_transition(gradual)
             # self.coordinator.async_set_updated_data(None)
 
-        if self.channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False) and success and not gradual:
+        if (
+            self.channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False)
+            and success
+            and not gradual
+        ):
             await self.coordinator.async_request_refresh()
 
     async def update_during_transition(self, when: int) -> None:
