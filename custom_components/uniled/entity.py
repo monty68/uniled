@@ -12,6 +12,7 @@ from homeassistant.const import (
     ATTR_MODEL,
     ATTR_NAME,
     ATTR_SW_VERSION,
+    ATTR_SUGGESTED_AREA,
     Platform,
 )
 from homeassistant import config_entries
@@ -46,6 +47,7 @@ from .const import (
     ATTR_UL_SEGMENT_COUNT,
     ATTR_UL_SEGMENT_PIXELS,
     ATTR_UL_STATUS,
+    ATTR_UL_SUGGESTED_AREA,
     ATTR_UL_TOTAL_PIXELS,
     UNILED_STATE_CHANGE_LATENCY,
 )
@@ -160,6 +162,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             ATTR_UL_SEGMENT_COUNT,
             ATTR_UL_SEGMENT_PIXELS,
             ATTR_UL_STATUS,
+            ATTR_UL_SUGGESTED_AREA,
             ATTR_UL_TOTAL_PIXELS,
         }
     )
@@ -231,6 +234,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             ),
             ATTR_HW_VERSION: device.master.get(ATTR_UL_INFO_MODEL_NAME, device.model_name),
             ATTR_SW_VERSION: device.master.get(ATTR_UL_INFO_FIRMWARE, None),
+            ATTR_SUGGESTED_AREA: device.master.get(ATTR_UL_SUGGESTED_AREA, None),
         }
 
         if device.transport == UNILED_TRANSPORT_NET:
