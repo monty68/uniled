@@ -233,3 +233,30 @@ class NumberAttribute(UniledAttribute):
     @property
     def step(self) -> int:
         return self._inc
+
+class SceneAttribute(UniledAttribute):
+    """UniLED Scene Attribute Class"""
+    def __init__(
+        self,
+        attr: str,
+        name: str,
+        scene_id: int,
+    ) -> None:
+        super().__init__(
+           "scene",
+           ATTR_UL_SCENE,
+        )
+        self._scene_id = scene_id
+
+    @property
+    def scene_id(self) -> int:
+        return self._scene_id
+
+    @property
+    def name(self) -> int:
+        return f"Scene {self._scene_id}"
+
+    @property
+    def key(self) -> int:
+        return f"scene.{self._scene_id}"
+    

@@ -61,12 +61,13 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
+    Platform.LIGHT,
+    Platform.SCENE,
     Platform.SENSOR,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SWITCH,
     Platform.BUTTON,
-    Platform.LIGHT,
 ]
 
 
