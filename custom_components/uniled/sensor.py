@@ -39,6 +39,8 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -63,6 +65,7 @@ def _add_sensor_entity(
         return UniledSignalSensor(coordinator, channel)
     return None
 
+
 class UniledSensorEntity(
     UniledEntity, CoordinatorEntity[UniledUpdateCoordinator], SensorEntity
 ):
@@ -81,6 +84,7 @@ class UniledSensorEntity(
     def native_value(self) -> str:
         """Return the value reported by the sensor."""
         return self.device.get_state(self.channel, self.feature.attr)
+
 
 @dataclass
 class RSSIFeature(SensorAttribute):

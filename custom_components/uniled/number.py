@@ -26,6 +26,8 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -73,4 +75,3 @@ class UniledNumberEntity(
     async def async_set_native_value(self, value: float) -> None:
         """Set the features value value."""
         await self._async_state_change(value)
-        

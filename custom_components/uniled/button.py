@@ -26,6 +26,8 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -71,5 +73,7 @@ class UniledButtonEntity(
     async def async_press(self) -> None:
         """Button Pressed!"""
         value = self.device.get_state(self.channel, self.feature.attr)
-        value = not value if isinstance(self.feature.value, bool) else self.feature.value
+        value = (
+            not value if isinstance(self.feature.value, bool) else self.feature.value
+        )
         await self._async_state_change(value)
