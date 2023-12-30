@@ -257,7 +257,7 @@ class SceneAttribute(UniledAttribute):
 
     @property
     def name(self) -> int:
-        return f"Scene {self._scene_id}"
+        return f"Scene {self._scene_id + 1}"
 
     @property
     def key(self) -> int:
