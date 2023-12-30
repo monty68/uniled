@@ -13,7 +13,7 @@ class UniledGroup(IntEnum):
     NEEDS_ON = 1
     CONFIGURATION = 2
     DIAGNOSTIC = 3
-
+    OPTION = 128 # config_flow option!
 
 class UniledAttribute:
     """UniLED Base Attribute Class"""
@@ -238,13 +238,16 @@ class SceneAttribute(UniledAttribute):
     """UniLED Scene Attribute Class"""
     def __init__(
         self,
-        attr: str,
-        name: str,
         scene_id: int,
+        extra: list | None = None,
     ) -> None:
         super().__init__(
            "scene",
            ATTR_UL_SCENE,
+           None,
+           "mdi:star",
+           None,
+           extra=extra
         )
         self._scene_id = scene_id
 
