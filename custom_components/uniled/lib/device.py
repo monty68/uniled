@@ -258,14 +258,14 @@ class UniledDevice:
     ) -> bool:
         """Set a channel attribute state"""
         command = self._model.build_command(self, channel, attr, state)
-        success = await self.send(command) if command else False
-        # refresh = not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False)
-        # _LOGGER.debug("%s: Command Success = %s (%s)", self.name, success, command)
-        if success:
-            channel.set(attr, state, True)
-        else:
-            channel.refresh()
-        return success
+        if command:
+            success = await self.send(command) if command else False
+            if success:
+                channel.set(attr, state, True)
+            else:
+                channel.refresh()
+            return success
+        return False
 
     async def async_set_multi_state(self, channel_id: int, **kwargs) -> None:
         """Set a channel (id) multi attribute states"""
@@ -278,7 +278,6 @@ class UniledDevice:
         success = await self.send(
             self._model.build_multi_commands(self, channel, **kwargs)
         )
-        # if not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False):
         channel.refresh()
         return success
 
