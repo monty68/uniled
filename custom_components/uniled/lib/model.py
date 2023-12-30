@@ -11,6 +11,7 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+
 @dataclass(frozen=True)
 class UniledModel(UniledChips):
     """UniLED Base Model Class"""
@@ -39,21 +40,41 @@ class UniledModel(UniledChips):
         self, device: Any, channel: UniledChannel, attr: str, value: any
     ) -> list[bytearray]:
         """Build supported command"""
-        _LOGGER.info(
-            "%s: %s, command: %s = %s (%s)",
-            self.model_name,
-            channel.identity or channel.name or f"{channel.number}",
-            attr,
-            value,
-            channel.status.get(attr),
-        )
-        command_method = f"build_{attr}_command"
-        command_builder = getattr(self, command_method, None)
-        if callable(command_builder):
-            if commands := command_builder(device, channel, value):
-                channel.set(attr, value)
-            return commands
-        _LOGGER.warning("%s: Method '%s' not found.", self.model_name, command_method)
+        if channel.status.has(attr):
+            _LOGGER.info(
+                "%s: %s, command: %s = %s (%s)",
+                self.model_name,
+                channel.identity or channel.name or f"{channel.number}",
+                attr,
+                value,
+                channel.status.get(attr),
+            )
+            command_method = f"build_{attr}_command"
+            command_builder = getattr(self, command_method, None)
+            if callable(command_builder):
+                try:
+                    if commands := command_builder(device, channel, value):
+                        channel.set(attr, value)
+                    return commands
+                except Exception as ex:
+                    _LOGGER.warn(
+                        "%s: %s, command %s generated an exception: %s",
+                        self.model_name,
+                        channel.identity or channel.name or f"{channel.number}",
+                        attr,
+                        str(ex),
+                    )
+                    return []
+            _LOGGER.warning(
+                "%s: Method '%s' not found.", self.model_name, command_method
+            )
+        else:
+            _LOGGER.debug(
+                "%s: %s, command: %s ignored, no matching status attribute",
+                self.model_name,
+                channel.identity or channel.name or f"{channel.number}",
+                attr,
+            )
         return []
 
     def build_multi_commands(
@@ -63,11 +84,11 @@ class UniledModel(UniledChips):
         multi = []
         for attr, value in kwargs.items():
             commands = self.build_command(device, channel, attr, value)
-            if isinstance(commands, list):
-                multi.extend(commands)
-                pass
-            else:
-                multi.append(commands)
+            if commands:
+                if isinstance(commands, list):
+                    multi.extend(commands)
+                else:
+                    multi.append(commands)
         return multi
 
     def fetch_attribute_list(
