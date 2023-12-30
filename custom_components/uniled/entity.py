@@ -129,7 +129,10 @@ def async_uniled_entity_update(
             continue
 
         for feature in channel.features:
-            if not feature.platform.startswith(platform):
+            if (
+                not feature.platform.startswith(platform)
+                or feature.group == UniledGroup.OPTION
+            ):
                 continue
             if entity := async_add_entity(coordinator, channel, feature):
                 new_entities.append(entity)
@@ -226,13 +229,13 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         device_info: DeviceInfo = {
             ATTR_IDENTIFIERS: {(DOMAIN, entry.entry_id)},
             ATTR_NAME: device.name,
-            ATTR_MODEL: device.master.get(
-                ATTR_UL_INFO_HARDWARE, device.description
-            ),
+            ATTR_MODEL: device.master.get(ATTR_UL_INFO_HARDWARE, device.description),
             ATTR_MANUFACTURER: device.master.get(
                 ATTR_UL_INFO_MANUFACTURER, device.manufacturer
             ),
-            ATTR_HW_VERSION: device.master.get(ATTR_UL_INFO_MODEL_NAME, device.model_name),
+            ATTR_HW_VERSION: device.master.get(
+                ATTR_UL_INFO_MODEL_NAME, device.model_name
+            ),
             ATTR_SW_VERSION: device.master.get(ATTR_UL_INFO_FIRMWARE, None),
             ATTR_SUGGESTED_AREA: device.master.get(ATTR_UL_SUGGESTED_AREA, None),
         }
