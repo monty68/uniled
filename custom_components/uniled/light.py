@@ -76,7 +76,7 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-# PARALLEL_UPDATES = 1
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -142,7 +142,7 @@ class UniledLightEntity(
     def _async_update_attrs(self, first: bool = False) -> None:
         """Handle updating _attr values."""
         super()._async_update_attrs()
-
+    
     @property
     def color_mode(self) -> ColorMode | str | None:
         """Return the color mode of the light."""
