@@ -41,10 +41,18 @@ class UniledModel(UniledChips):
     ) -> list[bytearray]:
         """Build supported command"""
         if channel.status.has(attr):
-            _LOGGER.info(
-                "%s: %s, command: %s = %s (%s)",
+            if channel.get(attr, value) == value:
+                _LOGGER.debug(
+                    "%s: Channel %s, command: %s ignored, as no state changed.",
+                    self.model_name,
+                    channel.number,
+                    attr,
+                )
+                return []
+            _LOGGER.debug(
+                "%s: Channel %s, command: %s = %s (%s)",
                 self.model_name,
-                channel.identity or channel.name or f"{channel.number}",
+                channel.number,
                 attr,
                 value,
                 channel.status.get(attr),
@@ -58,21 +66,24 @@ class UniledModel(UniledChips):
                     return commands
                 except Exception as ex:
                     _LOGGER.warn(
-                        "%s: %s, command %s generated an exception: %s",
+                        "%s: Channel %s, command %s generated an exception: %s",
                         self.model_name,
-                        channel.identity or channel.name or f"{channel.number}",
+                        channel.number,
                         attr,
                         str(ex),
                     )
                     return []
             _LOGGER.warning(
-                "%s: Method '%s' not found.", self.model_name, command_method
+                "%s: Channel %s, command method '%s' not found.",
+                self.model_name,
+                channel.number,
+                command_method,
             )
         else:
             _LOGGER.debug(
-                "%s: %s, command: %s ignored, no matching status attribute",
+                "%s: Channel %s, command: %s ignored, no matching status attribute",
                 self.model_name,
-                channel.identity or channel.name or f"{channel.number}",
+                channel.number,
                 attr,
             )
         return []
@@ -99,5 +110,7 @@ class UniledModel(UniledChips):
         list_fetcher = getattr(self, list_method, None)
         if callable(list_fetcher):
             return list_fetcher(device, channel)
-        _LOGGER.warning("%s: Method '%s' not found.", self.model_name, list_method)
+        _LOGGER.warning(
+            "%s: Fetch list method '%s' not found.", self.model_name, list_method
+        )
         return []
