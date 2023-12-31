@@ -404,12 +404,7 @@ class BanlanX2(UniledBleModel):
 
         if not device.master.features:
             features = [
-                LightStripFeature(extra=(
-                    ATTR_UL_LIGHT_MODE,
-                    ATTR_UL_LIGHT_MODE_NUMBER,
-                    ATTR_UL_EFFECT_NUMBER,
-                    ATTR_UL_EFFECT_SPEED,
-                )),
+                LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
                 EffectTypeFeature(),
                 EffectSpeedFeature(BANLANX2_MAX_EFFECT_SPEED),
                 EffectLengthFeature(BANLANX2_MAX_EFFECT_LENGTH),

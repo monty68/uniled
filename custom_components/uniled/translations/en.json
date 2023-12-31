@@ -1,20 +1,76 @@
 {
     "title": "Universal Light Controller",
+    "entity": {
+      "light": {
+        "bulb": {
+          "name": "Bulb"
+        },
+        "lamp": {
+          "name": "Lamp"
+        },
+        "light": {
+          "name": "light"
+        },
+        "strip": {
+          "name": "strip"
+        }
+      },
+      "number": {
+        "effect_speed": {
+          "name": "**Effect Speed"
+        },
+        "effect_length": {
+          "name": "Effect Length"
+        },
+        "sensitivity": {
+          "name": "Audio Input Sensitivity"
+        }
+      },
+      "select": {
+        "audio_input": {
+          "name": "Audio Input"
+        },
+        "light_mode": {
+          "name": "Light Mode"
+        }
+      },
+      "sensor": {
+        "effect_type": {
+          "name": "Effect Type",
+          "state": {
+            "static": "Static",
+            "dynamic": "Dynamic",
+            "sound": "Sound"
+          }
+        }
+      },
+      "switch": {
+        "effect_direction": {
+          "name": "Effect Direction"
+        },
+        "effect_loop": {
+          "name": "Loop Effects"
+        },
+        "effect_play": {
+          "name": "Effect Play/Pause"
+        }
+      }
+    },
     "config": {
       "abort": {
-        "already_configured": "Device is already configured",
-        "already_in_progress": "Configuration flow is already in progress",
-        "mesh_not_supported": "Mesh not supported",
-        "no_devices_found": "No devices found on the network",
-        "not_supported": "Device not supported"
+        "already_configured": "Device is already configured.",
+        "already_in_progress": "Configuration flow is already in progress.",
+        "mesh_not_supported": "Mesh not supported.",
+        "no_devices_found": "No devices found on the network.",
+        "not_supported": "Device not supported."
       },
       "error": {
-        "cannot_connect": "Failed to connect",
-        "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs)",
-        "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs)",
-        "mesh_login": "Failed to login to mesh cloud (check logs)",
+        "cannot_connect": "Failed to connect!",
+        "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs).",
+        "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs).",
+        "mesh_login": "Failed to login to mesh cloud (check logs).",
         "mesh_no_devices": "No devices matching mesh ID found in the cloud account.",
-        "unknown": "Unexpected error"
+        "unknown": "Unexpected error!"
       },
       "flow_title": "{name}",
       "step": {
@@ -29,7 +85,7 @@
         },
         "mesh_cloud": {
           "title": "{mesh_title} Cloud Credentials",
-          "description": "Provide the credentials you use in the (Magic Hue/Hao Deng) app",
+          "description": "Provide the credentials you use in the (Magic Hue/Hao Deng) app.",
           "data": {
             "username": "Username (email)",
             "password": "Password",
@@ -39,14 +95,56 @@
       }
     },
     "options": {
+      "abort": {
+        "no_configurable": "Nothing to configure!",
+        "not_available": "Device is not available/connected."
+      },
       "error": {
-        "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs)",
-        "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs)",
-        "mesh_login": "Failed to login to mesh cloud (check logs)",
+        "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs).",
+        "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs).",
+        "mesh_login": "Failed to login to mesh cloud (check logs).",
         "mesh_no_devices": "No devices matching mesh ID found in the cloud account.",
-        "unknown": "Unexpected error"
+        "unknown": "Unexpected error!"
       },
       "step": {
+        "conf_menu": {
+          "title": "Configuration Options",
+          "menu_options": {
+            "channels": "Configure Device",
+            "tune_comms": "Tune Device Communications"
+          }
+        },
+        "channels": {
+          "title": "Channel Configuration",
+          "data": {
+            "channel": "Choose a channel to configure:"
+          }
+        },
+        "conf_type": {
+          "title": "{channel_name} Configuration",
+          "data": {
+            "light_type": "Light type",
+            "chip_type": "Chip type"
+          },
+          "data_description": {
+            "light_type": "The light type configuration and wiring (refer to the products manual for more details).",
+            "chip_type": "The IC type of the LED's connected to the device."
+          }
+        },
+        "conf_channel": {
+          "title": "{channel_name} Configuration",
+          "data": {
+            "chip_order": "LED ordering",
+            "onoff_effect": "Power on/off effect",
+            "onoff_speed": "Power on/off effect speed",
+            "onoff_pixels": "Power on/off pixels count",
+            "coexistence": "Coexistence of colored and white LED's",
+            "on_power": "Power on state"
+          },
+          "data_description": {
+            "chip_order": "The order of the {chip_type} LED's connected to the device."
+          }
+        },
         "tune_comms": {
           "title": "Tune Device Communications",
           "data": {
@@ -59,9 +157,10 @@
           }
         },
         "mesh_menu": {
+          "title": "Configuration Options",
           "menu_options": {
-            "tune_comms": "Tune Device Communications",
-            "mesh_cloud": "{mesh_title} Cloud Credentials"
+            "mesh_cloud": "{mesh_title} Cloud Credentials",
+            "tune_comms": "Tune Device Communications"
           }
         },
         "mesh_cloud": {

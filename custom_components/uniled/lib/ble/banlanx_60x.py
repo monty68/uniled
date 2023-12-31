@@ -1,7 +1,7 @@
 """UniLED BLE Devices - SP LED (BanlanX SP60xE)"""
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from ..const import *  # I know!
 from ..channel import UniledChannel
@@ -266,6 +266,7 @@ class BanlanX60X(UniledBleModel):
             if len(data) == message_length:
                 _LOGGER.debug("%s: Message: %s", device.name, data.hex())
                 master_power = 0
+                master_level = 0
                 channel_id = 0
                 while len(data) > CHANNEL_DATA_SIZE:
                     channel_id += 1
@@ -292,6 +293,7 @@ class BanlanX60X(UniledBleModel):
                         effect = data[1]
                         power = data[0]
                         master_power += power
+                        master_level += data[3]
 
                         channel.status.replace(
                             {
@@ -355,21 +357,27 @@ class BanlanX60X(UniledBleModel):
 
                 # Master Channel
                 #
+                input = None
                 loop = None
                 if len(data) > 0:
                     # 0  = Audio Input
                     # 1  = Auto Mode (0x00 = Off, 0x01 = On)
                     _LOGGER.debug("%s: Residual : %s", device.name, data.hex())
+                    input = data[0] if self.model_num > 0x601E else None
                     loop = True if data[1] != 0 else False
 
                 last_save_scene = device.master.status.get(
                     ATTR_UL_SCENE_SAVE_SELECT, str(BANLANX60X_MAX_SCENES)
                 )
 
+                level = cast(int, master_level / channel_id)
+
                 device.master.status.replace(
                     {
                         ATTR_UL_DEVICE_FORCE_REFRESH: True,
+                        ATTR_UL_CHANNELS: channel_id,
                         ATTR_UL_POWER: True if master_power != 0 else False,
+                        ATTR_HA_BRIGHTNESS: level,
                         ATTR_UL_SCENE: True,
                         ATTR_UL_SCENE_LOOP: loop,
                         # ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
@@ -377,9 +385,9 @@ class BanlanX60X(UniledBleModel):
                     }
                 )
 
-                if self.model_num > 0x601E and master_power:
-                    input = self.str_if_key_in(data[0], BANLANX60X_AUDIO_INPUTS)
-                    device.master.status.set(ATTR_UL_AUDIO_INPUT, input)
+                if input is not None and master_power:
+                    audio_input = self.str_if_key_in(input, BANLANX60X_AUDIO_INPUTS)
+                    device.master.status.set(ATTR_UL_AUDIO_INPUT, audio_input)
 
                 if not device.master.features:
                     device.master.features = [
@@ -394,7 +402,7 @@ class BanlanX60X(UniledBleModel):
                             SceneAttribute(b, UNILED_CONTROL_ATTRIBUTES)
                         )
 
-                    if self.model_num > 0x601E:
+                    if input is not None:
                         device.master.features.append(AudioInputFeature())
                 return True
         raise ParseNotificationError("Unknown/Invalid Packet!")

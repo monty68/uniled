@@ -49,6 +49,8 @@ from .const import (
     ATTR_UL_STATUS,
     ATTR_UL_SUGGESTED_AREA,
     ATTR_UL_TOTAL_PIXELS,
+    UNILED_ENTITY_ATTRIBUTES,
+    UNILED_OPTIONS_ATTRIBUTES,
     UNILED_STATE_CHANGE_LATENCY,
 )
 
@@ -132,6 +134,7 @@ def async_uniled_entity_update(
             if (
                 not feature.platform.startswith(platform)
                 or feature.group == UniledGroup.OPTION
+                or feature.attr in UNILED_OPTIONS_ATTRIBUTES
             ):
                 continue
             if entity := async_add_entity(coordinator, channel, feature):
@@ -181,6 +184,8 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         self._device: UniledDevice = coordinator.device
         self._channel: UniledChannel = channel
         self._feature: UniledAttribute = feature
+        # TODO: This is buggy: self.platform is not set, throwing errors?
+        # self._attr_translation_key = feature.attr
         self._attr_has_entity_name = True
 
         if channel.name:
@@ -188,11 +193,8 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
                 self._attr_name = f"{channel.name} {feature.name}"
             else:
                 self._attr_name = f"{channel.name}"
-        else:
+        elif feature.name and feature.name.lower() != feature.platform:
             self._attr_name = f"{feature.name}"
-
-        if self._attr_name.lower() == feature.platform:
-            self._attr_name = None
 
         base_unique_id = coordinator.entry.unique_id or coordinator.entry.entry_id
         self._attr_unique_id = f"_{base_unique_id}"
@@ -205,6 +207,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             self._attr_unique_id = f"{self._attr_unique_id}_{key}"
 
         # _LOGGER.debug("%s: %s (%s)", self._attr_unique_id, self._attr_name, channel.name)
+        # _LOGGER.warn("%s: %s %s %s", self._attr_unique_id, self.name, self.feature.platform, self.platform)
 
         self._attr_entity_registry_enabled_default = feature.enabled
         self._attr_entity_category = None
@@ -291,6 +294,8 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         extra = {}
         if self.feature and self.feature.extra:
             for x in self.feature.extra:
+                if x in UNILED_ENTITY_ATTRIBUTES:
+                    continue
                 if (value := self.device.get_state(self.channel, x)) is not None:
                     extra[x] = value
         return extra

@@ -1093,18 +1093,7 @@ class BanlanX6xx(SP6xxEProxy):
 
         if cfg:
             features = [
-                LightStripFeature(
-                    extra=(
-                        ATTR_UL_LIGHT_MODE,
-                        ATTR_UL_LIGHT_MODE_NUMBER,
-                        ATTR_UL_EFFECT_NUMBER,
-                        ATTR_UL_EFFECT_LOOP,
-                        ATTR_UL_EFFECT_PLAY,
-                        ATTR_UL_EFFECT_SPEED,
-                        ATTR_UL_EFFECT_LENGTH,
-                        ATTR_UL_EFFECT_DIRECTION,
-                    )
-                ),
+                LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
                 LightModeFeature(),
                 EffectTypeFeature(),
                 EffectLoopFeature(),

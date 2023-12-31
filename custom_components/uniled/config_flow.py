@@ -28,6 +28,7 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_PROTOCOL,
     CONF_USERNAME,
+    Platform,
 )
 from .lib.net.device import UNILED_TRANSPORT_NET, UniledNetDevice, UniledNetModel
 from .lib.ble.device import UNILED_TRANSPORT_BLE, UniledBleDevice, UniledBleModel
@@ -43,6 +44,8 @@ from .lib.zng.manager import (
 )
 from .const import (
     DOMAIN,
+    ATTR_UL_CHIP_TYPE,
+    ATTR_UL_LIGHT_TYPE,
     CONF_UL_RETRY_COUNT as CONF_RETRY_COUNT,
     CONF_UL_TRANSPORT as CONF_TRANSPORT,
     CONF_UL_UPDATE_INTERVAL as CONF_UPDATE_INTERVAL,
@@ -52,7 +55,11 @@ from .const import (
     UNILED_MIN_UPDATE_INTERVAL as MIN_UPDATE_INTERVAL,
     UNILED_DEF_UPDATE_INTERVAL as DEFAULT_UPDATE_INTERVAL,
     UNILED_MAX_UPDATE_INTERVAL as MAX_UPDATE_INTERVAL,
+    UNILED_OPTIONS_ATTRIBUTES,
 )
+from .coordinator import UniledUpdateCoordinator
+
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 import functools
 import operator
@@ -103,6 +110,21 @@ class UniledMeshHandler:
             "options": options,
         }
 
+    async def async_step_mesh_menu(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Menu step"""
+        mesh_uuid = self.context.get(CONF_MESH_UUID, 0)
+
+        return self.async_show_menu(
+            step_id="mesh_menu",
+            menu_options=["mesh_cloud", "tune_comms"],
+            description_placeholders={
+                "mesh_title": self._mesh_title(mesh_uuid),
+                "mesh_uuid": hex(mesh_uuid),
+            },
+        )
+
     async def async_step_mesh_cloud(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -149,13 +171,13 @@ class UniledMeshHandler:
                         if has_changed:
                             # _LOGGER.info(f"Updating configuration: {info['data']}")
                             self.hass.config_entries.async_update_entry(
-                                self.config_entry, data=info['data']
+                                self.config_entry, data=info["data"]
                             )
-                        return self.async_create_entry(title="", data=info['options'])
+                        return self.async_create_entry(title="", data=info["options"])
                     return self.async_create_entry(
                         title=self.context["title_placeholders"]["name"],
-                        data=info['data'],
-                        options=info['options']
+                        data=info["data"],
+                        options=info["options"],
                     )
                 else:
                     errors[CONF_COUNTRY] = "mesh_no_devices"
@@ -197,25 +219,205 @@ class UniledOptionsFlowHandler(flow.OptionsFlowWithConfigEntry, UniledMeshHandle
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
-        self._mesh_set_context()
+        self.coordinator: UniledUpdateCoordinator = self.hass.data[DOMAIN][
+            self.config_entry.entry_id
+        ]
+
         if self.config_entry.data.get(CONF_TRANSPORT) == UNILED_TRANSPORT_ZNG:
+            self._mesh_set_context()
             return await self.async_step_mesh_menu()
+
+        config_options = 0
+        for channel in self.coordinator.device.channel_list:
+            if not channel.features:
+                continue
+            for feature in channel.features:
+                if feature.attr in UNILED_OPTIONS_ATTRIBUTES:
+                    config_options += 1
+
+        if config_options:
+            return await self.async_step_conf_menu()
         return await self.async_step_tune_comms()
 
-    async def async_step_mesh_menu(
+    async def async_step_conf_menu(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Menu step"""
-        mesh_uuid = self.context.get(CONF_MESH_UUID, 0)
-
+        """Configuration menu step"""
+        if not self.coordinator.device.available:
+            return self.async_abort(reason="not_available")
         return self.async_show_menu(
-            step_id="mesh_menu",
-            menu_options=["tune_comms", "mesh_cloud"],
-            description_placeholders={
-                "mesh_title": self._mesh_title(mesh_uuid),
-                "mesh_uuid": hex(mesh_uuid),
-            },
+            step_id="conf_menu",
+            menu_options=["channels", "tune_comms"],
         )
+
+    async def async_step_channels(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Channels Menu"""
+        if self.coordinator.device.channels > 1:
+            if user_input is not None:
+                channel_id = int(user_input.get("channel", 0))
+            else:
+                channels = {}
+                for channel in self.coordinator.device.channel_list:
+                    if not channel.features:
+                        continue
+                    for feature in channel.features:
+                        if feature.attr in UNILED_OPTIONS_ATTRIBUTES:
+                            channels[channel.number] = channel.name
+                            break
+
+                if len(channels) > 1:
+                    data_schema = vol.Schema(
+                        {
+                            vol.Required("channel"): vol.In(
+                                {number: name for number, name in channels.items()}
+                            ),
+                        }
+                    )
+                    return self.async_show_form(
+                        step_id="channels",
+                        data_schema=data_schema,
+                    )
+                elif len(channels) == 1:
+                    channel_id = next(iter(channels))
+                else:
+                    return self.async_abort(reason="no_configurable")
+        else:
+            channel_id = 0
+        channel = self.coordinator.device.channel(channel_id)
+        self.context["channel"] = channel
+        if channel.has(ATTR_UL_LIGHT_TYPE) or channel.has(ATTR_UL_CHIP_TYPE):
+            return await self.async_step_conf_type()
+        return await self.async_step_conf_channel()
+
+    async def async_step_conf_type(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure type"""
+        errors: dict[str, str] = {}
+        channel = self.context.get("channel", None)
+
+        if (conf_value := channel.get(ATTR_UL_LIGHT_TYPE, None)) is not None:
+            conf_attr = ATTR_UL_LIGHT_TYPE
+        elif (conf_value := channel.get(ATTR_UL_CHIP_TYPE, None)) is not None:
+            conf_attr = ATTR_UL_CHIP_TYPE
+        else:
+            return await self.async_step_conf_channel()
+
+        if not self.coordinator.device.available:
+            errors[conf_attr] = "not_available"
+
+        if user_input is not None and not errors:
+            conf_value = user_input.get(conf_attr, conf_value)
+            if conf_value != channel.get(conf_attr, conf_value):
+                if await self.coordinator.device.async_set_state(
+                    channel, conf_attr, conf_value
+                ):
+                    self.options[conf_attr] = conf_value
+                    return self.async_create_entry(title="", data=self.options)
+                else:
+                    errors[conf_attr] = "unknown"
+            else:
+                return await self.async_step_conf_channel()
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(conf_attr, default=conf_value): SelectSelector(
+                    SelectSelectorConfig(
+                        mode=SelectSelectorMode.DROPDOWN,
+                        options=self.coordinator.device.get_list(channel, conf_attr),
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="conf_type",
+            data_schema=data_schema,
+            description_placeholders={
+                "channel_name": channel.name,
+            },
+            errors=errors,
+        )
+
+    async def async_step_conf_channel(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure a channel"""
+        errors: dict[str, str] = {}
+        channel = self.context.get("channel", None)
+
+        if user_input is not None and not errors:
+            for conf_attr, conf_value in user_input.items():
+                _LOGGER.warn("%s = %s", conf_attr, conf_value)
+                if not self.coordinator.device.available:
+                    errors[conf_attr] = "not_available"
+                elif conf_value != channel.get(conf_attr, conf_value):
+                    if await self.coordinator.device.async_set_state(
+                        channel, conf_attr, conf_value
+                    ):
+                        self.options[conf_attr] = conf_value
+                    else:
+                        errors[conf_attr] = "unknown"
+
+        if user_input is None or errors:
+            schema = None
+            for conf_attr in UNILED_OPTIONS_ATTRIBUTES:
+                if conf_attr == ATTR_UL_LIGHT_TYPE or conf_attr == ATTR_UL_CHIP_TYPE:
+                    continue
+                for feature in channel.features:
+                    if feature.attr != conf_attr:
+                        continue
+                    if (conf_value := channel.get(conf_attr, None)) is None:
+                        break
+                    if feature.platform == Platform.NUMBER:
+                        option = {
+                            vol.Required(conf_attr, default=conf_value): vol.All(
+                                vol.Coerce(int),
+                                vol.Range(min=feature.min_value, max=feature.max_value),
+                            ),
+                        }
+                    elif feature.platform == Platform.SELECT:
+                        option = {
+                            vol.Required(conf_attr, default=conf_value): SelectSelector(
+                                SelectSelectorConfig(
+                                    mode=SelectSelectorMode.DROPDOWN,
+                                    options=self.coordinator.device.get_list(
+                                        channel, conf_attr
+                                    ),
+                                )
+                            ),
+                        }
+                    elif feature.platform == Platform.SWITCH:
+                        option = {vol.Required(conf_attr, default=conf_value): cv.boolean}
+                    else:
+                        _LOGGER.warning(
+                            "Unsupported feature platform: '%s' for '%s'.",
+                            feature.platform,
+                            feature.attr,
+                        )
+                        break
+                    if option and schema is None:
+                        schema = vol.Schema(option)
+                    elif option and schema:
+                        schema = schema.extend(option)
+                    break
+
+            if schema is not None:
+                return self.async_show_form(
+                    step_id="conf_channel",
+                    data_schema=schema,
+                    description_placeholders={
+                        "channel_name": channel.name,
+                        "light_type": channel.get(ATTR_UL_LIGHT_TYPE, None),
+                        "chip_type": channel.get(ATTR_UL_CHIP_TYPE, None),
+                    },
+                    errors=errors,
+                )
+
+        if not self.coordinator.device.available:
+            return self.async_abort(reason="not_available")
+        return self.async_create_entry(title="", data=self.options)
 
     async def async_step_tune_comms(
         self, user_input: dict[str, Any] | None = None

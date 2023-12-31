@@ -52,6 +52,7 @@ from ..const import (
     ATTR_UL_POWER,
     ATTR_UL_RSSI,
     ATTR_UL_STATUS,
+    ATTR_UL_SUGGESTED_AREA,
 )
 
 import math
@@ -221,6 +222,7 @@ class ZenggeModel(UniledBleModel):
                 else ZENGGE_STATUS_OFFLINE,
                 ATTR_UL_NODE_TYPE: node.node_type,
                 ATTR_UL_NODE_WIRING: node.node_wiring,
+                ATTR_UL_SUGGESTED_AREA: node.node_area,
                 ATTR_UL_LIGHT_MODE_NUMBER: mode,
                 ATTR_UL_POWER: power,
                 ATTR_HA_SUPPORTED_COLOR_MODES: self.color_modes(node),
