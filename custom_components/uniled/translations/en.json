@@ -17,7 +17,7 @@
       },
       "number": {
         "effect_speed": {
-          "name": "**Effect Speed"
+          "name": "Effect Speed"
         },
         "effect_length": {
           "name": "Effect Length"
@@ -69,7 +69,7 @@
         "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs).",
         "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs).",
         "mesh_login": "Failed to login to mesh cloud (check logs).",
-        "mesh_no_devices": "No devices matching mesh ID found in the cloud account.",
+        "mesh_no_devices": "No devices matching mesh ID found in the cloud.",
         "unknown": "Unexpected error!"
       },
       "flow_title": "{name}",
@@ -103,7 +103,7 @@
         "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs).",
         "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs).",
         "mesh_login": "Failed to login to mesh cloud (check logs).",
-        "mesh_no_devices": "No devices matching mesh ID found in the cloud account.",
+        "mesh_no_devices": "No devices matching mesh ID found in the cloud.",
         "unknown": "Unexpected error!"
       },
       "step": {
@@ -123,11 +123,11 @@
         "conf_type": {
           "title": "{channel_name} Configuration",
           "data": {
-            "light_type": "Light type",
-            "chip_type": "Chip type"
+            "light_type": "Light configuration type",
+            "chip_type": "LED IC type"
           },
           "data_description": {
-            "light_type": "The light type configuration and wiring (refer to the products manual for more details).",
+            "light_type": "The light configuration and wiring (refer to the products manual for more details).",
             "chip_type": "The IC type of the LED's connected to the device."
           }
         },
@@ -135,14 +135,19 @@
           "title": "{channel_name} Configuration",
           "data": {
             "chip_order": "LED ordering",
-            "onoff_effect": "Power on/off effect",
-            "onoff_speed": "Power on/off effect speed",
-            "onoff_pixels": "Power on/off pixels count",
+            "onoff_effect": "Light on/off effect type",
+            "onoff_speed": "Light on/off effect speed",
+            "onoff_pixels": "Light on/off effect, pixels count",
             "coexistence": "Coexistence of colored and white LED's",
             "on_power": "Power on state"
           },
           "data_description": {
-            "chip_order": "The order of the {chip_type} LED's connected to the device."
+            "chip_order": "The order of the {chip_type} LED's connected to the device.",
+            "onoff_effect": "The effect to use when the light is turned on or off.",
+            "onoff_speed": "The speed of the effect when the light is turned on or off.",
+            "onoff_pixels": "The number of pixels used by the effect applied to the light when it is turned on or off.",
+            "coexistence": "In static modes only, determines if both colored and white LED's coexist or if they are controlled independently.",
+            "on_power": "Determines the state of the light when power is applied/restored to the device."
           }
         },
         "tune_comms": {
