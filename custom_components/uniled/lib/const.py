@@ -7,7 +7,7 @@ from .helpers import StrEnum
 UNILED_DEVICE_TIMEOUT: Final = 40
 UNILED_REFRESH_DELAY: Final = 1.0
 UNILED_DISCONNECT_DELAY: Final = 10.0 # 8.5? - Connections can take a lot longer!
-UNILED_COMMAND_SETTLE_DELAY: Final = 0.3
+UNILED_COMMAND_SETTLE_DELAY: Final = 0.4
 UNILED_STATE_CHANGE_LATENCY: Final = 2.0
 
 # Uniled Config and Options Keys
