@@ -78,7 +78,7 @@ class LightStripFeature(LightFeature):
 
     def __init__(self, extra: list | None = None) -> None:
         super().__init__(extra)
-        self._name = "Light"  # Backwards compat
+        self._name = "Light"
         self._icon = "mdi:led-strip-variant"
         self._key = "strip"
 
@@ -125,7 +125,7 @@ class EffectLengthFeature(NumberAttribute):
 
 
 class EffectDirectionFeature(SwitchAttribute):
-    """UniLED Effect Length Feature Class"""
+    """UniLED Effect Direction Feature Class"""
 
     def __init__(self) -> None:
         super().__init__(
