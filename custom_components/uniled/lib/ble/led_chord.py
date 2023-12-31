@@ -275,12 +275,7 @@ class _LEDCHORD(UniledBleModel):
 
             if not device.master.features:
                 device.master.features = [
-                    LightStripFeature(extra=(
-                        ATTR_UL_LIGHT_MODE,
-                        ATTR_UL_LIGHT_MODE_NUMBER,
-                        ATTR_UL_EFFECT_NUMBER,
-                        ATTR_UL_EFFECT_SPEED,
-                    )),
+                    LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
                     LightModeFeature(),
                     EffectTypeFeature(),
                     EffectSpeedFeature(LEDCHORD_MAX_EFFECT_SPEED),

@@ -172,11 +172,7 @@ class _LEDHUE(UniledBleModel):
 
         if not device.master.features:
             device.master.features = [
-                LightStripFeature(extra=(
-                    ATTR_UL_EFFECT_NUMBER,
-                    ATTR_UL_EFFECT_LOOP,
-                    ATTR_UL_EFFECT_SPEED,
-                )),
+                LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
                 EffectTypeFeature(),
                 EffectLoopFeature(),
                 EffectSpeedFeature(LEDHUE_EFFECT_MAX_SPEED),
