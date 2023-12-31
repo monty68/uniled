@@ -49,6 +49,7 @@ from .const import (
     CONF_UL_RETRY_COUNT as CONF_RETRY_COUNT,
     CONF_UL_TRANSPORT as CONF_TRANSPORT,
     CONF_UL_UPDATE_INTERVAL as CONF_UPDATE_INTERVAL,
+    UNILED_COMMAND_SETTLE_DELAY,
     UNILED_MIN_DEVICE_RETRYS as MIN_DEVICE_RETRYS,
     UNILED_DEF_DEVICE_RETRYS as DEFAULT_RETRY_COUNT,
     UNILED_MAX_DEVICE_RETRYS as MAX_DEVICE_RETRYS,
@@ -63,7 +64,7 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 import functools
 import operator
-import time
+import asyncio
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -348,17 +349,22 @@ class UniledOptionsFlowHandler(flow.OptionsFlowWithConfigEntry, UniledMeshHandle
         channel = self.context.get("channel", None)
 
         if user_input is not None and not errors:
+            # _LOGGER.warn(self.options)
             for conf_attr, conf_value in user_input.items():
-                _LOGGER.warn("%s = %s", conf_attr, conf_value)
                 if not self.coordinator.device.available:
                     errors[conf_attr] = "not_available"
                 elif conf_value != channel.get(conf_attr, conf_value):
                     if await self.coordinator.device.async_set_state(
                         channel, conf_attr, conf_value
                     ):
-                        self.options[conf_attr] = conf_value
+                        # TODO: Should check feature for reload flag!
+                        # self.options[conf_attr] = conf_value
+                        pass
                     else:
                         errors[conf_attr] = "unknown"
+                    # Need some time between commands for devices to settle
+                    await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
+            # _LOGGER.warn(self.options)
 
         if user_input is None or errors:
             schema = None
