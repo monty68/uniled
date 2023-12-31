@@ -45,8 +45,8 @@ class ZenggeFeature(UniledAttribute):
                 ATTR_UL_NODE_ID,
                 ATTR_UL_MAC_ADDRESS,
                 ATTR_UL_RSSI,
-                ATTR_UL_LIGHT_MODE_NUMBER,
-                ATTR_HA_TRANSITION,
+                # ATTR_UL_LIGHT_MODE_NUMBER,
+                # ATTR_HA_TRANSITION,
             ),
         )
 
