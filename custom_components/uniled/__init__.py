@@ -46,6 +46,7 @@ from .const import (
     CONF_UL_RETRY_COUNT as CONF_RETRY_COUNT,
     CONF_UL_TRANSPORT as CONF_TRANSPORT,
     CONF_UL_UPDATE_INTERVAL as CONF_UPDATE_INTERVAL,
+    UNILED_COMMAND_SETTLE_DELAY,
     UNILED_DEVICE_RETRYS as DEFAULT_RETRY_COUNT,
     UNILED_UPDATE_SECONDS as DEFAULT_UPDATE_INTERVAL,
     UNILED_DEVICE_TIMEOUT,
@@ -293,13 +294,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_shutdown_coordinator(
-    hass: HomeAssistant, coordinator: UniledUpdateCoordinator
+    hass: HomeAssistant, coordinator: UniledUpdateCoordinator, rediscover: bool = True
 ) -> None:
     """Shutdown coordinator device"""
     await coordinator.device.shutdown()
     if (
         coordinator.device.transport != UNILED_TRANSPORT_NET
         and coordinator.device.address
+        and rediscover
     ):
         bluetooth.async_rediscover_address(hass, coordinator.device.address)
 
@@ -310,6 +312,9 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     _LOGGER.info(
         "%s: Reloading due to config/options update...", coordinator.device.name
     )
+    await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
+    await _async_shutdown_coordinator(hass, coordinator, rediscover=False)
+    await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY * 3)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
