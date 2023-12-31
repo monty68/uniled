@@ -150,7 +150,7 @@ class UniledBleDevice(UniledDevice):
 
         if not device:
             return None
-        
+
         _LOGGER.debug(
             "Checking support for: '%s' (%s)... %s",
             device.address,
@@ -179,7 +179,7 @@ class UniledBleDevice(UniledDevice):
                             device.address,
                             device.name,
                             found.model_name,
-                            found.manufacturer
+                            found.manufacturer,
                         )
                         return found
                     _LOGGER.debug(
@@ -298,7 +298,7 @@ class UniledBleDevice(UniledDevice):
     async def update(self, retry: int | None = None) -> bool:
         """Update the device."""
         _LOGGER.debug("%s: Update!", self.name)
-        
+
         if not (query := self.model.build_state_query(self)):
             raise Exception("Update - Failed, no state query command available!")
 
@@ -358,7 +358,7 @@ class UniledBleDevice(UniledDevice):
                 finally:
                     pass
                 self._last_notification_time = None
-        if isinstance(self._ble_device, BLEDevice):
+        elif isinstance(self._ble_device, BLEDevice):
             await close_stale_connections(self._ble_device)
         _LOGGER.debug("%s: Stopped", self.name)
 
@@ -431,23 +431,14 @@ class UniledBleDevice(UniledDevice):
                     )
                     return False
                 except CharacteristicMissingError as ex:
-                    if attempt == retry:
-                        _LOGGER.error(
-                            "%s: Characteristic missing: %s; Stopping trying; RSSI: %s",
-                            self.name,
-                            ex,
-                            self.rssi,
-                            exc_info=True,
-                        )
-                        raise
-
-                    _LOGGER.debug(
-                        "%s: characteristic missing: %s; RSSI: %s",
+                    _LOGGER.error(
+                        "%s: Characteristic missing: %s; Stopping trying; RSSI: %s",
                         self.name,
                         ex,
                         self.rssi,
                         exc_info=True,
                     )
+                    raise
                 except BLEAK_RETRY_EXCEPTIONS as ex:
                     if attempt == retry:
                         _LOGGER.error(
@@ -461,6 +452,7 @@ class UniledBleDevice(UniledDevice):
                     _LOGGER.debug(
                         "%s: Communication failed with: %s", self.name, str(ex)
                     )
+                    await asyncio.sleep(UNILED_BLE_ERROR_BACKOFF_TIME)
                 except AttributeError:
                     raise
 
@@ -474,14 +466,13 @@ class UniledBleDevice(UniledDevice):
             return await self._execute_commands_locked(commands)
         except BleakDBusError as ex:
             # Disconnect so we can reset state and try again
-            await asyncio.sleep(UNILED_BLE_ERROR_BACKOFF_TIME)
             _LOGGER.debug(
-                "%s: RSSI: %s; Backing off %ss; Disconnecting due to error: %s",
+                "%s: Backing off %ss; Disconnecting due to error: %s",
                 self.name,
-                self.rssi,
                 UNILED_BLE_ERROR_BACKOFF_TIME,
                 ex,
             )
+            await asyncio.sleep(UNILED_BLE_ERROR_BACKOFF_TIME)
             await self._async_invoke_forced_disconnect()
             raise
         except BLEAK_RETRY_EXCEPTIONS as ex:
@@ -505,7 +496,9 @@ class UniledBleDevice(UniledDevice):
         for command in commands:
             if self._client.is_connected and command:
                 _LOGGER.debug("%s: Sending command: %s", self.name, command.hex())
-                reply = await self._client.write_gatt_char(self._write_char, command, True) # None)
+                reply = await self._client.write_gatt_char(
+                    self._write_char, command, True
+                )  # None)
                 # await self._client.write_gatt_char(self._write_char, command, False) # Do not use!
                 if reply is not None:
                     _LOGGER.debug("%s: Command Reply: %s", self.name, repr(reply))
@@ -528,17 +521,18 @@ class UniledBleDevice(UniledDevice):
             #    "%s: Already connected before obtaining lock, resetting timer.",
             #    self.name,
             # )
-            self._reset_disconnect_timer()
+            # self._reset_disconnect_timer()
             return True
         async with self._connect_lock:
             # Check again while holding the lock
             if self._client and self._client.is_connected:
-                _LOGGER.debug(
-                    "%s: Already connected after obtaining lock, resetting timer.",
-                    self.name,
-                )
-                self._reset_disconnect_timer()
+                # _LOGGER.debug(
+                #    "%s: Already connected after obtaining lock, resetting timer.",
+                #    self.name,
+                # )
+                # self._reset_disconnect_timer()
                 return True
+            await close_stale_connections(self._ble_device)
             _LOGGER.debug(
                 "%s: Connecting '%s'; RSSI: %s", self.name, self.address, self.rssi
             )
@@ -555,6 +549,7 @@ class UniledBleDevice(UniledDevice):
                 "%s: Connected '%s'; RSSI: %s", self.name, client.address, self.rssi
             )
             self._client = client
+            await asyncio.sleep(UNILED_BLE_COMMAND_SETTLE_DELAY)
 
             if not self._resolve_characteristics(client.services):
                 _LOGGER.warning(
@@ -595,10 +590,10 @@ class UniledBleDevice(UniledDevice):
             self.address,
             self._notify_char,
         )
-        
+
         # Gudard against long bleak notify attempts
         self._cancel_disconnect_timer()
-        
+
         try:
             reply = await self._client.start_notify(
                 self._notify_char, self._notification_handler
@@ -612,7 +607,7 @@ class UniledBleDevice(UniledDevice):
             return False
 
         # Probaly shouldn't reneable, as cancelled eleswhere!
-        self._reset_disconnect_timer()
+        # self._reset_disconnect_timer()
         return True
 
     ##
@@ -727,9 +722,9 @@ class UniledBleDevice(UniledDevice):
     async def _async_invoke_timed_disconnect(self) -> None:
         """Execute timed disconnection."""
         _LOGGER.debug(
-           "%s: Executing timed disconnect after timeout of %s",
-           self.name,
-           UNILED_BLE_DISCONNECT_DELAY,
+            "%s: Executing timed disconnect after timeout of %s",
+            self.name,
+            UNILED_BLE_DISCONNECT_DELAY,
         )
         await self._async_execute_disconnect()
 
@@ -756,7 +751,7 @@ class UniledBleDevice(UniledDevice):
         self._read_char = None
         self._write_char = None
 
-        if client:
+        if client and client.is_connected:
             try:
                 _LOGGER.debug("%s: Disconnecting '%s'...", self.name, self.address)
                 await client.disconnect()
@@ -801,9 +796,9 @@ class UniledBleDevice(UniledDevice):
                 self._read_char = self._write_char
             if not self._notify_char:
                 self._notify_char = self._read_char
-        #_LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
-        #_LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
-        #_LOGGER.debug("%s: Notify Characteristic: %s", self.name, self._notify_char)
+        # _LOGGER.debug("%s: Read Characteristic: %s", self.name, self._read_char)
+        # _LOGGER.debug("%s: Write Characteristic: %s", self.name, self._write_char)
+        # _LOGGER.debug("%s: Notify Characteristic: %s", self.name, self._notify_char)
         return bool(self._read_char and self._write_char and self._notify_char)
 
     ##
