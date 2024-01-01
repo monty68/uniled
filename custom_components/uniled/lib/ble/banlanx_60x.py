@@ -338,8 +338,9 @@ class BanlanX60X(UniledBleModel):
                                 channel.status.set(
                                     ATTR_HA_RGB_COLOR, (data[7], data[8], data[9])
                                 )
-                                if fxtype != UNILEDEffectType.SOUND:
-                                    channel.status.set(ATTR_HA_BRIGHTNESS, data[3])
+
+                            if fxtype != UNILEDEffectType.SOUND:
+                                channel.status.set(ATTR_HA_BRIGHTNESS, data[3])
 
                         if not channel.features:
                             channel.features = [
