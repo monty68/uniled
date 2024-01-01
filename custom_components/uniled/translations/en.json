@@ -78,9 +78,9 @@
         "effect_type": {
           "name": "Effect Type",
           "state": {
-            "Static": "Static",
-            "Dynamic": "Dynamic",
-            "Sound": "Sound"
+            "static": "Static",
+            "dynamic": "Dynamic",
+            "sound": "Sound"
           }
         },
         "rssi": {

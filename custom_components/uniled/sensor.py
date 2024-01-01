@@ -83,7 +83,10 @@ class UniledSensorEntity(
     @property
     def native_value(self) -> str:
         """Return the value reported by the sensor."""
-        return self.device.get_state(self.channel, self.feature.attr)
+        value = self.device.get_state(self.channel, self.feature.attr)
+        if isinstance(value, str):
+            value = value.lower()
+        return value
 
 
 @dataclass
