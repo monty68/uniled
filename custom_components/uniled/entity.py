@@ -296,7 +296,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         # translations = platform.component_translations
         translations = platform.object_id_platform_translations
         name_translation_key = (
-            f"component.{platform.platform_name}.entity.channel.{channel_id}"
+            f"component.{platform.platform_name}.entity.channel.{channel_id}.name"
         )       
         return translations.get(name_translation_key, self.channel.name)
 
