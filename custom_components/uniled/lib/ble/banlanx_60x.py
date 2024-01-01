@@ -294,7 +294,6 @@ class BanlanX60X(UniledBleModel):
                         effect = data[1]
                         power = data[0]
                         master_power += power
-                        master_level += data[3]
 
                         channel.status.replace(
                             {
@@ -341,6 +340,9 @@ class BanlanX60X(UniledBleModel):
 
                             if fxtype != UNILEDEffectType.SOUND:
                                 channel.status.set(ATTR_HA_BRIGHTNESS, data[3])
+                                master_level += data[3]
+                            else:
+                                master_level += 255
 
                         if not channel.features:
                             channel.features = [
@@ -372,20 +374,20 @@ class BanlanX60X(UniledBleModel):
                     ATTR_UL_SCENE_SAVE_SELECT, str(BANLANX60X_MAX_SCENES)
                 )
 
-                level = cast(int, master_level / channel_id)
-
                 device.master.status.replace(
                     {
                         ATTR_UL_DEVICE_FORCE_REFRESH: True,
                         ATTR_UL_CHANNELS: channel_id,
                         ATTR_UL_POWER: True if master_power != 0 else False,
-                        ATTR_HA_BRIGHTNESS: level,
-                        ATTR_UL_SCENE: True,
+                        ATTR_UL_SCENE: BANLANX60X_MAX_SCENES,
                         ATTR_UL_SCENE_LOOP: loop,
                         # ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
                         # ATTR_UL_SCENE_SAVE_BUTTON: False,
                     }
                 )
+
+                level = cast(int, master_level / channel_id)
+                device.master.status.set(ATTR_HA_BRIGHTNESS, level)
 
                 if input is not None and master_power:
                     audio_input = self.str_if_key_in(input, BANLANX60X_AUDIO_INPUTS)
@@ -451,9 +453,11 @@ class BanlanX60X(UniledBleModel):
         cnum = device.channels - 1 if not channel.number else channel.number - 1
 
         if isinstance(value, str):
-            effect = self.int_if_str_in(
-                value, BANLANX60X_EFFECTS, BANLANX60X_EFFECT_SOLID
-            )
+            effect = BANLANX60X_EFFECT_SOLID
+            for id, fx in BANLANX60X_EFFECTS.items():
+                if fx.name == value:
+                    effect = id
+                    break
         elif (effect := int(value)) not in BANLANX60X_EFFECTS:
             return None
         return bytearray([0xAA, 0x23, 0x02, cnum, effect])
