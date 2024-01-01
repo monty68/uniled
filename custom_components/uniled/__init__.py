@@ -75,7 +75,6 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up UNILED from a config entry."""
-
     transport: str = entry.data.get(CONF_TRANSPORT)
 
     if transport == UNILED_TRANSPORT_ZNG:
@@ -355,7 +354,7 @@ async def async_migrate_entry(hass, entry):
             "UniLED is unable to migrate this entities configuration, remove and re-install."
         )
         return False
-    
+
     if entry.version == 2:
         ent_reg = async_get(hass)
         for entity in list(ent_reg.entities.values()):
@@ -363,7 +362,9 @@ async def async_migrate_entry(hass, entry):
                 continue
             if not ent_reg.entities.get_entry(entity.id):
                 continue
-            for attr in UNILED_OPTIONS_ATTRIBUTES:
+            trash = UNILED_OPTIONS_ATTRIBUTES
+            trash.extend([f"scene.{s}" for s in range(9)])
+            for attr in trash:
                 if entity.unique_id.endswith(attr):
                     _LOGGER.warn(f"Removing redundent entity: {entity.unique_id}")
                     ent_reg.async_remove(entity.entity_id)
