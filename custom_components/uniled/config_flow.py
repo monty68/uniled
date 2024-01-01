@@ -461,7 +461,7 @@ class UniledOptionsFlowHandler(flow.OptionsFlowWithConfigEntry, UniledMeshHandle
 class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN):
     """Handle a UniLED config flow."""
 
-    VERSION = 2
+    VERSION = 3
 
     @staticmethod
     @callback
