@@ -2,7 +2,7 @@
     "title": "Universal Light Controller",
     "entity": {
       "channel": {
-        "master": "Master##",
+        "master": "Master",
         "channel_1": "Channel 1",
         "channel_2": "Channel 2",
         "channel_3": "Channel 3",
