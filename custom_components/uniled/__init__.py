@@ -367,6 +367,7 @@ async def async_migrate_entry(hass, entry):
                 if entity.unique_id.endswith(attr):
                     _LOGGER.warn(f"Removing redundent entity: {entity.unique_id}")
                     ent_reg.async_remove(entity.entity_id)
+                    break
         entry.version = 3
         _LOGGER.info("Migration to version %s successful", entry.version)
  
