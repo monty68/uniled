@@ -59,7 +59,7 @@
         "effect_speed": {
           "name": "Effect Speed"
         },
-        "effect_lengthX": {
+        "effect_length": {
           "name": "Effect Length"
         },
         "sensitivity": {
