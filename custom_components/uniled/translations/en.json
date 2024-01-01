@@ -209,7 +209,7 @@
             "chip_order": "The order of the {chip_type} LED's connected to the device.",
             "onoff_effect": "The effect to use when the light is turned on or off.",
             "onoff_speed": "The speed of the effect when the light is turned on or off.",
-            "onoff_pixels": "The number of pixels used by the effect applied to the light when it is turned on or off.",
+            "onoff_pixels": "The number of pixels used by the effect when the light is turned on or off.",
             "coexistence": "In static modes only, determines if both colored and white LED's coexist or if they are controlled independently.",
             "on_power": "Determines the state of the light when power is applied/restored to the device."
           }
