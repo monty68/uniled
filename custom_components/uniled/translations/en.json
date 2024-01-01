@@ -1,6 +1,48 @@
 {
     "title": "Universal Light Controller",
     "entity": {
+      "_": {
+        "channel": {
+          "master": "Master",
+          "channel_1": "Channel 1",
+          "channel_2": "Channel 2",
+          "channel_3": "Channel 3",
+          "channel_4": "Channel 4",
+          "channel_5": "Channel 5",
+          "channel_6": "Channel 6",
+          "channel_7": "Channel 7",
+          "channel_8": "Channel 8"
+        }
+      },
+      "scene": {
+        "scene_0": {
+          "name": "Scene #1"
+        },
+        "scene_1": {
+          "name": "Scene #2"
+        },
+        "scene_2": {
+          "name": "Scene #3"
+        },
+        "scene_3": {
+          "name": "Scene #4"
+        },
+        "scene_4": {
+          "name": "Scene #5"
+        },
+        "scene_5": {
+          "name": "Scene #6"
+        },
+        "scene_6": {
+          "name": "Scene #7"
+        },
+        "scene_7": {
+          "name": "Scene #8"
+        },
+        "scene_8": {
+          "name": "Scene #9"
+        }
+      },
       "light": {
         "bulb": {
           "name": "Bulb"
@@ -9,17 +51,17 @@
           "name": "Lamp"
         },
         "light": {
-          "name": "light"
+          "name": "Light"
         },
         "strip": {
-          "name": "strip"
+          "name": "Strip"
         }
       },
       "number": {
         "effect_speed": {
           "name": "Effect Speed"
         },
-        "effect_length": {
+        "effect_lengthX": {
           "name": "Effect Length"
         },
         "sensitivity": {
@@ -38,10 +80,13 @@
         "effect_type": {
           "name": "Effect Type",
           "state": {
-            "static": "Static",
-            "dynamic": "Dynamic",
-            "sound": "Sound"
+            "Static": "Static",
+            "Dynamic": "Dynamic",
+            "Sound": "Sound"
           }
+        },
+        "rssi": {
+          "name": "Signal strength"
         }
       },
       "switch": {
@@ -53,6 +98,9 @@
         },
         "effect_play": {
           "name": "Effect Play/Pause"
+        },
+        "scene_loop": {
+          "name": "Loop Scenes"
         }
       }
     },

@@ -1,9 +1,10 @@
 """Support for UniLED lights."""
 from __future__ import annotations
-from abc import abstractmethod
 from typing import Any, Protocol
+from abc import abstractmethod
 from functools import partial
 
+from homeassistant.backports.functools import cached_property
 from homeassistant.const import (
     ATTR_CONNECTIONS,
     ATTR_HW_VERSION,
@@ -22,7 +23,8 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
+from homeassistant.helpers.typing import UndefinedType
 
 from .const import (
     DOMAIN,
@@ -184,17 +186,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         self._device: UniledDevice = coordinator.device
         self._channel: UniledChannel = channel
         self._feature: UniledAttribute = feature
-        # TODO: This is buggy: self.platform is not set, throwing errors?
-        # self._attr_translation_key = feature.attr
         self._attr_has_entity_name = True
-
-        if channel.name:
-            if feature.name.lower() not in channel.name.lower():
-                self._attr_name = f"{channel.name} {feature.name}"
-            else:
-                self._attr_name = f"{channel.name}"
-        elif feature.name and feature.name.lower() != feature.platform:
-            self._attr_name = f"{feature.name}"
 
         base_unique_id = coordinator.entry.unique_id or coordinator.entry.entry_id
         self._attr_unique_id = f"_{base_unique_id}"
@@ -206,9 +198,6 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         if (key := getattr(feature, "key", None)) is not None:
             self._attr_unique_id = f"{self._attr_unique_id}_{key}"
 
-        # _LOGGER.debug("%s: %s (%s)", self._attr_unique_id, self._attr_name, channel.name)
-        # _LOGGER.warn("%s: %s %s %s", self._attr_unique_id, self.name, self.feature.platform, self.platform)
-
         self._attr_entity_registry_enabled_default = feature.enabled
         self._attr_entity_category = None
         self._attr_icon = feature.icon
@@ -218,13 +207,6 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         elif feature.group == UniledGroup.DIAGNOSTIC:
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._async_update_attrs(first=True)
-
-    async def async_added_to_hass(self) -> None:
-        """Handle entity which will be added."""
-        self.async_on_remove(
-            self._channel.register_callback(self._handle_coordinator_update)
-        )
-        await super().async_added_to_hass()
 
     def _async_device_info(
         self, device: UniledDevice, entry: config_entries.ConfigEntry
@@ -274,6 +256,23 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             self._device, self.coordinator.entry
         )
 
+    @callback
+    def add_to_platform_start(
+        self,
+        hass: HomeAssistant,
+        platform: EntityPlatform,
+        parallel_updates: asyncio.Semaphore | None,
+    ) -> None:
+        """Start adding an entity to a platform."""
+        super().add_to_platform_start(hass, platform, parallel_updates)
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        self.async_on_remove(
+            self._channel.register_callback(self._handle_coordinator_update)
+        )
+        await super().async_added_to_hass()
+
     async def _async_state_change(self, value: Any) -> None:
         """Update device with new entity value/state"""
         success = await self.device.async_set_state(
@@ -288,6 +287,19 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
             ## TODO Can we warn the user there will be a reload??
             await self._async_delayed_reload(self.hass, self.coordinator.entry)
 
+    @cached_property
+    def _channel_name(self) -> str | None:
+        """Return a translated name of the entity based on its device class."""
+        if not (channel_id := self.channel.identity):
+            return None
+        platform = self.platform
+        # translations = platform.component_translations
+        translations = platform.object_id_platform_translations
+        name_translation_key = (
+            f"component.{platform.platform_name}.entity._.channel.{channel_id}"
+        )       
+        return translations.get(name_translation_key, self.channel.name)
+
     @property
     def extra_state_attributes(self):
         """Return the device state attributes."""
@@ -300,6 +312,22 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
                     extra[x] = value
         return extra
 
+    @property
+    def translation_key(self) -> str | None:
+        """Return the translation key to translate the entity's states."""
+        return self.feature.key or self.feature.attr
+    
+    @property
+    def name(self) -> str | UndefinedType | None:
+        """Return entity name"""
+        if (name := super().name) is None or isinstance(name, UndefinedType):
+            name = self.feature.name
+        channel_name = self._channel_name
+        # _LOGGER.warn("%s: Channel Name: %s - %s", self.feature.key, channel_name, name)
+        if channel_name and channel_name.lower() != name.lower():
+            return f"{channel_name} {name}"
+        return name
+ 
     @property
     def available(self) -> bool:
         """Return if entity is available"""
