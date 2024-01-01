@@ -1,18 +1,16 @@
 {
     "title": "Universal Light Controller",
     "entity": {
-      "_": {
-        "channel": {
-          "master": "Master",
-          "channel_1": "Channel 1",
-          "channel_2": "Channel 2",
-          "channel_3": "Channel 3",
-          "channel_4": "Channel 4",
-          "channel_5": "Channel 5",
-          "channel_6": "Channel 6",
-          "channel_7": "Channel 7",
-          "channel_8": "Channel 8"
-        }
+      "channel": {
+        "master": "Master##",
+        "channel_1": "Channel 1",
+        "channel_2": "Channel 2",
+        "channel_3": "Channel 3",
+        "channel_4": "Channel 4",
+        "channel_5": "Channel 5",
+        "channel_6": "Channel 6",
+        "channel_7": "Channel 7",
+        "channel_8": "Channel 8"
       },
       "scene": {
         "scene_0": {
