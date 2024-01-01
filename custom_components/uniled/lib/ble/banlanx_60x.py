@@ -391,7 +391,7 @@ class BanlanX60X(UniledBleModel):
 
                 if not device.master.features:
                     device.master.features = [
-                        LightStripFeature(extra=[ATTR_UL_SCENE_LOOP]),
+                        LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
                         SceneLoopFeature(),
                         # SceneSaveSelect(),
                         # SceneSaveButton(),
