@@ -12,7 +12,7 @@ from homeassistant.core import Event, HomeAssistant, callback, CoreState
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers.device_registry import format_mac
-from homeassistant.helpers.entity_registry import async_migrate_entries
+from homeassistant.helpers.entity_registry import async_get, async_migrate_entries
 from homeassistant.const import (
     CONF_ADDRESS,
     CONF_COUNTRY,
@@ -50,6 +50,7 @@ from .const import (
     UNILED_DEVICE_RETRYS as DEFAULT_RETRY_COUNT,
     UNILED_UPDATE_SECONDS as DEFAULT_UPDATE_INTERVAL,
     UNILED_DEVICE_TIMEOUT,
+    UNILED_OPTIONS_ATTRIBUTES,
 )
 
 from .coordinator import UniledUpdateCoordinator
@@ -354,4 +355,19 @@ async def async_migrate_entry(hass, entry):
             "UniLED is unable to migrate this entities configuration, remove and re-install."
         )
         return False
+    
+    if entry.version == 2:
+        ent_reg = async_get(hass)
+        for entity in list(ent_reg.entities.values()):
+            if entity.config_entry_id != entry.entry_id:
+                continue
+            if not ent_reg.entities.get_entry(entity.id):
+                continue
+            for attr in UNILED_OPTIONS_ATTRIBUTES:
+                if entity.unique_id.endswith(attr):
+                    _LOGGER.warn(f"Removing redundent entity: {entity.unique_id}")
+                    ent_reg.async_remove(entity.entity_id)
+        entry.version = 3
+        _LOGGER.info("Migration to version %s successful", entry.version)
+ 
     return True
