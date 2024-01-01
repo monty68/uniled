@@ -17,8 +17,8 @@ UNILED_BLE_MODELS: Final = [
     SP110E,
     ######
     SP601E,
-    # SP602E,
-    # SP608E,
+    SP602E, # Experimental!
+    SP608E, # Experimental!
     ######
     SP611E,
     SP617E,
