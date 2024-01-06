@@ -70,7 +70,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 
-class UniledMeshHandler:
+class UniledMeshHandler(flow.OptionsFlowWithConfigEntry):
     """Common methods for mesh config and option flows"""
 
     def _mesh_title(self, mesh_uuid: int | None = None) -> str:
@@ -134,7 +134,7 @@ class UniledMeshHandler:
         cloud_password = self.context.get(CONF_PASSWORD, "")
         cloud_country = self.context.get(CONF_COUNTRY, "US")
         mesh_uuid = self.context.get(CONF_MESH_UUID, 0)
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             has_changed = False
@@ -286,7 +286,8 @@ class UniledOptionsFlowHandler(flow.OptionsFlowWithConfigEntry, UniledMeshHandle
                     return self.async_abort(reason="no_configurable")
         else:
             channel_id = 0
-        channel = self.coordinator.device.channel(channel_id)
+        if (channel := self.coordinator.device.channel(channel_id)) is None:
+            return self.async_abort(reason="no_configurable")
         self.context["channel"] = channel
         if channel.has(ATTR_UL_LIGHT_TYPE) or channel.has(ATTR_UL_CHIP_TYPE):
             return await self.async_step_conf_type()
@@ -395,7 +396,9 @@ class UniledOptionsFlowHandler(flow.OptionsFlowWithConfigEntry, UniledMeshHandle
                             ),
                         }
                     elif feature.platform == Platform.SWITCH:
-                        option = {vol.Required(conf_attr, default=conf_value): cv.boolean}
+                        option = {
+                            vol.Required(conf_attr, default=conf_value): cv.boolean
+                        }
                     else:
                         _LOGGER.warning(
                             "Unsupported feature platform: '%s' for '%s'.",
