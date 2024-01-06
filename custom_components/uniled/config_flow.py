@@ -70,7 +70,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 
-class UniledMeshHandler(flow.OptionsFlowWithConfigEntry):
+class UniledMeshHandler():
     """Common methods for mesh config and option flows"""
 
     def _mesh_title(self, mesh_uuid: int | None = None) -> str:
