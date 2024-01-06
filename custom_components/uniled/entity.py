@@ -326,7 +326,7 @@ class UniledEntity(CoordinatorEntity[UniledUpdateCoordinator]):
         # _LOGGER.warn("%s: Channel Name: %s - %s", self.feature.key, channel_name, name)
         if channel_name and channel_name.lower() != name.lower():
             return f"{channel_name} {name}"
-        return name
+        return name or channel_name
  
     @property
     def available(self) -> bool:
