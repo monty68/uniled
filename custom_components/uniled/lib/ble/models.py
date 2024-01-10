@@ -1,5 +1,6 @@
 """UniLED Supported BLE Models."""
 from typing import Final
+from .device import UNILED_TRANSPORT_BLE
 from .led_chord import SP107E
 from .led_hue import SP110E
 from .banlanx_60x import SP601E, SP602E, SP608E
@@ -16,8 +17,8 @@ UNILED_BLE_MODELS: Final = [
     SP110E,
     ######
     SP601E,
-    # SP602E,
-    # SP608E,
+    SP602E, # Experimental!
+    SP608E, # Experimental!
     ######
     SP611E,
     SP617E,

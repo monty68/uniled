@@ -19,12 +19,14 @@ from .entity import (
 
 from .lib.attributes import (
     UniledAttribute,
-    UniledNumber,
+    NumberAttribute,
 )
 
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -56,7 +58,7 @@ class UniledNumberEntity(
         self,
         coordinator: UniledUpdateCoordinator,
         channel: UniledChannel,
-        feature: UniledNumber,
+        feature: NumberAttribute,
     ) -> None:
         """Initialize a UniLED number control."""
         self._attr_mode = NumberMode.AUTO
@@ -73,4 +75,3 @@ class UniledNumberEntity(
     async def async_set_native_value(self, value: float) -> None:
         """Set the features value value."""
         await self._async_state_change(value)
-        

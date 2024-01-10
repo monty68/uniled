@@ -1,31 +1,32 @@
 """UniLED BLE Devices - SP LED (BanlanX SP60xE)"""
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from ..const import *  # I know!
 from ..channel import UniledChannel
 from ..features import (
     UniledAttribute,
     UniledGroup,
-    UniledButton,
-    UniledSelect,
-    UniledLedStrip,
-    UniledSceneLoop,
-    UniledEffectType,
-    UniledEffectSpeed,
-    UniledEffectLength,
-    UniledEffectDirection,
-    UniledSensitivity,
-    UniledAudioInput,
-    UniledChipOrder,
+    ButtonAttribute,
+    SceneAttribute,
+    SelectAttribute,
+    LightStripFeature,
+    SceneLoopFeature,
+    EffectTypeFeature,
+    EffectSpeedFeature,
+    EffectLengthFeature,
+    EffectDirectionFeature,
+    AudioSensitivityFeature,
+    AudioInputFeature,
+    ChipOrderFeature,
 )
 from ..effects import (
     UNILEDEffectType,
     UNILEDEffects,
 )
 from .device import (
-    BASE_UUID_FORMAT as BANLANX_UUID_FORMAT,
+    UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
     BANLANX_MANUFACTURER,
     BANLANX_MANUFACTURER_ID,
     ParseNotificationError,
@@ -93,30 +94,31 @@ BANLANX60X_EFFECT_SOUND: Final = 0x65
 
 BANLANX60X_EFFECTS: Final = {
     BANLANX60X_EFFECT_SOLID: _FX_STATIC(),
-    BANLANX60X_EFFECT_PATTERN + 0: _FX_DYNAMIC(UNILEDEffects.RAINBOW, False, True),
+    BANLANX60X_EFFECT_PATTERN + 0: _FX_DYNAMIC(UNILEDEffects.RAINBOW, False, True, True),
     BANLANX60X_EFFECT_PATTERN + 1: _FX_DYNAMIC(UNILEDEffects.RAINBOW_STARS),
     BANLANX60X_EFFECT_PATTERN + 2: _FX_DYNAMIC(UNILEDEffects.STARS_TWINKLE, True),
-    BANLANX60X_EFFECT_PATTERN + 3: _FX_DYNAMIC(UNILEDEffects.FIRE, False, True),
-    BANLANX60X_EFFECT_PATTERN + 4: _FX_DYNAMIC(UNILEDEffects.STACKING, True, True),
-    BANLANX60X_EFFECT_PATTERN + 5: _FX_DYNAMIC(UNILEDEffects.COMET, True, True),
-    BANLANX60X_EFFECT_PATTERN + 6: _FX_DYNAMIC(UNILEDEffects.WAVE, True, True),
-    BANLANX60X_EFFECT_PATTERN + 7: _FX_DYNAMIC("Chasing", True, True),
-    BANLANX60X_EFFECT_PATTERN + 8: _FX_DYNAMIC("Red/Blue/White", False, True),
-    BANLANX60X_EFFECT_PATTERN + 9: _FX_DYNAMIC("Green/Yellow/White", False, True),
-    BANLANX60X_EFFECT_PATTERN + 10: _FX_DYNAMIC("Red/Green/White", False, True),
-    BANLANX60X_EFFECT_PATTERN + 11: _FX_DYNAMIC("Red/Yellow", False, True),
-    BANLANX60X_EFFECT_PATTERN + 12: _FX_DYNAMIC("Red/White", False, True),
-    BANLANX60X_EFFECT_PATTERN + 13: _FX_DYNAMIC("Green/White", False, True),
+    BANLANX60X_EFFECT_PATTERN + 3: _FX_DYNAMIC(UNILEDEffects.FIRE, False, True, True),
+    BANLANX60X_EFFECT_PATTERN + 4: _FX_DYNAMIC(UNILEDEffects.STACKING, True, True, True),
+    BANLANX60X_EFFECT_PATTERN + 5: _FX_DYNAMIC(UNILEDEffects.COMET, True, True, True),
+    BANLANX60X_EFFECT_PATTERN + 6: _FX_DYNAMIC(UNILEDEffects.WAVE, True, True, True),
+    BANLANX60X_EFFECT_PATTERN + 7: _FX_DYNAMIC("Chasing", True, True, True),
+    BANLANX60X_EFFECT_PATTERN + 8: _FX_DYNAMIC("Red/Blue/White", False, True, True),
+    BANLANX60X_EFFECT_PATTERN + 9: _FX_DYNAMIC("Green/Yellow/White", False, True, True),
+    BANLANX60X_EFFECT_PATTERN + 10: _FX_DYNAMIC("Red/Green/White", False, True, True),
+    BANLANX60X_EFFECT_PATTERN + 11: _FX_DYNAMIC("Red/Yellow", False, True, True),
+    BANLANX60X_EFFECT_PATTERN + 12: _FX_DYNAMIC("Red/White", False, True, True),
+    BANLANX60X_EFFECT_PATTERN + 13: _FX_DYNAMIC("Green/White", False, True, True),
     BANLANX60X_EFFECT_PATTERN + 14: _FX_DYNAMIC(UNILEDEffects.GRADIENT),
-    BANLANX60X_EFFECT_PATTERN + 15: _FX_DYNAMIC("Wiping", True, True),
+    BANLANX60X_EFFECT_PATTERN + 15: _FX_DYNAMIC("Wiping", True, True, True),
     BANLANX60X_EFFECT_PATTERN + 16: _FX_DYNAMIC(UNILEDEffects.BREATH, True),
-    BANLANX60X_EFFECT_PATTERN + 17: _FX_DYNAMIC("Full Color Comet Wiping", True),
-    BANLANX60X_EFFECT_PATTERN + 18: _FX_DYNAMIC("Comet Wiping", True),
-    BANLANX60X_EFFECT_PATTERN + 19: _FX_DYNAMIC("Pixel Dot Wiping", True),
-    BANLANX60X_EFFECT_PATTERN + 20: _FX_DYNAMIC("Full Color Meteor Rain", False, True),
-    BANLANX60X_EFFECT_PATTERN + 21: _FX_DYNAMIC("Meteor Rain", True, True),
-    BANLANX60X_EFFECT_PATTERN + 22: _FX_DYNAMIC("Color Dots", False, True),
-    BANLANX60X_EFFECT_PATTERN + 23: _FX_DYNAMIC("Color Block", False, True),
+    BANLANX60X_EFFECT_PATTERN + 17: _FX_DYNAMIC("Full Color Comet Wiping", True, False, True),
+    BANLANX60X_EFFECT_PATTERN + 18: _FX_DYNAMIC("Comet Wiping", True, False, True),
+    BANLANX60X_EFFECT_PATTERN + 19: _FX_DYNAMIC("Pixel Dot Wiping", True, False, True),
+    BANLANX60X_EFFECT_PATTERN + 20: _FX_DYNAMIC("Full Color Meteor Rain", False, True, True),
+
+    BANLANX60X_EFFECT_PATTERN + 21: _FX_DYNAMIC("Meteor Rain", True, True, True),
+    BANLANX60X_EFFECT_PATTERN + 22: _FX_DYNAMIC("Color Dots", False, True, True),
+    BANLANX60X_EFFECT_PATTERN + 23: _FX_DYNAMIC("Color Block", False, True, True),
     BANLANX60X_EFFECT_SOUND + 0: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_SPECTRUM_FULL),
     BANLANX60X_EFFECT_SOUND
     + 1: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_SPECTRUM_SINGLE, True),
@@ -124,10 +126,10 @@ BANLANX60X_EFFECTS: Final = {
     BANLANX60X_EFFECT_SOUND
     + 3: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_STARS_SINGLE, True),
     BANLANX60X_EFFECT_SOUND
-    + 4: _FX_SOUND("Sound - Full Color Beat Injection", False, True),
-    BANLANX60X_EFFECT_SOUND + 5: _FX_SOUND("Sound - Beat Injection", True, True),
-    BANLANX60X_EFFECT_SOUND + 6: _FX_SOUND(UNILEDEffects.SOUND_ENERGY_GRADIENT),
-    BANLANX60X_EFFECT_SOUND + 7: _FX_SOUND(UNILEDEffects.SOUND_ENERGY_SINGLE, True),
+    + 4: _FX_SOUND("Sound - Full Color Beat Injection", False, True, True),
+    BANLANX60X_EFFECT_SOUND + 5: _FX_SOUND("Sound - Beat Injection", True, True, True),
+    BANLANX60X_EFFECT_SOUND + 6: _FX_SOUND(UNILEDEffects.SOUND_ENERGY_GRADIENT, False, False, True),
+    BANLANX60X_EFFECT_SOUND + 7: _FX_SOUND(UNILEDEffects.SOUND_ENERGY_SINGLE, True, False, True),
     BANLANX60X_EFFECT_SOUND + 8: _FX_SOUND(UNILEDEffects.SOUND_PULSE_GRADIENT),
     BANLANX60X_EFFECT_SOUND + 9: _FX_SOUND(UNILEDEffects.SOUND_PULSE_SINGLE, True),
     BANLANX60X_EFFECT_SOUND + 10: _FX_SOUND("Sound - Full Color Ripple"),
@@ -142,26 +144,25 @@ ATTR_UL_SCENE_SAVE_SELECT: Final = "scene_to_save"
 ATTR_UL_SCENE_SAVE_BUTTON: Final = "scene_save"
 
 
-class SceneSaveSelect(UniledSelect):
+class SceneSaveSelect(SelectAttribute):
     def __init__(self):
         super().__init__(
-            UniledGroup.CONFIGURATION,
-            False,
             ATTR_UL_SCENE_SAVE_SELECT,
             "Save to which scene",
             "mdi:star-settings",
-            None,
+            group=UniledGroup.CONFIGURATION,
+            enabled=False,
         )
 
 
-class SceneSaveButton(UniledButton):
+class SceneSaveButton(ButtonAttribute):
     def __init__(self):
         super().__init__(
-            UniledGroup.CONFIGURATION,
-            False,
             ATTR_UL_SCENE_SAVE_BUTTON,
             "Save to Scene",
             "mdi:star-plus",
+            group=UniledGroup.CONFIGURATION,
+            enabled=False,
         )
 
 
@@ -266,6 +267,7 @@ class BanlanX60X(UniledBleModel):
             if len(data) == message_length:
                 _LOGGER.debug("%s: Message: %s", device.name, data.hex())
                 master_power = 0
+                master_level = 0
                 channel_id = 0
                 while len(data) > CHANNEL_DATA_SIZE:
                     channel_id += 1
@@ -335,22 +337,22 @@ class BanlanX60X(UniledBleModel):
                                 channel.status.set(
                                     ATTR_HA_RGB_COLOR, (data[7], data[8], data[9])
                                 )
-                                if fxtype != UNILEDEffectType.SOUND:
-                                    channel.status.set(ATTR_HA_BRIGHTNESS, data[3])
+
+                            if fxtype != UNILEDEffectType.SOUND:
+                                channel.status.set(ATTR_HA_BRIGHTNESS, data[3])
+                                master_level += data[3]
+                            else:
+                                master_level += 255
 
                         if not channel.features:
                             channel.features = [
-                                UniledLedStrip(),
-                                UniledEffectType(),
-                                UniledEffectSpeed(BANLANX60X_MAX_EFFECT_SPEED),
-                                UniledEffectLength(BANLANX60X_MAX_EFFECT_LENGTH),
-                                UniledEffectDirection(),
-                                UniledSensitivity(BANLANX60X_MAX_SENSITIVITY),
-                                UniledChipOrder(),
-                                UniledAttribute(ATTR_UL_EFFECT_NUMBER),
-                                UniledAttribute(ATTR_UL_EFFECT_SPEED),
-                                UniledAttribute(ATTR_UL_EFFECT_LENGTH),
-                                UniledAttribute(ATTR_UL_EFFECT_DIRECTION),
+                                LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
+                                EffectTypeFeature(),
+                                EffectSpeedFeature(BANLANX60X_MAX_EFFECT_SPEED),
+                                EffectLengthFeature(BANLANX60X_MAX_EFFECT_LENGTH),
+                                EffectDirectionFeature(),
+                                AudioSensitivityFeature(BANLANX60X_MAX_SENSITIVITY),
+                                ChipOrderFeature(),
                             ]
 
                     # Next Channels Data?
@@ -359,11 +361,13 @@ class BanlanX60X(UniledBleModel):
 
                 # Master Channel
                 #
+                input = None
                 loop = None
                 if len(data) > 0:
                     # 0  = Audio Input
                     # 1  = Auto Mode (0x00 = Off, 0x01 = On)
                     _LOGGER.debug("%s: Residual : %s", device.name, data.hex())
+                    input = data[0] if self.model_num > 0x601E else None
                     loop = True if data[1] != 0 else False
 
                 last_save_scene = device.master.status.get(
@@ -373,42 +377,37 @@ class BanlanX60X(UniledBleModel):
                 device.master.status.replace(
                     {
                         ATTR_UL_DEVICE_FORCE_REFRESH: True,
+                        ATTR_UL_CHANNELS: channel_id,
                         ATTR_UL_POWER: True if master_power != 0 else False,
-                        ATTR_UL_SCENE: True if master_power != 0 else False,
+                        ATTR_UL_SCENE: BANLANX60X_MAX_SCENES,
                         ATTR_UL_SCENE_LOOP: loop,
-                        ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
-                        ATTR_UL_SCENE_SAVE_BUTTON: False,
+                        # ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
+                        # ATTR_UL_SCENE_SAVE_BUTTON: False,
                     }
                 )
 
-                if self.model_num > 0x601E and master_power:
-                    input = self.str_if_key_in(data[0], BANLANX60X_AUDIO_INPUTS)
-                    device.master.status.set(ATTR_UL_AUDIO_INPUT, input)
+                level = cast(int, master_level / channel_id)
+                device.master.status.set(ATTR_HA_BRIGHTNESS, level)
+
+                if input is not None and master_power:
+                    audio_input = self.str_if_key_in(input, BANLANX60X_AUDIO_INPUTS)
+                    device.master.status.set(ATTR_UL_AUDIO_INPUT, audio_input)
 
                 if not device.master.features:
                     device.master.features = [
-                        UniledLedStrip(),
-                        UniledSceneLoop(),
-                        #SceneSaveSelect(),
-                        #SceneSaveButton(),
-                        UniledAttribute(ATTR_UL_SCENE_LOOP),
+                        LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
+                        SceneLoopFeature(),
+                        # SceneSaveSelect(),
+                        # SceneSaveButton(),
                     ]
 
                     for b in range(BANLANX60X_MAX_SCENES):
                         device.master.features.append(
-                            UniledButton(
-                                UniledGroup.STANDARD,
-                                True,
-                                ATTR_UL_SCENE,
-                                f"Scene {b + 1}",
-                                "mdi:star",
-                                f"scene_{b + 1}",
-                                int(b),
-                            )
+                            SceneAttribute(b, UNILED_CONTROL_ATTRIBUTES)
                         )
 
-                    if self.model_num > 0x601E:
-                        device.master.features.append(UniledAudioInput())
+                    if input is not None:
+                        device.master.features.append(AudioInputFeature())
                 return True
         raise ParseNotificationError("Unknown/Invalid Packet!")
 
@@ -454,9 +453,11 @@ class BanlanX60X(UniledBleModel):
         cnum = device.channels - 1 if not channel.number else channel.number - 1
 
         if isinstance(value, str):
-            effect = self.int_if_str_in(
-                value, BANLANX60X_EFFECTS, BANLANX60X_EFFECT_SOLID
-            )
+            effect = BANLANX60X_EFFECT_SOLID
+            for id, fx in BANLANX60X_EFFECTS.items():
+                if fx.name == value:
+                    effect = id
+                    break
         elif (effect := int(value)) not in BANLANX60X_EFFECTS:
             return None
         return bytearray([0xAA, 0x23, 0x02, cnum, effect])
@@ -553,10 +554,12 @@ class BanlanX60X(UniledBleModel):
     ) -> list[bytearray]:
         """Build chip order message(s)"""
         cnum = device.channels - 1 if not channel.number else channel.number - 1
-        if (order := self.chip_order_index(UNILED_CHIP_ORDER_RGB, str(value))) is not None:
+        if (
+            order := self.chip_order_index(UNILED_CHIP_ORDER_RGB, str(value))
+        ) is not None:
             return bytearray([0xAA, 0x24, 0x02, cnum, order])
         return None
-    
+
     def fetch_chip_order_list(
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:

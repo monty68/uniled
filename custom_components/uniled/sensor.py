@@ -13,19 +13,15 @@ from homeassistant.components.sensor import (
     SensorStateClass,
     SensorEntity,
 )
-
 from homeassistant.const import (
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
 )
-
 from .lib.attributes import (
     UniledAttribute,
     UniledGroup,
-    UniledSensor,
+    SensorAttribute,
 )
-
 from .entity import (
-    UNILED_TRANSPORT_BLE,
     UniledUpdateCoordinator,
     UniledChannel,
     UniledEntity,
@@ -33,12 +29,17 @@ from .entity import (
     AddEntitiesCallback,
     async_uniled_entity_setup,
 )
+from .const import ATTR_UL_RSSI
+
+from .lib.net.device import UNILED_TRANSPORT_NET
 
 EXTRA_ATTRIBUTE_MAC_ADDRESS = "mac_address"
 
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -60,9 +61,10 @@ def _add_sensor_entity(
     """Create UniLED sensor entity."""
     if feature:
         return UniledSensorEntity(coordinator, channel, feature)
-    if channel.number == 0 and coordinator.device.transport == UNILED_TRANSPORT_BLE:
+    if channel.number == 0 and coordinator.device.transport != UNILED_TRANSPORT_NET:
         return UniledSignalSensor(coordinator, channel)
     return None
+
 
 class UniledSensorEntity(
     UniledEntity, CoordinatorEntity[UniledUpdateCoordinator], SensorEntity
@@ -73,7 +75,7 @@ class UniledSensorEntity(
         self,
         coordinator: UniledUpdateCoordinator,
         channel: UniledChannel,
-        feature: UniledSensor,
+        feature: SensorAttribute,
     ) -> None:
         """Initialize a UniLED sensor."""
         super().__init__(coordinator, channel, feature)
@@ -81,20 +83,24 @@ class UniledSensorEntity(
     @property
     def native_value(self) -> str:
         """Return the value reported by the sensor."""
-        return self.device.get_state(self.channel, self.feature.attr)
+        value = self.device.get_state(self.channel, self.feature.attr)
+        if isinstance(value, str):
+            value = value.lower()
+        return value
+
 
 @dataclass
-class UniledRSSI(UniledSensor):
+class RSSIFeature(SensorAttribute):
     """UniLED RSSI Feature Class"""
 
     def __init__(self) -> None:
         super().__init__(
-            UniledGroup.DIAGNOSTIC,
-            False,
             None,
             "RSSI",
             "mdi:signal",
-            "rssi",
+            key="rssi",
+            group=UniledGroup.DIAGNOSTIC,
+            enabled=False,
         )
 
 
@@ -115,7 +121,7 @@ class UniledSignalSensor(
         channel: UniledChannel,
     ) -> None:
         """Initialize a UniLED effect speed control."""
-        super().__init__(coordinator, channel, UniledRSSI())
+        super().__init__(coordinator, channel, RSSIFeature())
 
     @callback
     def _async_update_attrs(self, first: bool = False) -> None:

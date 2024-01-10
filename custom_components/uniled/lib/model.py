@@ -5,15 +5,15 @@ from abc import abstractmethod
 from typing import Any, Final
 
 from .channel import UniledChannel
+from .chips import UniledChips
 
-import itertools
 import logging
 
 _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class UniledModel:
+class UniledModel(UniledChips):
     """UniLED Base Model Class"""
 
     model_num: int  # The model number
@@ -21,38 +21,6 @@ class UniledModel:
     description: str  # Description of the model ({type} {color_mode})
     manufacturer: str  # The manufacturers name
     channels: int  # The number of supported channels
-
-    def chip_order_list(self, sequence: str, suffix: str = "") -> list:
-        """Generate list of chip order combinations"""
-        combos = list()
-        letters = len(sequence)
-        if sequence and letters <= 3:
-            for combo in itertools.permutations(sequence, len(sequence)):
-                combos.append("".join(combo) + suffix)
-        elif letters <= 5:
-            combos = self.chip_order_list(sequence[:3], sequence[3:])
-            for combo in itertools.permutations(sequence, len(sequence)):
-                order = "".join(combo) + suffix
-                if order not in combos:
-                    combos.append(order)
-        return combos
-
-    def chip_order_name(self, sequence: str, value: int) -> str:
-        """Generate list of chip order combinations"""
-        order = None
-        if orders := self.chip_order_list(sequence):
-            try:
-                order = orders[value]
-            except IndexError:
-                pass
-        return order
-
-    def chip_order_index(self, sequence: str, value: str) -> int:
-        """Generate list of chip order combinations"""
-        if orders := self.chip_order_list(sequence):
-            if value in orders:
-                return orders.index(value)
-        return None
 
     @abstractmethod
     def parse_notifications(self, device: Any, sender: int, data: bytearray) -> bool:
@@ -72,21 +40,52 @@ class UniledModel:
         self, device: Any, channel: UniledChannel, attr: str, value: any
     ) -> list[bytearray]:
         """Build supported command"""
-        _LOGGER.debug(
-            "%s: %s, command: %s = %s (%s)",
-            self.model_name,
-            channel.name,
-            attr,
-            value,
-            channel.status.get(attr),
-        )
-        command_method = f"build_{attr}_command"
-        command_builder = getattr(self, command_method, None)
-        if callable(command_builder):
-            if commands := command_builder(device, channel, value):
-                channel.set(attr, value)
-            return commands
-        _LOGGER.warning("%s: Method '%s' not found.", self.model_name, command_method)
+        if channel.status.has(attr):
+            if channel.get(attr, value) == value:
+                _LOGGER.debug(
+                    "%s: Channel %s, command: %s ignored, as no state changed.",
+                    self.model_name,
+                    channel.number,
+                    attr,
+                )
+                return []
+            _LOGGER.debug(
+                "%s: Channel %s, command: %s = %s (%s)",
+                self.model_name,
+                channel.number,
+                attr,
+                value,
+                channel.status.get(attr),
+            )
+            command_method = f"build_{attr}_command"
+            command_builder = getattr(self, command_method, None)
+            if callable(command_builder):
+                try:
+                    if commands := command_builder(device, channel, value):
+                        channel.set(attr, value)
+                    return commands
+                except Exception as ex:
+                    _LOGGER.warn(
+                        "%s: Channel %s, command %s generated an exception: %s",
+                        self.model_name,
+                        channel.number,
+                        attr,
+                        str(ex),
+                    )
+                    return []
+            _LOGGER.warning(
+                "%s: Channel %s, command method '%s' not found.",
+                self.model_name,
+                channel.number,
+                command_method,
+            )
+        else:
+            _LOGGER.debug(
+                "%s: Channel %s, command: %s ignored, no matching status attribute",
+                self.model_name,
+                channel.number,
+                attr,
+            )
         return []
 
     def build_multi_commands(
@@ -96,11 +95,11 @@ class UniledModel:
         multi = []
         for attr, value in kwargs.items():
             commands = self.build_command(device, channel, attr, value)
-            if isinstance(commands, list):
-                multi.extend(commands)
-                pass
-            else:
-                multi.append(commands)
+            if commands:
+                if isinstance(commands, list):
+                    multi.extend(commands)
+                else:
+                    multi.append(commands)
         return multi
 
     def fetch_attribute_list(
@@ -111,26 +110,7 @@ class UniledModel:
         list_fetcher = getattr(self, list_method, None)
         if callable(list_fetcher):
             return list_fetcher(device, channel)
-        _LOGGER.warning("%s: Method '%s' not found.", self.model_name, list_method)
+        _LOGGER.warning(
+            "%s: Fetch list method '%s' not found.", self.model_name, list_method
+        )
         return []
-
-    ##
-    ## Helpers
-    ##
-    def str_if_key_in(self, key, dikt: dict, default: str | None = None) -> str | None:
-        """Return dictionary string value from key"""
-        if not dikt or not isinstance(dikt, dict):
-            return default
-        return default if key not in dikt else str(dikt[key])
-
-    def int_if_str_in(
-        self, string: str, dikt: dict, default: int | None = None
-    ) -> int | None:
-        """Return dictionary key value from string lookup"""
-        if not dikt or not isinstance(dikt, dict):
-            return default
-        for key, value in dikt.items():
-            if value == string:
-                return key
-        return default
-        # return [k for k in dikt.items() if k[1] == string][0][0]

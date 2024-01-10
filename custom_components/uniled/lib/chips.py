@@ -1,6 +1,7 @@
 """UniLED Chip Types"""
 from __future__ import annotations
 from typing import Final
+import itertools
 
 UNILED_CHIP_ORDER_CW: Final = "CW"
 UNILED_CHIP_ORDER_123: Final = "123"
@@ -47,3 +48,55 @@ UNILED_CHIP_TYPES_4COLOR: Final = [
     0x19,  # P9414
     0x1A,  # P9412
 ]
+
+class UniledChips:
+    """UniLED Chip Utilities Class"""
+
+    def chip_order_list(self, sequence: str, suffix: str = "") -> list:
+        """Generate list of chip order combinations"""
+        combos = list()
+        letters = len(sequence)
+        if sequence and letters <= 3:
+            for combo in itertools.permutations(sequence, len(sequence)):
+                combos.append("".join(combo) + suffix)
+        elif letters <= 5:
+            combos = self.chip_order_list(sequence[:3], sequence[3:])
+            for combo in itertools.permutations(sequence, len(sequence)):
+                order = "".join(combo) + suffix
+                if order not in combos:
+                    combos.append(order)
+        return combos
+
+    def chip_order_name(self, sequence: str, value: int) -> str:
+        """Generate list of chip order combinations"""
+        order = None
+        if orders := self.chip_order_list(sequence):
+            try:
+                order = orders[value]
+            except IndexError:
+                pass
+        return order
+
+    def chip_order_index(self, sequence: str, value: str) -> int:
+        """Generate list of chip order combinations"""
+        if orders := self.chip_order_list(sequence):
+            if value in orders:
+                return orders.index(value)
+        return None
+
+    def str_if_key_in(self, key, dikt: dict, default: str | None = None) -> str | None:
+        """Return dictionary string value from key"""
+        if not dikt or not isinstance(dikt, dict):
+            return default
+        return default if key not in dikt else str(dikt[key])
+
+    def int_if_str_in(
+        self, string: str, dikt: dict, default: int | None = None
+    ) -> int | None:
+        """Return dictionary key value from string lookup"""
+        if not dikt or not isinstance(dikt, dict):
+            return default
+        for key, value in dikt.items():
+            if value == string:
+                return key
+        return default

@@ -19,12 +19,14 @@ from .entity import (
 
 from .lib.attributes import (
     UniledAttribute,
-    UniledSelect,
+    SelectAttribute,
 )
 
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -56,7 +58,7 @@ class UniledSelectEntity(
         self,
         coordinator: UniledUpdateCoordinator,
         channel: UniledChannel,
-        feature: UniledSelect,
+        feature: SelectAttribute,
     ) -> None:
         """Initialize a UniLED select control."""
         super().__init__(coordinator, channel, feature)
@@ -67,7 +69,9 @@ class UniledSelectEntity(
         super()._async_update_attrs()
         options = self.device.get_list(self.channel, self.feature.attr)
         self._attr_options = list() if options is None else options
-        self._attr_current_option = self.device.get_state(self.channel, self.feature.attr)
+        self._attr_current_option = self.device.get_state(
+            self.channel, self.feature.attr
+        )
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""

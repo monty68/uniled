@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any
+from types import MappingProxyType
 
 from .model import (
     UniledModel,
@@ -11,7 +12,9 @@ from .model import (
 
 from .const import (
     UNILED_MASTER as MASTER,
+    UNILED_UPDATE_SECONDS,
     UNILED_DEVICE_RETRYS,
+    CONF_UL_UPDATE_INTERVAL,
     CONF_UL_RETRY_COUNT,
     ATTR_UL_INFO_FIRMWARE,
     ATTR_UL_DEVICE_FORCE_REFRESH,
@@ -42,13 +45,22 @@ class UniledMaster(UniledChannel):
         super().__init__(0)
 
     @property
-    def name(self) -> str:
+    def name(self) -> str | None:
         """Returns the channel name."""
         if self.device.channels == 1:
             return ""
         if self.device.channels > 1 and self._name is not None:
             return self._name
         return super().name
+
+    @property
+    def identity(self) -> str | None:
+        """Returns the channel identity."""
+        if self.device.channels == 1:
+            return None       
+        if self.device.channels > 1 and self._name is not None:
+            return self._name.replace(" ", "_").lower()
+        return super().identity
 
     @property
     def device(self) -> UniledDevice:
@@ -63,21 +75,17 @@ class UniledMaster(UniledChannel):
 class UniledDevice:
     """UniLED Base Device Class"""
 
-    _channels: list[UniledChannel] = list()
-    # _model: weakref.ProxyType(UniledModel) | None = None
-    _model: UniledModel | None = None
-    _callbacks: list[Callable[[UniledChannel], None]] = list()
-    _last_notification_data: bytearray = ()
-    _last_notification_time = None
-    _config = None
-    _retry_count: int = UNILED_DEVICE_RETRYS
-
     def __init__(self, config: Any) -> None:
         """Init the UniLED Base Driver"""
-        self._config = config
-        if isinstance(config, dict):
-            self._retry_count = config.get(CONF_UL_RETRY_COUNT, UNILED_DEVICE_RETRYS)
-        _LOGGER.debug("%s - %s", self._config, self.retry_count)
+        self._model: UniledModel | None = None
+        self._config = None
+        self._started = True
+        self._channels: list[UniledChannel] = list()
+        self._callbacks: list[Callable[[UniledChannel], None]] = list()
+        self._last_notification_data: bytearray = ()
+        self._last_notification_time = None
+        if isinstance(config, dict) or isinstance(config, MappingProxyType):
+            self._config = config
 
     def __del__(self):
         """Delete the device"""
@@ -135,10 +143,6 @@ class UniledDevice:
         assert self._model is not None  # nosec
         return self._model.description
 
-    # @property
-    # def firmware(self) -> str | None:
-    #    return self.master.get(ATTR_UL_INFO_FIRMWARE)
-
     @property
     def unique_id(self) -> str:
         """Return the unique ID of the device."""
@@ -147,7 +151,7 @@ class UniledDevice:
     @property
     def master(self) -> UniledMaster | None:
         """Return the master channel"""
-        return None if not len(self._channels) else self._channels[0]
+        return None if not len(self.channel_list) else self.channel_list[0]
 
     @property
     def channel_list(self) -> list[UniledChannel]:
@@ -178,10 +182,34 @@ class UniledDevice:
         return save
 
     @property
+    def update_interval(self) -> int:
+        """Device update interval"""
+        if self._config:
+            return self._config.get(CONF_UL_UPDATE_INTERVAL, UNILED_UPDATE_SECONDS)
+        return UNILED_UPDATE_SECONDS
+
+    @property
     def retry_count(self) -> int:
         """Device retry count"""
-        return self._retry_count
+        if self._config:
+            return self._config.get(CONF_UL_RETRY_COUNT, UNILED_DEVICE_RETRYS)
+        return UNILED_DEVICE_RETRYS
+
+    @property
+    def started(self) -> bool:
+        """Started."""
+        return self._started
     
+    async def startup(self, event = None) -> bool:
+        """Startup the device."""
+        self._started = True
+        return True
+
+    async def shutdown(self, event = None) -> None:
+        """Shutdown the device."""
+        self._started = False
+        await self.stop()
+
     def register_callback(
         self, callback: Callable[[UniledChannel], None]
     ) -> Callable[[], None]:
@@ -230,14 +258,14 @@ class UniledDevice:
     ) -> bool:
         """Set a channel attribute state"""
         command = self._model.build_command(self, channel, attr, state)
-        success = await self.send(command) if command else False
-        # refresh = not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False)
-        _LOGGER.debug("%s: Command Success = %s (%s)", self.name, success, command)
-        if success:
-            channel.set(attr, state, True)
-        else:
-            channel.refresh()
-        return success
+        if command:
+            success = await self.send(command) if command else False
+            if success:
+                channel.set(attr, state, True)
+            else:
+                channel.refresh()
+            return success
+        return False
 
     async def async_set_multi_state(self, channel_id: int, **kwargs) -> None:
         """Set a channel (id) multi attribute states"""
@@ -247,10 +275,10 @@ class UniledDevice:
 
     async def async_set_multi_state(self, channel: UniledChannel, **kwargs) -> bool:
         """Set a channel multi attribute states"""
-        success = await self.send(
-            self._model.build_multi_commands(self, channel, **kwargs)
-        )
-        # if not channel.status.get(ATTR_UL_DEVICE_FORCE_REFRESH, False):
+        commands = self._model.build_multi_commands(self, channel, **kwargs)
+        if not commands:
+            return True
+        success = await self.send(commands)
         channel.refresh()
         return success
 
@@ -276,14 +304,17 @@ class UniledDevice:
         return False
 
     @abstractmethod
-    async def update(self) -> None:
+    async def update(self, retry: int | None = None) -> bool:
         """Update the device."""
+        return False
 
     @abstractmethod
     async def stop(self) -> None:
         """Stop the device"""
 
     @abstractmethod
-    async def send(self, commands: list[bytes] | bytes) -> bool:
+    async def send(
+        self, commands: list[bytes] | bytes, retry: int | None = None
+    ) -> bool:
         """Send command(s) to a device."""
         return False

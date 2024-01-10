@@ -129,10 +129,13 @@ dmypy.json
 .pyre/
 .to.do
 .vscode/settings.json
+tests/playing.py
 custom_components/uniled/lib/ble/__pycache__
 custom_components/uniled/lib/net/__pycache__
+custom_components/uniled/lib/zng/__pycache__
 custom_components/uniled/lib/__pycache__
 custom_components/uniled/__pycache__
-custom_components/uniled/lib/zng
 custom_components/zengge_mesh
-tests/playing.py
+custom_components/uniled/significant_change.py
+custom_components/uniled/reproduce_state.py
+.gitignore

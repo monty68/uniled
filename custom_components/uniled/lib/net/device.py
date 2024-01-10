@@ -1,13 +1,14 @@
 """UniLED NETwork Device Handler."""
 from __future__ import annotations
-
+from typing import Final
 from ..device import UniledDevice, ParseNotificationError
 from ..model import UniledModel
-from ..const import UNILED_TRANSPORT_NET
 
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
+UNILED_TRANSPORT_NET: Final = "net"
 
 ##
 ## UniLed NETwork Model Handler
