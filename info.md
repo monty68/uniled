@@ -5,14 +5,7 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
 
-# UniLED v2.1 (Beta) - The Universal Light Controller
-### 💥Breaking Changes
-
-This release is unable to automatically migrate entities from v1 or v2.0
-versions and once installed, any entities previously created, will not function and must be deleted, rediscovered, and reinstalled.
-
----
-
+# UniLED v2.2.0 - The Universal Light Controller
 ### UniLED supports the following range of BLE LED controllers:
 
 ### 📱LED Chord
@@ -99,7 +92,7 @@ logger:
 
 ## 🙋 Contributions are always welcomed!
 
-If you want to contribute to UniLED, please read the [Contribution guidelines](CONTRIBUTING.md)
+If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
 
 ## 🎉 Acknowledgements <a name = "acknowledgement"></a>
 

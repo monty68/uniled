@@ -4,14 +4,7 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
 
-# ![HA][ha-logo] UniLED v2.1 Beta - The Universal Light Controller
-### 💥Breaking Changes
-
-This release is unable to automatically migrate entities from v1 or v2.0
-versions and once installed, any entities previously created, will not function and must be deleted, rediscovered, and reinstalled.
-
----
-
+# ![HA][ha-logo] UniLED v2.2.0 - The Universal Light Controller
 ### UniLED supports the following range of BLE LED controllers:
 
 ### 📱LED Chord
@@ -97,12 +90,17 @@ If you want to contribute to UniLED, please read the [Contribution guidelines](C
 
 ## 🎉 Acknowledgements
 
-- [SleepyNinja](https://github.com/SleepyNinja0o) for the great work deciphering and developing code for Zengge BLE Mesh devices and which has been used as a basis to implement support in UniLED.
+If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
 
 ***
 
 [uniled]: https://github.com/monty68/uniled
 [ha-logo]: docs/img/ha-logo-32x32.png
+[SP107E]: docs/sp107e.md
+[SP110E]: docs/sp110e.md
+[SP601E]: docs/sp601e.md
+[SP61xE]: docs/sp61Xe.md
+[SP620E]: docs/sp620e.md
 [Info]: info.md
 [user_profile]: https://github.com/monty68
 [maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
