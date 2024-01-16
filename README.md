@@ -89,8 +89,7 @@ logger:
 If you want to contribute to UniLED, please read the [Contribution guidelines](CONTRIBUTING.md)
 
 ## 🎉 Acknowledgements
-
-If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
+[SleepyNinja](https://github.com/SleepyNinja0o) for the great work deciphering and developing code for Zengge BLE Mesh devices and which has been used as a basis to implement support in UniLED.
 
 ***
 
