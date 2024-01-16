@@ -21,7 +21,7 @@ versions and once installed, any entities previously created, will not function 
   - **SP110E** - SPI RGB(W) Controller
 
 ### 📱BanlanX
-  - **SP601E** - Multi Channel SPI RGB Controller
+  - **SP601E** / **SP602E** / **SP608E** - Multi Channel SPI RGB Controllers
   - **SP611E** - SPI RGB Controller
   - **SP613E** - PWM RGB Controller
   - **SP614E** - PWM RGBW Controller
