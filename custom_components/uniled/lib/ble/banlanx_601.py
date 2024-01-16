@@ -1,4 +1,4 @@
-"""UniLED BLE Devices - SP LED (BanlanX SP60xE)"""
+"""UniLED BLE Devices - SP LED (BanlanX SP601E)"""
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Final, cast
@@ -25,19 +25,6 @@ from ..effects import (
     UNILEDEffectType,
     UNILEDEffects,
 )
-
-from .banlanx_601 import (
-    ATTR_UL_SCENE_SAVE_SELECT,
-    ATTR_UL_SCENE_SAVE_BUTTON,
-    SceneSaveSelect,
-    SceneSaveButton,
-    BANLANX601_AUDIO_INPUTS as BANLANX60X_AUDIO_INPUTS,
-    BANLANX601_EFFECT_PATTERN as BANLANX60X_EFFECT_PATTERN,
-    BANLANX601_EFFECT_SOLID as BANLANX60X_EFFECT_SOLID,
-    BANLANX601_EFFECT_SOUND as BANLANX60X_EFFECT_SOUND,
-    BANLANX601_EFFECTS as BANLANX60X_EFFECTS,
-)
-
 from .device import (
     UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
     BANLANX_MANUFACTURER,
@@ -53,18 +40,136 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-BANLANX60X_MAX_SENSITIVITY = 16
-BANLANX60X_MAX_SCENES = 9
-BANLANX60X_MAX_EFFECT_SPEED = 10
-BANLANX60X_MAX_EFFECT_LENGTH = 240
 
 ##
-## BanlanX - SP60xE Protocol Implementation
+## Effects
 ##
-class BanlanX60X(UniledBleModel):
-    """BanlanX - SP60xE Protocol Implementation"""
+@dataclass(frozen=True)
+class _FX_STATIC:
+    """Effect and Attributes"""
 
-    triggers: int
+    name: str = UNILEDEffects.SOLID
+    colorable: bool = True
+    directional: bool = False
+    sizeable: bool = False
+    speedable: bool = False
+
+
+@dataclass(frozen=True)
+class _FX_DYNAMIC:
+    """BanlanX Effect and Attributes"""
+
+    name: str
+    colorable: bool = False
+    directional: bool = False
+    sizeable: bool = False
+    speedable: bool = True
+
+
+@dataclass(frozen=True)
+class _FX_SOUND:
+    """BanlanX Sound Effect and Attributes"""
+
+    name: str
+    colorable: bool = False
+    directional: bool = False
+    sizeable: bool = False
+    speedable: bool = False
+
+
+BANLANX601_AUDIO_INPUTS: Final = {
+    0x00: UNILED_AUDIO_INPUT_INTMIC,
+    0x01: UNILED_AUDIO_INPUT_PLAYER,
+    0x02: UNILED_AUDIO_INPUT_AUX_IN,
+}
+
+BANLANX601_MAX_SENSITIVITY = 16
+BANLANX601_MAX_SCENES = 9
+BANLANX601_MAX_EFFECT_SPEED = 10
+BANLANX601_MAX_EFFECT_LENGTH = 150
+
+BANLANX601_EFFECT_PATTERN: Final = 0x01
+BANLANX601_EFFECT_SOLID: Final = 0x19
+BANLANX601_EFFECT_SOUND: Final = 0x65
+
+BANLANX601_EFFECTS: Final = {
+    BANLANX601_EFFECT_SOLID: _FX_STATIC(),
+    BANLANX601_EFFECT_PATTERN + 0: _FX_DYNAMIC(UNILEDEffects.RAINBOW, False, True, True),
+    BANLANX601_EFFECT_PATTERN + 1: _FX_DYNAMIC(UNILEDEffects.RAINBOW_STARS),
+    BANLANX601_EFFECT_PATTERN + 2: _FX_DYNAMIC(UNILEDEffects.STARS_TWINKLE, True),
+    BANLANX601_EFFECT_PATTERN + 3: _FX_DYNAMIC(UNILEDEffects.FIRE, False, True, True),
+    BANLANX601_EFFECT_PATTERN + 4: _FX_DYNAMIC(UNILEDEffects.STACKING, True, True, True),
+    BANLANX601_EFFECT_PATTERN + 5: _FX_DYNAMIC(UNILEDEffects.COMET, True, True, True),
+    BANLANX601_EFFECT_PATTERN + 6: _FX_DYNAMIC(UNILEDEffects.WAVE, True, True, True),
+    BANLANX601_EFFECT_PATTERN + 7: _FX_DYNAMIC("Chasing", True, True, True),
+    BANLANX601_EFFECT_PATTERN + 8: _FX_DYNAMIC("Red/Blue/White", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 9: _FX_DYNAMIC("Green/Yellow/White", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 10: _FX_DYNAMIC("Red/Green/White", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 11: _FX_DYNAMIC("Red/Yellow", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 12: _FX_DYNAMIC("Red/White", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 13: _FX_DYNAMIC("Green/White", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 14: _FX_DYNAMIC(UNILEDEffects.GRADIENT),
+    BANLANX601_EFFECT_PATTERN + 15: _FX_DYNAMIC("Wiping", True, True, True),
+    BANLANX601_EFFECT_PATTERN + 16: _FX_DYNAMIC(UNILEDEffects.BREATH, True),
+    BANLANX601_EFFECT_PATTERN + 17: _FX_DYNAMIC("Full Color Comet Wiping", True, False, True),
+    BANLANX601_EFFECT_PATTERN + 18: _FX_DYNAMIC("Comet Wiping", True, False, True),
+    BANLANX601_EFFECT_PATTERN + 19: _FX_DYNAMIC("Pixel Dot Wiping", True, False, True),
+    BANLANX601_EFFECT_PATTERN + 20: _FX_DYNAMIC("Full Color Meteor Rain", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 21: _FX_DYNAMIC("Meteor Rain", True, True, True),
+    BANLANX601_EFFECT_PATTERN + 22: _FX_DYNAMIC("Color Dots", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 23: _FX_DYNAMIC("Color Block", False, True, True),
+    BANLANX601_EFFECT_SOUND + 0: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_SPECTRUM_FULL),
+    BANLANX601_EFFECT_SOUND
+    + 1: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_SPECTRUM_SINGLE, True),
+    BANLANX601_EFFECT_SOUND + 2: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_STARS_FULL),
+    BANLANX601_EFFECT_SOUND
+    + 3: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_STARS_SINGLE, True),
+    BANLANX601_EFFECT_SOUND
+    + 4: _FX_SOUND("Sound - Full Color Beat Injection", False, True, True),
+    BANLANX601_EFFECT_SOUND + 5: _FX_SOUND("Sound - Beat Injection", True, True, True),
+    BANLANX601_EFFECT_SOUND + 6: _FX_SOUND(UNILEDEffects.SOUND_ENERGY_GRADIENT, False, False, True),
+    BANLANX601_EFFECT_SOUND + 7: _FX_SOUND(UNILEDEffects.SOUND_ENERGY_SINGLE, True, False, True),
+    BANLANX601_EFFECT_SOUND + 8: _FX_SOUND(UNILEDEffects.SOUND_PULSE_GRADIENT),
+    BANLANX601_EFFECT_SOUND + 9: _FX_SOUND(UNILEDEffects.SOUND_PULSE_SINGLE, True),
+    BANLANX601_EFFECT_SOUND + 10: _FX_SOUND("Sound - Full Color Ripple"),
+    BANLANX601_EFFECT_SOUND + 11: _FX_SOUND("Sound - Ripple", True),
+    BANLANX601_EFFECT_SOUND + 12: _FX_SOUND(UNILEDEffects.SOUND_LOVE_AND_PEACE),
+    BANLANX601_EFFECT_SOUND + 13: _FX_SOUND(UNILEDEffects.SOUND_CHRISTMAS),
+    BANLANX601_EFFECT_SOUND + 14: _FX_SOUND(UNILEDEffects.SOUND_HEARTBEAT),
+    BANLANX601_EFFECT_SOUND + 15: _FX_SOUND(UNILEDEffects.SOUND_PARTY),
+}
+
+ATTR_UL_SCENE_SAVE_SELECT: Final = "scene_to_save"
+ATTR_UL_SCENE_SAVE_BUTTON: Final = "scene_save"
+
+
+class SceneSaveSelect(SelectAttribute):
+    def __init__(self):
+        super().__init__(
+            ATTR_UL_SCENE_SAVE_SELECT,
+            "Save to which scene",
+            "mdi:star-settings",
+            group=UniledGroup.CONFIGURATION,
+            enabled=False,
+        )
+
+
+class SceneSaveButton(ButtonAttribute):
+    def __init__(self):
+        super().__init__(
+            ATTR_UL_SCENE_SAVE_BUTTON,
+            "Save to Scene",
+            "mdi:star-plus",
+            group=UniledGroup.CONFIGURATION,
+            enabled=False,
+        )
+
+
+##
+## BanlanX - SP601E Protocol Implementation
+##
+class BanlanX601(UniledBleModel):
+    """BanlanX - SP601E Protocol Implementation"""
 
     def __init__(
         self,
@@ -73,7 +178,6 @@ class BanlanX60X(UniledBleModel):
         info: str,
         data: bytes,
         channels: int,
-        triggers: int,
     ):
         super().__init__(
             model_num=id,
@@ -88,7 +192,6 @@ class BanlanX60X(UniledBleModel):
             ble_notify_uuids=[],
             ble_manufacturer_data=data,
         )
-        self.triggers = triggers
 
     @property
     def master_channel(self):
@@ -103,8 +206,8 @@ class BanlanX60X(UniledBleModel):
     ) -> bool:
         """Parse notification message(s)"""
 
-        _STATUS_FLAG_1 = 0x36
-        _STATUS_FLAG_2 = 0x38
+        _STATUS_FLAG_1 = 0x53
+        _STATUS_FLAG_2 = 0x43
         _HEADER_LENGTH = 5
         _PACKET_NUMBER = 2
         _MESSAGE_LENGTH = 3
@@ -147,10 +250,17 @@ class BanlanX60X(UniledBleModel):
 
                 data = last[_HEADER_LENGTH:] + data[_HEADER_LENGTH:]
 
+            # RAW: 53 43 01 18 0f 00 01 02 ff 0a 1e 01 ff 00 00 10 00 01 02 ff
+            #      53 43 02 18 09 0a 1e 00 00 ff 00 10 00 00
+            #
+            # 00 01 02 03 04 05 06 07 08 09 10|11 12 13 14 15 16 17 18 19 20 21|22 23
+            # <-- Channel 1                -->|<-- Channel 2                -->|?? AM
+            # --------------------------------|--------------------------------|-----
+            # 00 01 02 ff 0a 1e 01 ff 00 00 10|00 01 02 ff 0a 1e 00 00 ff 00 10 00 00
+            #
             CHANNEL_DATA_SIZE = 11
-
             if len(data) == message_length:
-                # _LOGGER.debug("%s: Message: %s", device.name, data.hex())
+                _LOGGER.debug("%s: Message: %s", device.name, data.hex())
                 master_power = 0
                 master_level = 0
                 channel_id = 0
@@ -163,39 +273,28 @@ class BanlanX60X(UniledBleModel):
                         # 1  = Effect
                         # 2  = Color Order
                         # 3  = Level (0x00 - 0xFF)
-                        # 4  = Effect Speed (0x01 - 0x0A)
-                        # 5  = Effect Length MSB (0x01 - 0xF0)
-                        # 6  = Effect Length LSB (0x01 - 0xF0)
-                        # 7  = Effect Direction (0x00 = Backwards, 0x01 = Forwards)
-                        # 8  = Red Level (0x00 - 0xFF)
-                        # 9  = Green Level (0x00 - 0xFF)
-                        # 10 = Blue Level (x00 - 0xFF)
-                        #
-                        # 00 01 02 03 04 05 06 07 08 09 10
-                        # --------------------------------
-                        # 00 01 02 ff 0a 00 14 88 ff 00 00
-                        #
+                        # 4  = Effect Speed (0x01 - 0x1E)
+                        # 5  = Effect Length (0x01 - 0x96)
+                        # 6  = Effect Direction (0x00 = Backwards, 0x01 = Forwards)
+                        # 7  = Red Level (0x00 - 0xFF)
+                        # 8  = Green Level (0x00 - 0xFF)
+                        # 9  = Blue Level (x00 - 0xFF)
+                        # 10 = Gain/Sensitivity (0x01 - 0x0F)
                         _LOGGER.debug(
                             "%s: Channel %s: %s",
                             device.name,
                             channel_id,
                             data[:CHANNEL_DATA_SIZE].hex(),
                         )
-                        power = data[0]
                         effect = data[1]
-                        order = data[2]
-                        level = data[3]
-                        speed = data[4]                       
-                        length = int.from_bytes(data[5:7], byteorder="big")
-                        direction = data[7]
-                        rgb = (data[8], data[9], data[10])
+                        power = data[0]
                         master_power += power
 
                         channel.status.replace(
                             {
                                 ATTR_UL_DEVICE_FORCE_REFRESH: True,
                                 ATTR_UL_CHIP_ORDER: self.chip_order_name(
-                                    UNILED_CHIP_ORDER_RGB, order
+                                    UNILED_CHIP_ORDER_RGB, data[2]
                                 ),
                                 ATTR_UL_POWER: True if power != 0 else False,
                                 ATTR_UL_EFFECT: effect,
@@ -206,33 +305,37 @@ class BanlanX60X(UniledBleModel):
 
                         if (
                             fx := None
-                            if effect not in BANLANX60X_EFFECTS
-                            else BANLANX60X_EFFECTS[effect]
+                            if effect not in BANLANX601_EFFECTS
+                            else BANLANX601_EFFECTS[effect]
                         ) is not None:
                             channel.status.set(ATTR_HA_EFFECT, str(fx.name))
 
-                            if effect >= BANLANX60X_EFFECT_SOUND:
+                            if effect >= BANLANX601_EFFECT_SOUND:
+                                if power:
+                                    channel.status.set(ATTR_UL_SENSITIVITY, data[10])
                                 fxtype = UNILEDEffectType.SOUND
-                            elif effect != BANLANX60X_EFFECT_SOLID:
+                            elif effect != BANLANX601_EFFECT_SOLID:
                                 fxtype = UNILEDEffectType.DYNAMIC
                             else:
                                 fxtype = UNILEDEffectType.STATIC
                             channel.status.set(ATTR_UL_EFFECT_TYPE, str(fxtype))
 
                             if fx.speedable:
-                                channel.status.set(ATTR_UL_EFFECT_SPEED, speed)
+                                channel.status.set(ATTR_UL_EFFECT_SPEED, data[4])
                             if fx.sizeable:
-                                channel.status.set(ATTR_UL_EFFECT_LENGTH, length)
+                                channel.status.set(ATTR_UL_EFFECT_LENGTH, data[5])
                             if fx.directional:
                                 channel.status.set(
-                                    ATTR_UL_EFFECT_DIRECTION, bool(direction)
+                                    ATTR_UL_EFFECT_DIRECTION, bool(data[6])
                                 )
                             if fx.colorable:
-                                channel.status.set(ATTR_HA_RGB_COLOR, rgb)
+                                channel.status.set(
+                                    ATTR_HA_RGB_COLOR, (data[7], data[8], data[9])
+                                )
 
                             if fxtype != UNILEDEffectType.SOUND:
-                                channel.status.set(ATTR_HA_BRIGHTNESS, level)
-                                master_level += level
+                                channel.status.set(ATTR_HA_BRIGHTNESS, data[3])
+                                master_level += data[3]
                             else:
                                 master_level += 255
 
@@ -240,9 +343,10 @@ class BanlanX60X(UniledBleModel):
                             channel.features = [
                                 LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
                                 EffectTypeFeature(),
-                                EffectSpeedFeature(BANLANX60X_MAX_EFFECT_SPEED),
-                                EffectLengthFeature(BANLANX60X_MAX_EFFECT_LENGTH),
+                                EffectSpeedFeature(BANLANX601_MAX_EFFECT_SPEED),
+                                EffectLengthFeature(BANLANX601_MAX_EFFECT_LENGTH),
                                 EffectDirectionFeature(),
+                                AudioSensitivityFeature(BANLANX601_MAX_SENSITIVITY),
                                 ChipOrderFeature(),
                             ]
 
@@ -252,8 +356,17 @@ class BanlanX60X(UniledBleModel):
 
                 # Master Channel
                 #
+                input = None
+                loop = None
+                if len(data) > 0:
+                    # 0  = Audio Input
+                    # 1  = Auto Mode (0x00 = Off, 0x01 = On)
+                    _LOGGER.debug("%s: Residual : %s", device.name, data.hex())
+                    input = data[0] if self.model_num > 0x601E else None
+                    loop = True if data[1] != 0 else False
+
                 last_save_scene = device.master.status.get(
-                    ATTR_UL_SCENE_SAVE_SELECT, str(BANLANX60X_MAX_SCENES)
+                    ATTR_UL_SCENE_SAVE_SELECT, str(BANLANX601_MAX_SCENES)
                 )
 
                 device.master.status.replace(
@@ -261,49 +374,18 @@ class BanlanX60X(UniledBleModel):
                         ATTR_UL_DEVICE_FORCE_REFRESH: True,
                         ATTR_UL_CHANNELS: channel_id,
                         ATTR_UL_POWER: True if master_power != 0 else False,
-                        ATTR_HA_BRIGHTNESS: cast(int, master_level / channel_id),
-                        ATTR_UL_SCENE: BANLANX60X_MAX_SCENES,
+                        ATTR_UL_SCENE: BANLANX601_MAX_SCENES,
+                        ATTR_UL_SCENE_LOOP: loop,
                         # ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
                         # ATTR_UL_SCENE_SAVE_BUTTON: False,
                     }
                 )
 
-                if (gain := data.pop(0) if len(data) >= 1 else None) is not None and master_power:
-                    device.master.status.set(ATTR_UL_SENSITIVITY, gain)
+                level = cast(int, master_level / channel_id)
+                device.master.status.set(ATTR_HA_BRIGHTNESS, level)
 
-                if (timers := data.pop(0) if len(data) >= 1 else 0):
-                    TIMER_DATA_SIZE = 7
-                    timer_id = 0
-                    while len(data) >= TIMER_DATA_SIZE and timer_id < timers:
-                        timer_id += 1
-                        timer_data = data[:TIMER_DATA_SIZE]
-                        data = data[TIMER_DATA_SIZE:]
-                        _LOGGER.debug(
-                            "%s: Timer %s: %s",
-                            device.name,
-                            timer_id,
-                            timer_data.hex(),
-                        )
-
-                TRIGGER_DATA_SIZE = 13
-                trigger_id = 0
-                while len(data) >= TRIGGER_DATA_SIZE and trigger_id < self.triggers:
-                    trigger_id += 1
-                    trigger_data = data[:TRIGGER_DATA_SIZE]
-                    data = data[TRIGGER_DATA_SIZE:]
-                    _LOGGER.debug(
-                        "%s: Trigger %s: %s",
-                        device.name,
-                        trigger_id,
-                        trigger_data.hex(),
-                    )
-
-                if (loop := data.pop(0) if len(data) >= 1 else None) is not None:
-                    device.master.status.set(ATTR_UL_SCENE_LOOP, loop)
-
-                input = None
                 if input is not None and master_power:
-                    audio_input = self.str_if_key_in(input, BANLANX60X_AUDIO_INPUTS)
+                    audio_input = self.str_if_key_in(input, BANLANX601_AUDIO_INPUTS)
                     device.master.status.set(ATTR_UL_AUDIO_INPUT, audio_input)
 
                 if not device.master.features:
@@ -314,17 +396,13 @@ class BanlanX60X(UniledBleModel):
                         # SceneSaveButton(),
                     ]
 
-                    for b in range(BANLANX60X_MAX_SCENES):
+                    for b in range(BANLANX601_MAX_SCENES):
                         device.master.features.append(
                             SceneAttribute(b, UNILED_CONTROL_ATTRIBUTES)
                         )
 
-                    if gain is not None:
-                        device.master.features.append(AudioSensitivityFeature(BANLANX60X_MAX_SENSITIVITY))
-
                     if input is not None:
                         device.master.features.append(AudioInputFeature())
-
                 return True
         raise ParseNotificationError("Unknown/Invalid Packet!")
 
@@ -334,29 +412,29 @@ class BanlanX60X(UniledBleModel):
 
     def build_state_query(self, device: UniledBleDevice) -> bytearray:
         """Build a state query message"""
-        return bytearray([0x88, 0x8F, 0x00])
+        return bytearray([0xAA, 0x2F, 0x00])
 
     def build_onoff_command(
         self, device: UniledBleDevice, channel: UniledChannel, state: int
     ) -> bytearray:
         """Build power on or off message"""
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x82, 0x02, cnum, 0x01 if state else 0x00])
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+        return bytearray([0xAA, 0x22, 0x02, cnum, 0x01 if state else 0x00])
 
     def build_brightness_command(
         self, device: UniledBleDevice, channel: UniledChannel, level: int
     ) -> bytearray:
         """The bytes to send for a brightness level change"""
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x85, 0x02, cnum, level])
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+        return bytearray([0xAA, 0x25, 0x02, cnum, level])
 
     def build_rgb_color_command(
         self, device: UniledBleDevice, channel: UniledChannel, rgb: tuple[int, int, int]
     ) -> bytearray | None:
         """The bytes to send for a color level change"""
         red, green, blue = rgb
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x89, 0x05, cnum, red, green, blue, 0xFF])
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+        return bytearray([0xAA, 0x29, 0x05, cnum, red, green, blue, 0xFF])
 
     def build_effect_command(
         self,
@@ -367,16 +445,17 @@ class BanlanX60X(UniledBleModel):
         """The bytes to send for an effect change"""
         if not channel.number:
             return None
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+
         if isinstance(value, str):
-            effect = BANLANX60X_EFFECT_SOLID
-            for id, fx in BANLANX60X_EFFECTS.items():
+            effect = BANLANX601_EFFECT_SOLID
+            for id, fx in BANLANX601_EFFECTS.items():
                 if fx.name == value:
                     effect = id
                     break
-        elif (effect := int(value)) not in BANLANX60X_EFFECTS:
+        elif (effect := int(value)) not in BANLANX601_EFFECTS:
             return None
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x83, 0x02, cnum, effect])
+        return bytearray([0xAA, 0x23, 0x02, cnum, effect])
 
     def fetch_effect_list(
         self, device: UniledBleDevice, channel: UniledChannel
@@ -384,8 +463,8 @@ class BanlanX60X(UniledBleModel):
         """Return list of effect names"""
         effects = list()
         if channel.number:
-            for fx in BANLANX60X_EFFECTS:
-                effects.append(str(BANLANX60X_EFFECTS[fx].name))
+            for fx in BANLANX601_EFFECTS:
+                effects.append(str(BANLANX601_EFFECTS[fx].name))
         return effects
 
     def build_effect_speed_command(
@@ -393,65 +472,63 @@ class BanlanX60X(UniledBleModel):
     ) -> bytearray | None:
         """The bytes to send for an effect speed change."""
         speed = int(value) & 0xFF
-        if not 1 <= speed <= BANLANX60X_MAX_EFFECT_SPEED:
+        if not 1 <= speed <= BANLANX601_MAX_EFFECT_SPEED:
             return None
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x86, 0x02, cnum, speed])
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+        return bytearray([0xAA, 0x26, 0x02, cnum, speed])
 
     def build_effect_length_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: int
     ) -> bytearray | None:
         """The bytes to send for an effect length change."""
-        # 88 87 03 01 00 f0 = Length?
-        if not 1 <= value <= BANLANX60X_MAX_EFFECT_LENGTH:
+        length = int(value) & 0xFF
+        if not 1 <= length <= BANLANX601_MAX_EFFECT_LENGTH:
             return None
-        length = int(value).to_bytes(2, byteorder="big")
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x87, 0x03, cnum, length[0], length[1]])
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+        return bytearray([0xAA, 0x27, 0x02, cnum, length])
 
     def build_effect_direction_command(
         self, device: UniledBleDevice, channel: UniledChannel, state: bool
     ) -> bytearray | None:
         """The bytes to send for an effect direction change."""
-        # 88 8a 02 01 00 = Direction?
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x8A, 0x02, cnum, 0x01 if state else 0x00])
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+        return bytearray([0xAA, 0x2A, 0x02, cnum, 0x01 if state else 0x00])
 
     def build_audio_input_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: str
     ) -> bytearray | None:
         """The bytes to send for an input change"""
-        input = self.int_if_str_in(value, BANLANX60X_AUDIO_INPUTS, 0x00)
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x88, 0x02, cnum, input])  ## ????? 0x88 ?????
+        input = self.int_if_str_in(value, BANLANX601_AUDIO_INPUTS, 0x00)
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+        return bytearray([0xAA, 0x28, 0x02, cnum, input])  ## ????? 0x28 ?????
 
     def fetch_audio_input_list(
         self, device: UniledBleDevice, channel: UniledChannel
     ) -> list | None:
         """Return list of light modes"""
-        return list(BANLANX60X_AUDIO_INPUTS.values())
+        return list(BANLANX601_AUDIO_INPUTS.values())
 
     def build_sensitivity_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: int
     ) -> bytearray | None:
         """The bytes to send for a gain/sensitivity change"""
         gain = int(value) & 0xFF
-        if not 1 <= gain <= BANLANX60X_MAX_SENSITIVITY:
+        if not 1 <= gain <= BANLANX601_MAX_SENSITIVITY:
             return None
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
-        return bytearray([0x88, 0x8B, 0x02, cnum, gain])
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
+        return bytearray([0xAA, 0x2B, 0x02, cnum, gain])
 
     def build_scene_command(
         self, device: UniledBleDevice, channel: UniledChannel, scene: int
     ) -> bytearray:
         """Build scene message(s)"""
-        return bytearray([0x88, 0x8E, 0x01, scene])
+        return bytearray([0xAA, 0x2E, 0x01, scene])
 
     def build_scene_loop_command(
         self, device: UniledBleDevice, channel: UniledChannel, state: bool
     ) -> bytearray:
         """Build scene loop message(s)"""
-        return bytearray([0x88, 0x90, 0x01, 0x01 if state else 0x00])
+        return bytearray([0xAA, 0x30, 0x01, 0x01 if state else 0x00])
 
     def build_scene_save_command(
         self, device: UniledBleDevice, channel: UniledChannel, scene: int
@@ -463,7 +540,7 @@ class BanlanX60X(UniledBleModel):
     ) -> bytearray:
         """Return list of scene numbers"""
         scenes = list()
-        for b in range(BANLANX60X_MAX_SCENES):
+        for b in range(BANLANX601_MAX_SCENES):
             scenes.append(str(b + 1))
         return scenes
 
@@ -471,11 +548,11 @@ class BanlanX60X(UniledBleModel):
         self, device: UniledBleDevice, channel: UniledChannel, value: str | None = None
     ) -> list[bytearray]:
         """Build chip order message(s)"""
-        cnum = 0xFF if not channel.number else 1 << (channel.number - 1)
+        cnum = device.channels - 1 if not channel.number else channel.number - 1
         if (
             order := self.chip_order_index(UNILED_CHIP_ORDER_RGB, str(value))
         ) is not None:
-            return bytearray([0x88, 0x84, 0x02, cnum, order])
+            return bytearray([0xAA, 0x24, 0x02, cnum, order])
         return None
 
     def fetch_chip_order_list(
@@ -488,34 +565,10 @@ class BanlanX60X(UniledBleModel):
 ##
 ## Device Signatures
 ##
-SP602E = BanlanX60X(
-    id=0x602E,
-    name="SP602E",
-    info="4xSPI RGB (Music) Controller",
-    data=b"\x02\x02",
-    channels=4,
-    triggers=4,
+SP601E = BanlanX601(
+    id=0x601E,
+    name="SP601E",
+    info="2xSPI RGB (Music) Controller",
+    data=b"\x01\x02",
+    channels=2,
 )
-
-SP608E = BanlanX60X(
-    id=0x608E,
-    name="SP608E",
-    info="8xSPI RGB (Music) Controller",
-    data=b"\x05\x02",
-    channels=8,
-    triggers=4,
-)
-
-# 88 95 0a 01 01 04 00 1e 01 ff 00 00 ff
-# 88 98 0a 01 03 05 00 1e 01 ff 00 00 ff
-# 88 96 0a ff 03 05 00 1e 01 ff 00 00 ff
-# 88 97 00 - ??
-
-# Enable Triggers??
-#
-# 88 99 04 00 01 01 01
-# 88 99 04 01 01 02 01
-# 88 99 04 02 01 04 01
-# 88 99 04 03 01 08 01
-# 88 99 04 01 01 0f 03
-#
