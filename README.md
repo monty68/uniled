@@ -4,13 +4,7 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
 
-# ![HA][ha-logo] UniLED v2.1 Beta - The Universal Light Controller
-### 💥Breaking Changes
-
-This release is unable to automatically migrate entities from v1 or v2.0
-versions and once installed, any entities previously created, will not function and must be deleted, rediscovered, and reinstalled.
-
----
+# ![HA][ha-logo] UniLED v2.2.0 - The Universal Light Controller
 
 ### UniLED supports the following range of BLE LED controllers:
 
@@ -51,7 +45,7 @@ versions and once installed, any entities previously created, will not function 
 3. HA will report certain entities, such as Effect Speed as being unavailable when the chosen effect does not support it, for example when using a solid effect, the effect speed will show as unavailable until a dynamic effect is selected. 
 
 ### 📱Hao Deng
-#### **Experimental** support for Hao Deng/Zengge BLE Mesh devices.
+#### **Basic** support for Hao Deng/Zengge BLE Mesh devices.
 ---
 
 ## 🚀 Installation
