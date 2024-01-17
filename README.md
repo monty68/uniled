@@ -5,6 +5,7 @@
 [![License][license-shield]][license]
 
 # ![HA][ha-logo] UniLED v2.2.0 - The Universal Light Controller
+
 ### UniLED supports the following range of BLE LED controllers:
 
 ### 📱LED Chord
@@ -44,7 +45,7 @@
 3. HA will report certain entities, such as Effect Speed as being unavailable when the chosen effect does not support it, for example when using a solid effect, the effect speed will show as unavailable until a dynamic effect is selected. 
 
 ### 📱Hao Deng
-#### **Experimental** support for Hao Deng/Zengge BLE Mesh devices.
+#### **Basic** support for Hao Deng/Zengge BLE Mesh devices.
 ---
 
 ## 🚀 Installation
