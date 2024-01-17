@@ -90,13 +90,17 @@ logger:
 If you want to contribute to UniLED, please read the [Contribution guidelines](CONTRIBUTING.md)
 
 ## 🎉 Acknowledgements
-
-- [SleepyNinja](https://github.com/SleepyNinja0o) for the great work deciphering and developing code for Zengge BLE Mesh devices and which has been used as a basis to implement support in UniLED.
+[SleepyNinja](https://github.com/SleepyNinja0o) for the great work deciphering and developing code for Zengge BLE Mesh devices and which has been used as a basis to implement support in UniLED.
 
 ***
 
 [uniled]: https://github.com/monty68/uniled
 [ha-logo]: docs/img/ha-logo-32x32.png
+[SP107E]: docs/sp107e.md
+[SP110E]: docs/sp110e.md
+[SP601E]: docs/sp601e.md
+[SP61xE]: docs/sp61Xe.md
+[SP620E]: docs/sp620e.md
 [Info]: info.md
 [user_profile]: https://github.com/monty68
 [maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
