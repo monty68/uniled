@@ -569,6 +569,8 @@ SP601E = BanlanX601(
     id=0x601E,
     name="SP601E",
     info="2xSPI RGB (Music) Controller",
-    data=b"\x01\x02",
+    # Fix: Issue #49 - Second byte can be different so only check first byte is '0x01'
+    data=b"\x01",
+    # data=b"\x01\x02",
     channels=2,
 )
