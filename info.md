@@ -93,7 +93,7 @@ logger:
 
 ## 🙋 Contributions are always welcomed!
 
-If you want to contribute to UniLED, please read the [Contribution guidelines](CONTRIBUTING.md)
+If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
 
 ## 🎉 Acknowledgements <a name = "acknowledgement"></a>
 
