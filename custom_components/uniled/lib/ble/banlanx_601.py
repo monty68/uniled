@@ -356,15 +356,6 @@ class BanlanX601(UniledBleModel):
 
                 # Master Channel
                 #
-                input = None
-                loop = None
-                if len(data) > 0:
-                    # 0  = Audio Input
-                    # 1  = Auto Mode (0x00 = Off, 0x01 = On)
-                    _LOGGER.debug("%s: Residual : %s", device.name, data.hex())
-                    input = data[0] if self.model_num > 0x601E else None
-                    loop = True if data[1] != 0 else False
-
                 last_save_scene = device.master.status.get(
                     ATTR_UL_SCENE_SAVE_SELECT, str(BANLANX601_MAX_SCENES)
                 )
@@ -374,16 +365,31 @@ class BanlanX601(UniledBleModel):
                         ATTR_UL_DEVICE_FORCE_REFRESH: True,
                         ATTR_UL_CHANNELS: channel_id,
                         ATTR_UL_POWER: True if master_power != 0 else False,
+                        ATTR_HA_BRIGHTNESS: cast(int, master_level / channel_id),
                         ATTR_UL_SCENE: BANLANX601_MAX_SCENES,
-                        ATTR_UL_SCENE_LOOP: loop,
                         # ATTR_UL_SCENE_SAVE_SELECT: last_save_scene,
                         # ATTR_UL_SCENE_SAVE_BUTTON: False,
                     }
                 )
 
-                level = cast(int, master_level / channel_id)
-                device.master.status.set(ATTR_HA_BRIGHTNESS, level)
+                if (timers := data.pop(0) if len(data) >= 1 else 0):
+                    TIMER_DATA_SIZE = 7
+                    timer_id = 0
+                    while len(data) >= TIMER_DATA_SIZE and timer_id < timers:
+                        timer_id += 1
+                        timer_data = data[:TIMER_DATA_SIZE]
+                        data = data[TIMER_DATA_SIZE:]
+                        _LOGGER.debug(
+                            "%s: Timer %s: %s",
+                            device.name,
+                            timer_id,
+                            timer_data.hex(),
+                        )
 
+                if (loop := data.pop(0) if len(data) >= 1 else None) is not None:
+                    device.master.status.set(ATTR_UL_SCENE_LOOP, loop)
+
+                input = None
                 if input is not None and master_power:
                     audio_input = self.str_if_key_in(input, BANLANX601_AUDIO_INPUTS)
                     device.master.status.set(ATTR_UL_AUDIO_INPUT, audio_input)
@@ -391,7 +397,6 @@ class BanlanX601(UniledBleModel):
                 if not device.master.features:
                     device.master.features = [
                         LightStripFeature(extra=UNILED_CONTROL_ATTRIBUTES),
-                        SceneLoopFeature(),
                         # SceneSaveSelect(),
                         # SceneSaveButton(),
                     ]
@@ -400,6 +405,9 @@ class BanlanX601(UniledBleModel):
                         device.master.features.append(
                             SceneAttribute(b, UNILED_CONTROL_ATTRIBUTES)
                         )
+
+                    if loop is not None:
+                        device.master.features.append(SceneLoopFeature())
 
                     if input is not None:
                         device.master.features.append(AudioInputFeature())
