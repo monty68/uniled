@@ -697,9 +697,8 @@ SP611E = BanlanX2(
     id=0x611E,
     name="SP611E",
     info="SPI RGB (Music) Controller",
-    # Fix: Issue #47 - Second byte can be different so only check first byte is '0x04'
-    data=b"\x04",
-    # data=b"\x04\x10",
+    # Fix: Issue #47 and #52 - Second byte can be different so only check first byte
+    data=[b"\x04", b"\x10", b"\x11", b"\x12", b"\x13", b"\x14", b"\x15"],
     colors=3,
     intmic=True,
 )
@@ -726,7 +725,7 @@ SP621E = BanlanX2(
     id=0x621E,
     name="SP621E",
     info="Mini SPI RGB Controller",
-    data=b"\x0d\x00",
+    data=[b"\x0d", b"\x16"],
     colors=3,
     intmic=False,
 )
