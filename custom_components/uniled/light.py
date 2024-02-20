@@ -156,7 +156,15 @@ class UniledLightEntity(
 
     @property
     def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
-        """Flag supported color modes."""
+        """Supported color modes."""
+        modes = self.__supported_color_modes
+        if not isinstance(modes, set):
+            _LOGGER.warning("%s: Modes: %s is not a set!", self.device.name, modes)
+        return modes
+    
+    @property
+    def __supported_color_modes(self) -> set[ColorMode] | set[str] | None:
+        """Supported color modes."""
         if self.channel.has(ATTR_SUPPORTED_COLOR_MODES):
             return self.channel.get(ATTR_SUPPORTED_COLOR_MODES, {ColorMode.ONOFF})
         elif self.channel.has(ATTR_RGBWW_COLOR):

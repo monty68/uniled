@@ -435,7 +435,7 @@ class BanlanX2(UniledBleModel):
             {
                 ATTR_UL_DEVICE_FORCE_REFRESH: True,
                 ATTR_UL_POWER: data[0] == 1,
-                ATTR_HA_SUPPORTED_COLOR_MODES: [COLOR_MODE_BRIGHTNESS],
+                ATTR_HA_SUPPORTED_COLOR_MODES: {COLOR_MODE_BRIGHTNESS},
                 ATTR_HA_COLOR_MODE: COLOR_MODE_BRIGHTNESS,
                 ATTR_UL_CHIP_ORDER: self.chip_order_name(
                     UNILED_CHIP_ORDER_RGBW
@@ -465,10 +465,10 @@ class BanlanX2(UniledBleModel):
             if self.colors == 4:
                 device.master.set(ATTR_HA_WHITE, cold)
                 device.master.set(
-                    ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_RGB, COLOR_MODE_WHITE]
+                    ATTR_HA_SUPPORTED_COLOR_MODES, {COLOR_MODE_RGB, COLOR_MODE_WHITE}
                 )
             else:
-                device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_RGB])
+                device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, {COLOR_MODE_RGB})
 
             if effect in BANLANX2_EFFECTS_SOUND:
                 device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_SOUND)
@@ -477,7 +477,7 @@ class BanlanX2(UniledBleModel):
                     ATTR_UL_AUDIO_INPUT,
                     self.str_if_key_in(input, BANLANX2_AUDIO_INPUTS, UNILED_UNKNOWN),
                 )
-                device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_ONOFF])
+                device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, {COLOR_MODE_ONOFF})
                 device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_ONOFF)
                 device.master.set(ATTR_UL_COLOR_LEVEL, level)
                 device.master.set(ATTR_HA_BRIGHTNESS, None)
@@ -486,7 +486,7 @@ class BanlanX2(UniledBleModel):
                 if effect == BANLANX2_EFFECT_WHITE:
                     device.master.set(
                         ATTR_HA_SUPPORTED_COLOR_MODES,
-                        [COLOR_MODE_RGB, COLOR_MODE_WHITE],
+                        {COLOR_MODE_RGB, COLOR_MODE_WHITE},
                     )
                     device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_WHITE)
                     device.master.set(ATTR_HA_BRIGHTNESS, cold)
@@ -505,7 +505,7 @@ class BanlanX2(UniledBleModel):
             device.master.set(ATTR_UL_EFFECT_LENGTH, length)
             device.master.set(ATTR_UL_EFFECT_TYPE, UNILED_EFFECT_TYPE_DYNAMIC)
         elif mode == BANLANX2_LIGHT_MODE_AUTO_SOUND:
-            device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, [COLOR_MODE_ONOFF])
+            device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, {COLOR_MODE_ONOFF})
             device.master.set(ATTR_HA_COLOR_MODE, COLOR_MODE_ONOFF)
             device.master.set(ATTR_UL_COLOR_LEVEL, level)
             device.master.set(ATTR_HA_BRIGHTNESS, None)

@@ -1067,21 +1067,21 @@ class BanlanX6xx(SP6xxEProxy):
                         device.master.set(ATTR_HA_RGBW_COLOR, (data[37], data[38], data[39], white_level))
                     elif cfg.hue or cfg.cct or cfg.white:
                         white_mode = COLOR_MODE_BRIGHTNESS
-                        supported_color_modes = []
+                        supported_color_modes = set()
 
                         if cfg.hue:
                             device.master.set(ATTR_HA_RGB_COLOR, (data[37], data[38], data[39]))
-                            supported_color_modes.append(COLOR_MODE_RGB)
+                            supported_color_modes.add(COLOR_MODE_RGB)
                         if cfg.cct:
                             device.master.set(ATTR_UL_CCT_COLOR, (data[40], data[41], white_level, None))
                             white_mode = COLOR_MODE_COLOR_TEMP
-                            supported_color_modes.append(white_mode)
+                            supported_color_modes.add(white_mode)
                         elif cfg.white and cfg.hue:
                             device.master.set(ATTR_HA_WHITE, white_level)
                             white_mode = COLOR_MODE_WHITE
-                            supported_color_modes.append(white_mode)
+                            supported_color_modes.add(white_mode)
                         else:
-                            supported_color_modes = [white_mode]
+                            supported_color_modes = set(white_mode)
                         device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, supported_color_modes)
                         device.master.set(ATTR_HA_COLOR_MODE, 
                             COLOR_MODE_RGB 
