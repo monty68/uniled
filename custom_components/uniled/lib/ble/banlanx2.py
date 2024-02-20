@@ -707,7 +707,9 @@ SP617E = BanlanX2(
     id=0x617E,
     name="SP617E",
     info="SPI RGB(W) (Music) Controller",
-    data=b"\x17\x10",
+    # Fix: Issue #57 - Second byte can be different so only check first byte
+    # data=b"\x17\x10",
+    data=b"\x17",
     colors=4,
     intmic=True,
 )
