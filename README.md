@@ -4,7 +4,7 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
 
-# ![HA][ha-logo] UniLED v2.2.0 - The Universal Light Controller
+# ![HA][ha-logo] UniLED v2.2.5 - The Universal Light Controller
 
 ### UniLED supports the following range of BLE LED controllers:
 

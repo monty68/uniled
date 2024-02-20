@@ -19,5 +19,5 @@
     "pycryptodome>=3.17",
     "cryptography"
   ],
-  "version": "2.2.4"
+  "version": "2.2.5"
 }
