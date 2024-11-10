@@ -1,4 +1,5 @@
 """UniLED BLE Devices - SP LED (LED Hue)"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -185,7 +186,7 @@ class _LEDHUE(UniledBleModel):
 
     def build_on_connect(self, device: UniledBleDevice) -> list[bytearray] | None:
         """Build on connect message(s)"""
-        return None # bytearray([0x00, 0x00, 0x00, self.cmd.CHECK_DEVICE])
+        return None  # bytearray([0x00, 0x00, 0x00, self.cmd.CHECK_DEVICE])
 
     def build_state_query(self, device: UniledBleDevice) -> bytearray | None:
         """Build a state query message"""
@@ -320,12 +321,23 @@ class _LEDHUE(UniledBleModel):
 
 
 ##
-## SP110E
+## SP110E (x10 variation)
 ##
-SP110E = _LEDHUE(
+SP110Ex00 = _LEDHUE(
     id=0x110E,
     name="SP110E",
     info="RGB(W) SPI Controller",
     data=b"\x00\x00",
+    channels=1,
+)
+
+##
+## SP110E (x10 variation) Fix Issue #69
+##
+SP110Ex10 = _LEDHUE(
+    id=0x110E,
+    name="SP110E",
+    info="RGB(W) SPI Controller",
+    data=b"\x10\x00",
     channels=1,
 )
