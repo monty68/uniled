@@ -3,6 +3,7 @@
   "name": "Universal Light Controller",
   "bluetooth": [
     { "manufacturer_id": 63517 },
+    { "manufacturer_id": 21301 },
     { "manufacturer_id": 20563 },
     { "manufacturer_id": 5053 },
     { "manufacturer_id": 0 },
