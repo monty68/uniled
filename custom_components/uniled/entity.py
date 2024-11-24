@@ -4,7 +4,9 @@ from typing import Any, Protocol
 from abc import abstractmethod
 from functools import partial
 
-from homeassistant.backports.functools import cached_property
+# Fix Issue #74
+# from homeassistant.backports.functools import cached_property
+from functools import cached_property
 from homeassistant.const import (
     ATTR_CONNECTIONS,
     ATTR_HW_VERSION,

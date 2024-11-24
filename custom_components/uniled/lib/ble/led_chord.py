@@ -121,7 +121,7 @@ class _LEDCHORD(UniledBleModel):
             description=info,
             manufacturer="SPLED (LED Chord)",
             channels=channels,
-            ble_manufacturer_id=0,
+            ble_manufacturer_id=[0, 21301], # Fix Issue #65
             ble_service_uuids=[LEDCHORD_UUID_FORMAT.format(part) for part in ["ffe0"]],
             ble_write_uuids=[LEDCHORD_UUID_FORMAT.format(part) for part in ["ffe1"]],
             ble_read_uuids=[],
