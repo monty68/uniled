@@ -114,11 +114,11 @@ class _LEDCHORD(UniledBleModel):
         SET_MATRIX_AUTO_MODE = 18
         SET_SENSITIVITY = 19
 
-    def __init__(self, id: int, name: str, info: str, data: bytes, channels: int = 1):
+    def __init__(self, code: int, name: str, info: str, data: bytes, channels: int = 1):
         super().__init__(
-            model_num=id,
+            model_code=code,
             model_name=name,
-            description=info,
+            model_info=info,
             manufacturer="SPLED (LED Chord)",
             channels=channels,
             ble_manufacturer_id=[0, 21301], # Fix Issue #65
@@ -498,7 +498,7 @@ class _LEDCHORD(UniledBleModel):
 ## SP107E
 ##
 SP107E = _LEDCHORD(
-    id=0x107E,
+    code=0x00,
     name="SP107E",
     info="RGB(W) SPI (Music) Controller",
     data=b"\x00\x00",

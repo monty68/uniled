@@ -1,4 +1,4 @@
-"""UniLED BLE Devices - SP LED (LED Hue)"""
+"""UniLED BLE Devices - SP110E (LED Hue)"""
 
 from __future__ import annotations
 
@@ -84,11 +84,11 @@ class _LEDHUE(UniledBleModel):
         CHECK_DEVICE = 0xD5
         RENAME_DEVICE = 0xBB
 
-    def __init__(self, id: int, name: str, info: str, data: bytes, channels: int = 1):
+    def __init__(self, code: int, name: str, info: str, data: bytes, channels: int = 1):
         super().__init__(
-            model_num=id,
+            model_code=code,
             model_name=name,
-            description=info,
+            model_info=info,
             manufacturer="SPLED (LED Hue)",
             channels=channels,
             ble_manufacturer_id=0,
@@ -321,10 +321,10 @@ class _LEDHUE(UniledBleModel):
 
 
 ##
-## SP110E (x10 variation)
+## SP110E (x00 early variation)
 ##
-SP110Ex00 = _LEDHUE(
-    id=0x110E,
+SP110Ev1 = _LEDHUE(
+    code=0x00,
     name="SP110E",
     info="RGB(W) SPI Controller",
     data=b"\x00\x00",
@@ -332,10 +332,10 @@ SP110Ex00 = _LEDHUE(
 )
 
 ##
-## SP110E (x10 variation) Fix Issue #69
+## SP110E v2 (x10 variation) Fix Issue #69
 ##
-SP110Ex10 = _LEDHUE(
-    id=0x110E,
+SP110E = _LEDHUE(
+    code=0x10,
     name="SP110E",
     info="RGB(W) SPI Controller",
     data=b"\x10\x00",

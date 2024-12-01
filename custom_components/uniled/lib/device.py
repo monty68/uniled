@@ -1,96 +1,86 @@
 """UniLED Light Device."""
+
 from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any
 from types import MappingProxyType
+from .channel import UniledChannel
+from .master import UniledMaster
+from .model import UniledModel
 
-from .model import (
-    UniledModel,
-    UniledChannel,
-)
 
 from .const import (
-    UNILED_MASTER as MASTER,
     UNILED_UPDATE_SECONDS,
     UNILED_DEVICE_RETRYS,
     CONF_UL_UPDATE_INTERVAL,
     CONF_UL_RETRY_COUNT,
-    ATTR_UL_INFO_FIRMWARE,
-    ATTR_UL_DEVICE_FORCE_REFRESH,
 )
 
-import weakref
 import logging
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class ParseNotificationError(Exception):
-    """Raised on notifcation parse errors."""
-
-
-##
-## Master Channel
-##
-class UniledMaster(UniledChannel):
-    """UniLED Master Channel Class"""
-
-    _device: UniledDevice
-    _name: str | None
-
-    def __init__(self, device: UniledDevice, name: str | None = MASTER) -> None:
-        self._device = device
-        self._name = MASTER if name is True else name
-        super().__init__(0)
-
-    @property
-    def name(self) -> str | None:
-        """Returns the channel name."""
-        if self.device.channels == 1:
-            return ""
-        if self.device.channels > 1 and self._name is not None:
-            return self._name
-        return super().name
-
-    @property
-    def identity(self) -> str | None:
-        """Returns the channel identity."""
-        if self.device.channels == 1:
-            return None       
-        if self.device.channels > 1 and self._name is not None:
-            return self._name.replace(" ", "_").lower()
-        return super().identity
-
-    @property
-    def device(self) -> UniledDevice:
-        """Returns the device."""
-        assert self._device is not None  # nosec
-        return self._device
-
 
 ##
 ## Uniled Base Device Class
 ##
 class UniledDevice:
-    """UniLED Base Device Class"""
+    """UniLED Base Device."""
+
+    @staticmethod
+    def short_address(address: str) -> str:
+        """Convert a Bluetooth address to a short address."""
+        split_address = address.replace("-", ":").split(":")
+        return f"{split_address[-2].upper()}{split_address[-1].upper()}"[-4:]
+
+    @staticmethod
+    def simpler_address(address: str) -> str:
+        """Convert a Bluetooth address to a simpler address."""
+        return address.replace(":", "").lower()
+
+    @staticmethod
+    def human_readable_name(name: str | None, local_name: str, address: str) -> str:
+        """Return a human readable name for the given name, local_name, and address."""
+        if (name and local_name) and name != local_name:
+            return f"{name} ({local_name}_{UniledDevice.short_address(address)})"
+        return f"{name or local_name} ({UniledDevice.short_address(address)})"
+
+    @staticmethod
+    def format_mac(mac: str | None) -> str | None:
+        """Convert a device registry formatted mac to UNILED mac."""
+        if mac is None:
+            return None
+        if ":" not in mac:
+            mac = ':'.join(mac[i:i+2] for i in range(0,12,2))
+        return mac.upper()
+
+    @staticmethod
+    def mac_matches_by_one(formatted_mac_1: str, formatted_mac_2: str) -> bool:
+        """Check if a mac address is only one digit off.
+
+        Some of the devices have two mac addresses which are
+        one off from each other. We need to treat them as the same
+        since its the same device.
+        """
+        mac_int_1 = int(formatted_mac_1.replace(":", ""), 16)
+        mac_int_2 = int(formatted_mac_2.replace(":", ""), 16)
+        return abs(mac_int_1 - mac_int_2) < 2
+
+    _model: UniledModel | None = None
+    _config: dict | MappingProxyType | None = None
+    _started:bool = True
+    _channels: list[UniledChannel] = list()
+    _callbacks: list[Callable[[UniledChannel], None]] = list()
 
     def __init__(self, config: Any) -> None:
-        """Init the UniLED Base Driver"""
-        self._model: UniledModel | None = None
-        self._config = None
-        self._started = True
-        self._channels: list[UniledChannel] = list()
-        self._callbacks: list[Callable[[UniledChannel], None]] = list()
-        self._last_notification_data: bytearray = ()
-        self._last_notification_time = None
         if isinstance(config, dict) or isinstance(config, MappingProxyType):
             self._config = config
 
     def __del__(self):
         """Delete the device"""
         self._model = None
-        self._channels.clear()
+        if self._channels:
+            self._channels.clear()
         _LOGGER.debug("%s: Deleted Device", self.name)
 
     def _create_channels(self) -> None:
@@ -120,28 +110,31 @@ class UniledDevice:
         return self._model
 
     @property
-    def model_name(self) -> int:
+    def model_name(self) -> str | None:
         """Return the device model name."""
-        assert self._model is not None  # nosec
-        return self._model.model_name
+        if self._model is not None:
+            return self._model.model_name
+        if hasattr(self, "_model_name"):
+            return self._model_name
+        return None       
 
     @property
-    def model_number(self) -> int:
+    def model_code(self) -> int:
         """Return the device model number."""
         assert self._model is not None  # nosec
-        return self._model.model_num
+        return self._model.model_code
+
+    @property
+    def description(self) -> str:
+        """Return the device description."""
+        assert self._model is not None  # nosec
+        return self._model.model_info
 
     @property
     def manufacturer(self) -> str:
         """Return the device manufacturer."""
         assert self._model is not None  # nosec
         return self._model.manufacturer
-
-    @property
-    def description(self) -> str:
-        """Return the device description."""
-        assert self._model is not None  # nosec
-        return self._model.description
 
     @property
     def unique_id(self) -> str:
@@ -172,16 +165,6 @@ class UniledDevice:
         return self.master
 
     @property
-    def last_notification_data(self) -> bytearray:
-        """Last notification data"""
-        return self._last_notification_data
-
-    def save_notification_data(self, save: bytearray) -> bytearray:
-        """Save some notification data"""
-        self._last_notification_data = save
-        return save
-
-    @property
     def update_interval(self) -> int:
         """Device update interval"""
         if self._config:
@@ -199,13 +182,13 @@ class UniledDevice:
     def started(self) -> bool:
         """Started."""
         return self._started
-    
-    async def startup(self, event = None) -> bool:
+
+    async def startup(self, event=None) -> bool:
         """Startup the device."""
         self._started = True
         return True
 
-    async def shutdown(self, event = None) -> None:
+    async def shutdown(self, event=None) -> None:
         """Shutdown the device."""
         self._started = False
         await self.stop()
@@ -281,6 +264,14 @@ class UniledDevice:
         success = await self.send(commands)
         channel.refresh()
         return success
+
+    @abstractmethod
+    def match_model_name(self, name: str) -> UniledModel | None:
+        """Match a device model code(s)"""
+
+    @abstractmethod
+    def match_model_code(self, code: int) -> UniledModel | None:
+        """Match a device model code(s)"""
 
     @property
     @abstractmethod

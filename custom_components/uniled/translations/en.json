@@ -126,6 +126,7 @@
         "already_in_progress": "Configuration flow is already in progress.",
         "mesh_not_supported": "Mesh not supported.",
         "no_devices_found": "No devices found on the network.",
+        "no_response": "No response from device.",
         "not_supported": "Device not supported."
       },
       "error": {
@@ -144,7 +145,12 @@
           },
           "description": "Choose a device to set up"
         },
+        "network_confirm": {
+          "title": "Network Discovery",
+          "description": "Do you want to set up {device_name} - {model} @ {ip}?"
+        },
         "bluetooth_confirm": {
+          "title": "Bluetooth Discovery",
           "description": "Confirm you want to set up {name}?"
         },
         "mesh_cloud": {

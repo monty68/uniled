@@ -123,9 +123,9 @@ class ZenggeModel(UniledBleModel):
 
     def __init__(self):
         super().__init__(
-            model_num=0x5A4D,  # 'ZM'
+            model_code=0x5A4D,  # 'ZM'
             model_name=ZENGGE_MODEL_NAME,
-            description=ZENGGE_DESCRIPTION,
+            model_info=ZENGGE_DESCRIPTION,
             manufacturer=ZENGGE_MANUFACTURER,
             channels=0,
             ble_manufacturer_data=None,

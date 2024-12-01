@@ -2,21 +2,22 @@
 
 from typing import Final
 from .device import UNILED_TRANSPORT_BLE
-from .led_chord import SP107E
-from .led_hue import SP110Ex00, SP110Ex10
-from .banlanx_601 import SP601E
-from .banlanx_60x import SP602E, SP608E
-from .banlanx_6xx import SP6XXE
+from .sp107e import SP107E
+from .sp110e import SP110E, SP110Ev1
+from .sp601e import SP601E
+from .sp60xe import SP602E, SP608E
 from .banlanx2 import SP611E, SP617E, SP620E, SP621E
 from .banlanx3 import SP613E, SP614E, SP623E, SP624E
+#from .banlanx_6xx import SP6XXE
+from .sp63x_64xe import SP6XXE
 
 ##
 ## Supported BLE Models
 ##
 UNILED_BLE_MODELS: Final = [
     SP107E,
-    SP110Ex00,
-    SP110Ex10,
+    SP110E,
+    SP110Ev1,
     ######
     SP601E,
     ######
@@ -33,5 +34,5 @@ UNILED_BLE_MODELS: Final = [
     SP613E,
     SP614E,
     ######
-    SP6XXE,
+    SP6XXE(),
 ]

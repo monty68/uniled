@@ -1,15 +1,20 @@
 """Config flow for UniLED integration."""
+
 from __future__ import annotations
-from typing import Any
+from typing import Any, cast
 
 from homeassistant import config_entries as flow
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
 from homeassistant.components import onboarding
+from homeassistant.components import dhcp
 from homeassistant.components.bluetooth import (
     async_discovered_service_info,
     BluetoothServiceInfoBleak,
 )
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.typing import DiscoveryInfoType
 from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
@@ -19,18 +24,23 @@ from homeassistant.helpers.selector import (
 from homeassistant.const import (
     CONF_ADDRESS,
     CONF_COUNTRY,
-    CONF_DEVICES,
     CONF_HOST,
-    CONF_IP_ADDRESS,
-    CONF_LOCATION,
     CONF_MODEL,
     CONF_PASSWORD,
-    CONF_PORT,
-    CONF_PROTOCOL,
     CONF_USERNAME,
     Platform,
 )
-from .lib.net.device import UNILED_TRANSPORT_NET, UniledNetDevice, UniledNetModel
+from .lib.discovery import (
+    UNILED_DISCOVERY_SOURCE_DHCP,
+    UNILED_DISCOVERY_SOURCE_UDP,
+    UniledDiscovery,
+)
+from .discovery import (
+    async_discover_device,
+    async_name_from_discovery,
+    async_populate_data_from_discovery,
+    async_update_entry_from_discovery,
+)
 from .lib.ble.device import UNILED_TRANSPORT_BLE, UniledBleDevice, UniledBleModel
 from .lib.zng.cloud import MagicHue, MAGICHUE_DEFAULT_COUNTRY
 from .lib.zng.manager import (
@@ -42,10 +52,22 @@ from .lib.zng.manager import (
     ZENGGE_DESCRIPTION,
     ZenggeManager,
 )
+from .lib.net.device import (
+    UNILED_TRANSPORT_NET,
+    UniledNetDevice, 
+    UniledNetModel
+)
 from .const import (
     DOMAIN,
     ATTR_UL_CHIP_TYPE,
+    ATTR_UL_IP_ADDRESS,
     ATTR_UL_LIGHT_TYPE,
+    ATTR_UL_LOCAL_NAME,
+    ATTR_UL_MAC_ADDRESS,
+    ATTR_UL_MODEL_CODE,
+    ATTR_UL_MODEL_NAME,
+    ATTR_UL_SOURCE,
+    ATTR_UL_TRANSPORT,
     CONF_UL_RETRY_COUNT as CONF_RETRY_COUNT,
     CONF_UL_TRANSPORT as CONF_TRANSPORT,
     CONF_UL_UPDATE_INTERVAL as CONF_UPDATE_INTERVAL,
@@ -57,6 +79,7 @@ from .const import (
     UNILED_DEF_UPDATE_INTERVAL as DEFAULT_UPDATE_INTERVAL,
     UNILED_MAX_UPDATE_INTERVAL as MAX_UPDATE_INTERVAL,
     UNILED_OPTIONS_ATTRIBUTES,
+    UNILED_DISCOVERY_SIGNAL,
 )
 from .coordinator import UniledUpdateCoordinator
 
@@ -70,7 +93,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 
-class UniledMeshHandler():
+class UniledMeshHandler:
     """Common methods for mesh config and option flows"""
 
     def _mesh_title(self, mesh_uuid: int | None = None) -> str:
@@ -477,8 +500,31 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
     def __init__(self) -> None:
         """Initialize the config flow."""
         self._discovery_ble_info: BluetoothServiceInfoBleak | None = None
-        self._discovered_ble_devices: dict[str, BluetoothServiceInfoBleak] = {}
         self._discovered_zng_meshes: dict[str, int] = {}
+        self._discovered_ble_devices: dict[str, BluetoothServiceInfoBleak] = {}
+        self._discovered_net_devices: dict[str, UniledDiscovery] = {}
+
+    async def async_step_dhcp(self, discovery: dhcp.DhcpServiceInfo) -> FlowResult:
+        """Handle discovery via dhcp."""
+        self._allow_update_mac = False
+        self._discovered_device = UniledDiscovery(
+            transport=UNILED_TRANSPORT_NET,
+            source=UNILED_DISCOVERY_SOURCE_DHCP,
+            ip_address=discovery.ip,
+            mac_address=UniledNetDevice.format_mac(discovery.macaddress),
+            local_name=None,
+            model_name=None,
+            model_code=None,
+        )
+        return await self._async_network_discovery()
+
+    async def async_step_integration_discovery(
+        self, discovery: DiscoveryInfoType
+    ) -> FlowResult:
+        """Handle integration discovery."""
+        self._allow_update_mac = True
+        self._discovered_device = cast(UniledDiscovery, discovery)
+        return await self._async_network_discovery()
 
     async def async_step_bluetooth(
         self, discovery: BluetoothServiceInfoBleak
@@ -643,7 +689,7 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         return False
 
     def _async_bluetooth_create_entry(self):
-        """Get/Create entry"""
+        """Create bluetooth entry"""
         return self.async_create_entry(
             title=self.context["title_placeholders"]["name"],
             data={
@@ -651,6 +697,139 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
                 CONF_ADDRESS: self.context.get(CONF_ADDRESS, ""),
                 CONF_MODEL: self.context.get(CONF_MODEL, None),
             },
+            options={
+                CONF_RETRY_COUNT: DEFAULT_RETRY_COUNT,
+                CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,
+            },
+        )
+
+    async def _async_set_discovered_mac(
+        self, device: UniledDiscovery, allow_update_mac: bool
+    ) -> None:
+        """Set the discovered mac.
+
+        We only allow it to be updated if it comes from udp
+        discovery since the dhcp mac can be one digit off from
+        the udp discovery mac for devices with multiple network interfaces
+        """
+        mac_address = device[ATTR_UL_MAC_ADDRESS]
+        assert mac_address is not None
+        mac = UniledNetDevice.format_mac(mac_address)
+
+        await self.async_set_unique_id(mac)
+        for entry in self._async_current_entries(include_ignore=True):
+            if not (
+                entry.data.get(CONF_HOST) == device[ATTR_UL_IP_ADDRESS]
+                or (
+                    entry.unique_id
+                    and ":" in entry.unique_id
+                    and UniledNetDevice.mac_matches_by_one(entry.unique_id, mac)
+                )
+            ):
+                continue
+            if entry.source == flow.SOURCE_IGNORE:
+                raise AbortFlow("already_configured")
+            if (
+                async_update_entry_from_discovery(
+                    self.hass, entry, device, None, allow_update_mac
+                )
+                and entry.state
+                not in (
+                    flow.ConfigEntryState.SETUP_IN_PROGRESS,
+                    flow.ConfigEntryState.NOT_LOADED,
+                )
+            ) or entry.state == flow.ConfigEntryState.SETUP_RETRY:
+                self.hass.async_create_task(
+                    self.hass.config_entries.async_reload(entry.entry_id)
+                )
+            else:
+                async_dispatcher_send(
+                    self.hass,
+                    UNILED_DISCOVERY_SIGNAL.format(entry_id=entry.entry_id),
+                )
+            raise AbortFlow("already_configured")
+
+        _LOGGER.debug(
+            "Discovered '%s' (id=%d, model=%s) from '%s' @ %s",
+            async_name_from_discovery(device),
+            device[ATTR_UL_MODEL_CODE],
+            device[ATTR_UL_MODEL_NAME],
+            device[ATTR_UL_SOURCE],
+            device[ATTR_UL_IP_ADDRESS],
+        )
+
+    async def _async_network_discovery(self) -> FlowResult:
+        """Handle network discovery."""
+        assert self._discovered_device is not None
+        device = self._discovered_device
+        await self._async_set_discovered_mac(device, self._allow_update_mac)
+        host = device[ATTR_UL_IP_ADDRESS]
+        for progress in self._async_in_progress():
+            if progress.get("context", {}).get(CONF_HOST) == host:
+                return self.async_abort(reason="already_in_progress")
+
+        if not device[ATTR_UL_MODEL_NAME]:
+            mac_address = device[ATTR_UL_MAC_ADDRESS]
+            assert mac_address is not None
+            mac = UniledNetDevice.format_mac(mac_address)
+            try:
+                device = await async_discover_device(self.hass, host)
+            except Exception:
+                return self.async_abort(reason="cannot_connect")
+            discovered_mac = device[ATTR_UL_MAC_ADDRESS]
+            if device[ATTR_UL_MODEL_NAME] or (
+                discovered_mac is not None
+                and (
+                    formatted_discovered_mac := UniledNetDevice.format_mac(
+                        discovered_mac
+                    )
+                )
+                and formatted_discovered_mac != mac
+                and UniledNetDevice.mac_matches_by_one(discovered_mac, mac)
+            ):
+                self._discovered_device = device
+                await self._async_set_discovered_mac(device, True)
+
+        return await self.async_step_network_confirm()
+
+    async def async_step_network_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm network discovery."""
+        assert self._discovered_device is not None
+        device = self._discovered_device
+        mac_address = device[ATTR_UL_MAC_ADDRESS]
+        assert mac_address is not None
+        model = device[ATTR_UL_MODEL_NAME]
+        code = device[ATTR_UL_MODEL_CODE]
+        name = device[ATTR_UL_LOCAL_NAME]
+
+        placeholders = {
+            "name": async_name_from_discovery(device),
+            "device_name": name or mac_address,
+            "model": f"({model})" if model else f"ID#: {code}",
+            "ip": device[ATTR_UL_IP_ADDRESS],
+        }
+        self.context["title_placeholders"] = placeholders
+
+        if user_input is not None:
+            return self._async_network_create_entry(self._discovered_device)
+        self._set_confirm_only()
+        return self.async_show_form(
+            step_id="network_confirm", description_placeholders=placeholders
+        )
+
+    @callback
+    def _async_network_create_entry(self, device: UniledDiscovery):
+        """Create network entry"""
+        if device[ATTR_UL_MODEL_NAME] is None:
+            raise AbortFlow("not_supported")
+        # data: dict[str, Any] = {CONF_TRANSPORT: UNILED_TRANSPORT_NET}
+        data: dict[str, Any] = {}
+        async_populate_data_from_discovery(data, data, device)
+        return self.async_create_entry(
+            title=async_name_from_discovery(device),
+            data=data,
             options={
                 CONF_RETRY_COUNT: DEFAULT_RETRY_COUNT,
                 CONF_UPDATE_INTERVAL: DEFAULT_UPDATE_INTERVAL,

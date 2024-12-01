@@ -1,6 +1,7 @@
 """UniLED BLE Device Handler."""
 from __future__ import annotations
 from dataclasses import dataclass
+from abc import abstractmethod
 from typing import Any, Final
 
 from bleak.exc import BleakDBusError
@@ -20,7 +21,7 @@ from bleak_retry_connector import (
     get_device,
 )
 
-from ..device import UniledDevice, ParseNotificationError
+from ..device import UniledDevice
 from ..model import UniledModel
 from ..const import (
     UNILED_DISCONNECT_DELAY as UNILED_BLE_DISCONNECT_DELAY,
@@ -38,7 +39,7 @@ UNILED_TRANSPORT_BLE: Final = "ble"
 
 UNILED_BLE_BAD_RSSI = -127
 UNILED_BLE_ERROR_BACKOFF_TIME = 0.25
-UNILED_BLE_NOTFICATION_TIMEOUT = 5.0
+UNILED_BLE_NOTFICATION_TIMEOUT = 8.0
 
 UUID_MANUFACTURER = "0000{0:x}-0000-1000-8000-00805f9b34fb".format(0x2A29)
 UUID_FIRMWARE_REV = "0000{0:x}-0000-1000-8000-00805f9b34fb".format(0x2A26)
@@ -58,6 +59,9 @@ class CharacteristicMissingError(Exception):
 class ChannelMissingError(Exception):
     """Raised when a channel is missing."""
 
+
+class ParseNotificationError(Exception):
+    """Raised on notifcation parse errors."""
 
 ##
 ## UniLed BLE Model Handler
@@ -109,6 +113,11 @@ class UniledBleModel(UniledModel):
                 pass
         return False
 
+    @abstractmethod
+    def parse_notifications(self, device: Any, sender: int, data: bytearray) -> bool:
+        """Parse notification message(s)"""
+
+        raise ParseNotificationError("No parser available!")
 
 ##
 ## UniLed BLE Device Handler
@@ -205,22 +214,6 @@ class UniledBleDevice(UniledDevice):
             )
         return found
 
-    @staticmethod
-    def short_address(address: str) -> str:
-        """Convert a Bluetooth address to a short address."""
-        split_address = address.replace("-", ":").split(":")
-        return f"{split_address[-2].upper()}{split_address[-1].upper()}"[-4:]
-
-    @staticmethod
-    def simpler_address(address: str) -> str:
-        """Convert a Bluetooth address to a simpler address."""
-        return address.replace(":", "").lower()
-
-    @staticmethod
-    def human_readable_name(name: str | None, local_name: str, address: str) -> str:
-        """Return a human readable name for the given name, local_name, and address."""
-        return f"{name or local_name} ({UniledBleDevice.short_address(address)})"
-
     ##
     ## Initialize device instance
     ##
@@ -245,6 +238,8 @@ class UniledBleDevice(UniledDevice):
         self._read_char: BleakGATTCharacteristic | None = None
         self._write_char: BleakGATTCharacteristic | None = None
         self._notify_char: BleakGATTCharacteristic | None = None
+        self._last_notification_data: bytearray = ()
+        self._last_notification_time = None
 
         _LOGGER.debug(
             "%s: Inititalizing (%s)...", self.name, model_name if not None else "-?-"
@@ -291,6 +286,16 @@ class UniledBleDevice(UniledDevice):
         if (self._model and self._client) and self._client.is_connected:
             return True
         return False
+
+    @property
+    def last_notification_data(self) -> bytearray:
+        """Last notification data"""
+        return self._last_notification_data
+
+    def save_notification_data(self, save: bytearray) -> bytearray:
+        """Save some notification data"""
+        self._last_notification_data = save
+        return save
 
     ##
     ## Update Device
@@ -495,7 +500,7 @@ class UniledBleDevice(UniledDevice):
         to_send = len(commands)
         for command in commands:
             if self._client.is_connected and command:
-                _LOGGER.debug("%s: Sending command: %s", self.name, command.hex())
+                _LOGGER.debug("%s: => %s (%d)", self.name, command.hex(), len(command))
                 reply = await self._client.write_gatt_char(
                     self._write_char, command, True
                 )  # None)
@@ -618,11 +623,10 @@ class UniledBleDevice(UniledDevice):
     ) -> None:
         """Handle notification responses."""
         _LOGGER.debug(
-            "%s: Notification from '%s' [%s],\nData: %s",
+            "%s: <= %s (%d)",
             self.name,
-            self.address,
-            sender.handle,
             data.hex(),
+            len(data)
         )
         if self._model:
             if not self.channels:

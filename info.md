@@ -5,9 +5,9 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]][license]
 
-# UniLED v2.2.5 - The Universal Light Controller
+# UniLED - The Universal Light Controller
 
-### UniLED supports the following range of BLE LED controllers:
+### UniLED supports the following range of BLE/WiFi LED controllers:
 
 ### 📱LED Chord
   - **SP107E** - SPI RGB(W) Controller
@@ -25,7 +25,7 @@
   - **SP621E** - Mini SPI RGB Controller
   - **SP623E** - Mini PWM RGB Controller
   - **SP624E** - Mini PWM RGBW Controller
-  - **SP630E** - PWM/SPI RGB, RGBW, RGBCCT Controller
+  - **SP530E** / **SP630E** - PWM/SPI RGB, RGBW, RGBCCT Controller
   - **SP631E** / **SP641E** - PWM Single Color Controllers
   - **SP632E** / **SP642E** - PWM CCT Controllers
   - **SP633E** / **SP643E** - PWM RGB Controllers
@@ -36,6 +36,8 @@
   - **SP638E** / **SP648E** - SPI RGB Controllers
   - **SP639E** / **SP649E** - SPI RGBW Controllers
   - **SP63AE** / **SP64AE** - SPI RGBCCT Controllers
+  - **SP63BE** / **SP64BE** - SPI RGB+1CH PWM Controllers
+  - **SP63CE** / **SP64CE** - SPI RGB+2CH PWM Controllers
 
 #### 💡Hints and Tips
 1. For those devices that support "Effect Length", set the length to the number of LEDS.

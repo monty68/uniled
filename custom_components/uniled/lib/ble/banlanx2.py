@@ -1,9 +1,11 @@
 """UniLED BLE Devices - SP LED (BanlanX v2)"""
+
 from __future__ import annotations
 from itertools import chain
 from typing import Final
 
 from ..const import *  # I know!
+from ..discovery import UniledProxy
 from ..channel import UniledChannel
 from ..features import (
     UniledAttribute,
@@ -278,12 +280,18 @@ class BanlanX2(UniledBleModel):
     intmic: bool
 
     def __init__(
-        self, id: int, name: str, info: str, data: bytes, colors: int, intmic: bool
+        self,
+        code: list[int] | int,
+        name: str,
+        info: str,
+        data: bytes,
+        colors: int,
+        intmic: bool,
     ):
         super().__init__(
-            model_num=id,
+            model_code=id,
             model_name=name,
-            description=info,
+            model_info=info,
             manufacturer=BANLANX_MANUFACTURER,
             channels=1,
             ble_manufacturer_id=[BANLANX_MANUFACTURER_ID, 5053],
@@ -438,9 +446,11 @@ class BanlanX2(UniledBleModel):
                 ATTR_HA_SUPPORTED_COLOR_MODES: {COLOR_MODE_BRIGHTNESS},
                 ATTR_HA_COLOR_MODE: COLOR_MODE_BRIGHTNESS,
                 ATTR_UL_CHIP_ORDER: self.chip_order_name(
-                    UNILED_CHIP_ORDER_RGBW
-                    if self.colors == 4
-                    else UNILED_CHIP_ORDER_RGB,
+                    (
+                        UNILED_CHIP_ORDER_RGBW
+                        if self.colors == 4
+                        else UNILED_CHIP_ORDER_RGB
+                    ),
                     chip_order,
                 ),
                 ATTR_UL_LIGHT_MODE_NUMBER: mode,
@@ -588,7 +598,7 @@ class BanlanX2(UniledBleModel):
         red, green, blue, white = rgbw
         return [
             self.build_rgb_command(device, channel, (red, green, blue)),
-            bytearray([0xA0, 0x76, 0x02, white & 0xFF, 0x00])
+            bytearray([0xA0, 0x76, 0x02, white & 0xFF, 0x00]),
         ]
 
     def build_effect_command(
@@ -694,7 +704,7 @@ class BanlanX2(UniledBleModel):
 ## Device Signatures
 ##
 SP611E = BanlanX2(
-    id=0x611E,
+    code=[0x04, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15],
     name="SP611E",
     info="SPI RGB (Music) Controller",
     # Fix: Issue #47 and #52 - Second byte can be different so only check first byte
@@ -704,7 +714,7 @@ SP611E = BanlanX2(
 )
 
 SP617E = BanlanX2(
-    id=0x617E,
+    code=0x17,
     name="SP617E",
     info="SPI RGB(W) (Music) Controller",
     # Fix: Issue #57 - Second byte can be different so only check first byte
@@ -715,7 +725,7 @@ SP617E = BanlanX2(
 )
 
 SP620E = BanlanX2(
-    id=0x620E,
+    code=0x1B,
     name="SP620E",
     info="USB SPI RGB (Music) Controller",
     data=b"\x1b\x10",
@@ -724,7 +734,7 @@ SP620E = BanlanX2(
 )
 
 SP621E = BanlanX2(
-    id=0x621E,
+    code=0x0D,
     name="SP621E",
     info="Mini SPI RGB Controller",
     data=[b"\x0d", b"\x16"],

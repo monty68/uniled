@@ -1,8 +1,9 @@
 """UniLED Base Model."""
+
 from __future__ import annotations
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from abc import abstractmethod
-from typing import Any, Final
+from typing import Any, NewType
 
 from .channel import UniledChannel
 from .chips import UniledChips
@@ -11,30 +12,29 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+UniledDevice = NewType("UniledDevice", None)
 
+
+##
+## UniLed Base Model Class
+##
 @dataclass(frozen=True)
 class UniledModel(UniledChips):
-    """UniLED Base Model Class"""
+    """UniLED Base Model."""
 
-    model_num: int  # The model number
+    model_code: list[int] | int  # The model code number
     model_name: str  # The model name
-    description: str  # Description of the model ({type} {color_mode})
+    model_info: str  # Description of the model ({type} {color_mode})
     manufacturer: str  # The manufacturers name
     channels: int  # The number of supported channels
 
     @abstractmethod
-    def parse_notifications(self, device: Any, sender: int, data: bytearray) -> bool:
-        """Parse notification message(s)"""
-        from .device import ParseNotificationError
-
-        raise ParseNotificationError("No parser available!")
-
-    @abstractmethod
-    def build_state_query(self, device: Any) -> bytearray | None:
+    def build_state_query(self, device: UniledDevice) -> bytearray | None:
         """Build a state query message"""
 
-    def build_on_connect(self, device: Any) -> list[bytearray] | None:
+    def build_on_connect(self, device: UniledDevice) -> list[bytearray] | None:
         """Build state query message"""
+        return None
 
     def build_command(
         self, device: Any, channel: UniledChannel, attr: str, value: any

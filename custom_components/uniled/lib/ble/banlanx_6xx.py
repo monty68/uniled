@@ -1,4 +1,5 @@
-"""UniLED BLE Devices - SP LED (BanlanX SP630E)"""
+"""UniLED BLE Devices - SP LED (BanlanX SP6xxE)"""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Final
@@ -662,15 +663,10 @@ class CFG_8C(CFG_89):
 ## Device Signatures
 ##
 dataclass(frozen=True)
-
-
 class Signature:
     info: str
-    conf: Any  # dict(int, Any)
-    ids: dict(int, str)
-
-
-dataclass(frozen=True)
+    conf: Any  # dict[int, Any]
+    ids: dict[int, str]
 
 
 class SP630E(Signature):
@@ -691,81 +687,43 @@ class SP630E(Signature):
         0x89: CFG_89(),  # SPI - RGB + 1 CH PWM
         0x8C: CFG_8C(),  # SPI - RGB + 2 CH PWM
     }
-    ids = {
-        0x1F: "SP630E",
-    }
-
-
-dataclass(frozen=True)
+    ids = {0x1F: "SP630E"}
 
 
 class SP631E_SP641E(Signature):
     info = "PWM Single Color (Music) Controller"
-    conf = {
-        0x01: CFG_81(),
-    }
-    ids = {
-        0x20: "SP631E",
-        0x2C: "SP641E",
-    }
-
-
-dataclass(frozen=True)
+    conf = {0x01: CFG_81()}
+    ids = {0x20: "SP631E", 0x2C: "SP641E"}
 
 
 class SP632E_SP642E(Signature):
     info = "PWM CCT (Music) Controller"
-    conf = {
-        0x03: CFG_83(),
-    }
+    conf = {0x03: CFG_83()}
     ids = {0x21: "SP632E", 0x2D: "SP642E"}
-
-
-dataclass(frozen=True)
 
 
 class SP633E_SP643E(Signature):
     info = "PWM RGB (Music) Controller"
-    conf = {
-        0x05: CFG_85(),
-    }
+    conf = {0x05: CFG_85()}
     ids = {0x22: "SP633E", 0x2E: "SP643E"}
-
-
-dataclass(frozen=True)
 
 
 class SP634E_SP644E(Signature):
     info = "PWM RGBW (Music) Controller"
-    conf = {
-        0x07: CFG_87(),
-    }
+    conf = {0x07: CFG_87()}
     ids = {0x23: "SP634E", 0x2F: "SP644E"}
-
-
-dataclass(frozen=True)
 
 
 class SP635E_SP645E(Signature):
     info = "PWM RGBCCT (Music) Controller"
-    conf = {
-        0x0A: CFG_8A(),
-    }
+    conf = {0x0A: CFG_8A()}
     ids = {0x24: "SP635E", 0x30: "SP645E"}
-
-
-dataclass(frozen=True)
 
 
 class SP636E_SP646E(Signature):
     info = "SPI Single Color (Music) Controller"
-    conf = {
-        0x02: CFG_82(),
-    }
+    conf = {0x02: CFG_82()}
     ids = {0x25: "SP636E", 0x31: "SP646E"}
-
-
-dataclass(frozen=True)
 
 
 class SP637E_SP647E(Signature):
@@ -774,38 +732,34 @@ class SP637E_SP647E(Signature):
     ids = {0x26: "SP637E", 0x32: "SP647E"}
 
 
-dataclass(frozen=True)
-
-
 class SP638E_SP648E(Signature):
     info = "SPI RGB (Music) Controller"
-    conf = {
-        0x06: CFG_86(),
-    }
+    conf = {0x06: CFG_86()}
     ids = {0x27: "SP638E", 0x33: "SP648E"}
-
-
-dataclass(frozen=True)
 
 
 class SP639E_SP649E(Signature):
     info = "SPI RGBW (Music) Controller"
-    conf = {
-        0x08: CFG_88(),
-    }
+    conf = {0x08: CFG_88()}
     ids = {0x28: "SP639E", 0x34: "SP649E"}
-
-
-dataclass(frozen=True)
 
 
 class SP63AE_SP64AE(Signature):
     info = "SPI RGBCCT (Music) Controller"
-    conf = {
-        0x0B: CFG_8B(),
-        0x0E: CFG_8E(),
-    }
+    conf = {0x0B: CFG_8B(), 0x0E: CFG_8E()}
     ids = {0x29: "SP63AE", 0x35: "SP64AE"}
+
+
+class SP63BE_SP64BE(Signature):
+    info = "SPI RGB+1CH PWM (Music) Controller"
+    conf = {0x09: CFG_89()}
+    ids = {0x2A: "SP63BE", 0x36: "SP64BE"}
+
+
+class SP63CE_SP64CE(Signature):
+    info = "SPI RGB+2CH PWM (Music) Controller"
+    conf = {0x0C: CFG_8C()}
+    ids = {0x2B: "SP63CE", 0x37: "SP64CE"}
 
 
 MODEL_SIGNATURE_LIST: Final = [
@@ -820,6 +774,8 @@ MODEL_SIGNATURE_LIST: Final = [
     SP638E_SP648E,
     SP639E_SP649E,
     SP63AE_SP64AE,
+    SP63BE_SP64BE,
+    SP63CE_SP64CE,
 ]
 
 
@@ -835,7 +791,7 @@ class SP6xxEProxy(UniledBleModel):
                 if model != name:
                     continue
                 return BanlanX6xx(
-                    id=id, name=name, info=signature.info, conf=signature.conf
+                    code=id, name=name, info=signature.info, conf=signature.conf
                 )
         return None
 
@@ -853,16 +809,16 @@ class SP6xxEProxy(UniledBleModel):
                     if id != data[0]:
                         continue
                     return BanlanX6xx(
-                        id=id, name=name, info=signature.info, conf=signature.conf
+                        code=id, name=name, info=signature.info, conf=signature.conf
                     )
         return None
 
-    def __init__(self, id: int, name: str, info: str):
+    def __init__(self, code: int, name: str, info: str):
         """Initialise class"""
         super().__init__(
-            model_num=id,
+            model_code=code,
             model_name=name,
-            description=info,
+            model_info=info,
             manufacturer=BANLANX6XX_MANUFACTURER,
             channels=1,
             ble_manufacturer_id=BANLANX6XX_MANUFACTURER_ID,
@@ -870,7 +826,7 @@ class SP6xxEProxy(UniledBleModel):
             ble_write_uuids=BANLANX6XX_UUID_WRITE,
             ble_read_uuids=BANLANX6XX_UUID_READ,
             ble_notify_uuids=[],
-            ble_manufacturer_data=bytearray([id & 0xFF, 0x10]),
+            ble_manufacturer_data=bytearray([code & 0xFF, 0x10]),
         )
 
 
@@ -887,11 +843,11 @@ class BanlanX6xx(SP6xxEProxy):
     _MESSAGE_LENGTH = 5
     _DEVICE_STATUS = 0x02
 
-    configs: dict(int, _CONFIG) | None
+    configs: dict[int, _CONFIG] | None
 
-    def __init__(self, id: int, name: str, info: str, conf: dict(int, _CONFIG)):
+    def __init__(self, code: int, name: str, info: str, conf: dict[int, _CONFIG]):
         """Initialise class"""
-        super().__init__(id, name, info)
+        super().__init__(code, name, info)
         self.configs = conf
 
     def __decoder(self, encoded: bytearray) -> bytearray | None:
@@ -979,9 +935,9 @@ class BanlanX6xx(SP6xxEProxy):
                 ATTR_UL_ON_POWER: on_power,
                 ATTR_UL_POWER: power,
                 ATTR_UL_LIGHT_MODE_NUMBER: mode,
-                ATTR_UL_LIGHT_MODE: UNILED_UNKNOWN
-                if mode not in DICTOF_MODES
-                else DICTOF_MODES[mode],
+                ATTR_UL_LIGHT_MODE: (
+                    UNILED_UNKNOWN if mode not in DICTOF_MODES else DICTOF_MODES[mode]
+                ),
                 ATTR_UL_EFFECT_NUMBER: effect,
                 ATTR_UL_EFFECT: UNILED_UNKNOWN,
                 ATTR_UL_EFFECT_TYPE: UNILED_UNKNOWN,
@@ -1058,22 +1014,33 @@ class BanlanX6xx(SP6xxEProxy):
                         )
                     device.master.set(
                         ATTR_HA_BRIGHTNESS,
-                        white_level if self.is_white_mode(mode) else color_level
+                        white_level if self.is_white_mode(mode) else color_level,
                     )
                 elif self.is_static_mode(mode):
                     if cfg.hue and cfg.cct and coexistence:
-                        device.master.set(ATTR_HA_RGBWW_COLOR, (data[37], data[38], data[39], data[40], data[41]))
+                        device.master.set(
+                            ATTR_HA_RGBWW_COLOR,
+                            (data[37], data[38], data[39], data[40], data[41]),
+                        )
                     elif cfg.hue and cfg.white and coexistence:
-                        device.master.set(ATTR_HA_RGBW_COLOR, (data[37], data[38], data[39], white_level))
+                        device.master.set(
+                            ATTR_HA_RGBW_COLOR,
+                            (data[37], data[38], data[39], white_level),
+                        )
                     elif cfg.hue or cfg.cct or cfg.white:
                         white_mode = COLOR_MODE_BRIGHTNESS
                         supported_color_modes = set()
 
                         if cfg.hue:
-                            device.master.set(ATTR_HA_RGB_COLOR, (data[37], data[38], data[39]))
+                            device.master.set(
+                                ATTR_HA_RGB_COLOR, (data[37], data[38], data[39])
+                            )
                             supported_color_modes.add(COLOR_MODE_RGB)
                         if cfg.cct:
-                            device.master.set(ATTR_UL_CCT_COLOR, (data[40], data[41], white_level, None))
+                            device.master.set(
+                                ATTR_UL_CCT_COLOR,
+                                (data[40], data[41], white_level, None),
+                            )
                             white_mode = COLOR_MODE_COLOR_TEMP
                             supported_color_modes.add(white_mode)
                         elif cfg.white and cfg.hue:
@@ -1081,14 +1048,21 @@ class BanlanX6xx(SP6xxEProxy):
                             white_mode = COLOR_MODE_WHITE
                             supported_color_modes.add(white_mode)
                         else:
-                            supported_color_modes = set(white_mode)
-                        device.master.set(ATTR_HA_SUPPORTED_COLOR_MODES, supported_color_modes)
-                        device.master.set(ATTR_HA_COLOR_MODE, 
-                            COLOR_MODE_RGB 
-                            if self.is_color_mode(mode) 
-                            else white_mode
+                            # Fix Issues #73 and #77
+                            # supported_color_modes = set(white_mode)
+                            supported_color_modes.add(white_mode)
+
+                        device.master.set(
+                            ATTR_HA_SUPPORTED_COLOR_MODES, supported_color_modes
                         )
-                    device.master.set(ATTR_HA_BRIGHTNESS, white_level if self.is_white_mode(mode) else color_level)
+                        device.master.set(
+                            ATTR_HA_COLOR_MODE,
+                            COLOR_MODE_RGB if self.is_color_mode(mode) else white_mode,
+                        )
+                    device.master.set(
+                        ATTR_HA_BRIGHTNESS,
+                        white_level if self.is_white_mode(mode) else color_level,
+                    )
                 elif mode == MODE_CUSTOM_COLOR:
                     device.master.set(ATTR_HA_BRIGHTNESS, color_level)
 
@@ -1356,6 +1330,7 @@ class BanlanX6xx(SP6xxEProxy):
         if cfg is not None and cfg.effects:
             for m in cfg.effects:
                 modes[m] = str(DICTOF_MODES[m])
+        print(modes)
         return modes
 
     def build_effect_command(
@@ -1364,7 +1339,7 @@ class BanlanX6xx(SP6xxEProxy):
         channel: UniledChannel,
         effect: Any,
         mode: int | None = None,
-    ) -> [bytearray] | None:
+    ) -> list[bytearray] | None:
         """The bytes to send for an effect change"""
         if mode is None:
             mode = channel.status.light_mode_number
@@ -1461,7 +1436,11 @@ class BanlanX6xx(SP6xxEProxy):
         if cfg is None:
             return None
         channel.context = cfg
-        order = None if cfg.order is None else self.chip_order_index(cfg.order, channel.status.chip_order)
+        order = (
+            None
+            if cfg.order is None
+            else self.chip_order_index(cfg.order, channel.status.chip_order)
+        )
         if order is None:
             order = 0x00
         mode = channel.status.light_mode_number
@@ -1586,5 +1565,5 @@ class BanlanX6xx(SP6xxEProxy):
 ## SP6xxE
 ##
 SP6XXE = SP6xxEProxy(
-    id=0xFF, name="SP6xxE", info="SP63xE and SP64xE PWM/SPI Controllers"
+    code=0xFF, name="SP6xxE", info="SP63xE and SP64xE PWM/SPI Controllers"
 )

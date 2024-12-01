@@ -15,6 +15,7 @@ from .attributes import (
     ATTR_UL_POWER,
     ATTR_UL_LIGHT_TYPE,
     ATTR_UL_LIGHT_MODE,
+    ATTR_UL_EFFECT,
     ATTR_UL_EFFECT_TYPE,
     ATTR_UL_EFFECT_LOOP,
     ATTR_UL_EFFECT_PLAY,
@@ -93,6 +94,16 @@ class EffectTypeFeature(SensorAttribute):
             enabled=False
         )
 
+class EffectNameFeature(SensorAttribute):
+    """UniLED Effect Name Feature Class"""
+
+    def __init__(self) -> None:
+        super().__init__(
+            ATTR_UL_EFFECT,
+            "Effect Name",
+            "mdi:magic-staff",
+            enabled=False
+        )
 
 class EffectSpeedFeature(NumberAttribute):
     """UniLED Effect Speed Feature Class"""

@@ -1,5 +1,8 @@
 """The UniLED integration."""
+
 from __future__ import annotations
+
+from typing import Any, Final, cast
 
 from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth.match import (
@@ -11,12 +14,23 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, callback, CoreState
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.device_registry import format_mac
 from homeassistant.helpers.entity_registry import async_get, async_migrate_entries
+from homeassistant.helpers.event import (
+    async_track_time_change,
+    async_track_time_interval,
+)
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 from homeassistant.const import (
     CONF_ADDRESS,
     CONF_COUNTRY,
+    CONF_HOST,
     CONF_MODEL,
+    CONF_NAME,
     CONF_PASSWORD,
     CONF_USERNAME,
     EVENT_HOMEASSISTANT_STARTED,
@@ -32,17 +46,28 @@ from .lib.zng.manager import (
     ZenggeManager,
 )
 from .lib.ble.device import (
-    close_stale_connections,
-    get_device,
     UNILED_TRANSPORT_BLE,
     UniledBleDevice,
+    close_stale_connections,
+    get_device,
 )
 from .lib.net.device import (
     UNILED_TRANSPORT_NET,
     UniledNetDevice,
 )
+from .discovery import (
+    UniledDiscovery,
+    async_build_cached_discovery,
+    async_clear_discovery_cache,
+    async_get_discovery,
+    async_discover_device,
+    async_discover_devices,
+    async_trigger_discovery,
+    async_update_entry_from_discovery,
+)
 from .const import (
     DOMAIN,
+    ATTR_UL_MAC_ADDRESS,
     CONF_UL_RETRY_COUNT as CONF_RETRY_COUNT,
     CONF_UL_TRANSPORT as CONF_TRANSPORT,
     CONF_UL_UPDATE_INTERVAL as CONF_UPDATE_INTERVAL,
@@ -51,6 +76,12 @@ from .const import (
     UNILED_UPDATE_SECONDS as DEFAULT_UPDATE_INTERVAL,
     UNILED_DEVICE_TIMEOUT,
     UNILED_OPTIONS_ATTRIBUTES,
+    UNILED_DISCOVERY,
+    UNILED_DISCOVERY_SIGNAL,
+    UNILED_DISCOVERY_INTERVAL,
+    UNILED_DISCOVERY_STARTUP_TIMEOUT,
+    UNILED_DISCOVERY_SCAN_TIMEOUT,
+    # UNILED_SIGNAL_STATE_UPDATED,
 )
 
 from .coordinator import UniledUpdateCoordinator
@@ -71,6 +102,38 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
     Platform.BUTTON,
 ]
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the UNILED component."""
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    domain_data[UNILED_DISCOVERY] = await async_discover_devices(
+        hass, UNILED_DISCOVERY_STARTUP_TIMEOUT
+    )
+
+    @callback
+    def _async_start_background_discovery(*_: Any) -> None:
+        """Run discovery in the background."""
+        hass.async_create_background_task(_async_discovery(), UNILED_DISCOVERY)
+
+    async def _async_discovery(*_: Any) -> None:
+        async_trigger_discovery(
+            hass, await async_discover_devices(hass, UNILED_DISCOVERY_SCAN_TIMEOUT)
+        )
+
+    async_trigger_discovery(hass, domain_data[UNILED_DISCOVERY])
+
+    hass.bus.async_listen_once(
+        EVENT_HOMEASSISTANT_STARTED, _async_start_background_discovery
+    )
+
+    async_track_time_interval(
+        hass,
+        _async_start_background_discovery,
+        UNILED_DISCOVERY_INTERVAL,
+        cancel_on_shutdown=True,
+    )
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -223,12 +286,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     elif transport == UNILED_TRANSPORT_NET:
-        raise ConfigEntryError(
-            f"Unable to communicate with network device {address} as currently not supported!"
-        )
+        discovery_cached = True
+        host = entry.data[CONF_HOST]
+        if discovery := async_get_discovery(hass, host):
+            discovery_cached = False
+        else:
+            discovery = async_build_cached_discovery(entry)
+        uniled = UniledNetDevice(discovery=discovery, options=entry.options)
+        if not uniled.model:
+            raise ConfigEntryError(f"Could not resolve model for device {host}")
     else:
         raise ConfigEntryError(
-            f"Unable to communicate with device {address} of unsupported class: {transport}"
+            f"Unable to communicate with device of unknown transport class: {transport}"
         )
 
     coordinator = UniledUpdateCoordinator(hass, uniled, entry)
@@ -282,6 +351,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
     )
+
+    if transport == UNILED_TRANSPORT_NET:
+        # UDP probe after successful connect only
+        if discovery_cached:
+            if directed_discovery := await async_discover_device(hass, host):
+                uniled.discovery = discovery = directed_discovery
+                discovery_cached = False
+
+        if entry.unique_id and discovery.get(ATTR_UL_MAC_ADDRESS):
+            mac = uniled.format_mac(cast(str, discovery[ATTR_UL_MAC_ADDRESS]))
+            if not uniled.mac_matches_by_one(mac, entry.unique_id):
+                # The device is offline and another device is now using the ip address
+                raise ConfigEntryNotReady(
+                    f"Unexpected device found at {host}; Expected {entry.unique_id}, found"
+                    f" {mac}"
+                )
+
+        if not discovery_cached:
+            # Only update the entry once we have verified the unique id
+            # is either missing or we have verified it matches
+            async_update_entry_from_discovery(
+                hass, entry, discovery, uniled.model_name, True
+            )
+
+        async def _async_handle_discovered_device() -> None:
+            """Handle device discovery."""
+            # Force a refresh if the device is now available
+            if not coordinator.last_update_success:
+                coordinator.force_next_update = True
+                await coordinator.async_refresh()
+
+        entry.async_on_unload(
+            async_dispatcher_connect(
+                hass,
+                UNILED_DISCOVERY_SIGNAL.format(entry_id=entry.entry_id),
+                _async_handle_discovered_device,
+            )
+        )
 
     _LOGGER.debug(
         "*** Added UniLED device entry for: %s, ID: %s, Unique ID: %s",
@@ -340,6 +447,9 @@ async def async_unload_entry(hass, entry) -> bool:
         if coordinator:
             if coordinator.device.transport != UNILED_TRANSPORT_NET:
                 bluetooth.async_rediscover_address(hass, coordinator.device.address)
+            elif coordinator.device.transport == UNILED_TRANSPORT_NET:
+                # Make sure we probe the device again in case something has changed externally
+                async_clear_discovery_cache(hass, entry.data[CONF_HOST])
             del coordinator
         gc.collect()
 
@@ -371,5 +481,5 @@ async def async_migrate_entry(hass, entry):
                     break
         entry.version = 3
         _LOGGER.info("Migration to version %s successful", entry.version)
- 
+
     return True
