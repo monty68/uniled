@@ -25,6 +25,9 @@ from homeassistant.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
+from homeassistant.helpers import (
+    config_validation as cv,
+)
 from homeassistant.const import (
     CONF_ADDRESS,
     CONF_COUNTRY,
@@ -103,6 +106,7 @@ PLATFORMS: list[Platform] = [
     Platform.BUTTON,
 ]
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the UNILED component."""
