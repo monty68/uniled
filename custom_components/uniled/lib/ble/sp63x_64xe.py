@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from typing import Final
-from itertools import chain
 
 from ..discovery import UniledProxy
 from ..sptech_model import SPTechModel
@@ -98,6 +97,7 @@ class SPTechBleModel(SPTechModel, UniledBleModel):
         return self.decode_response_payload(
             device, (), data[:_HEADER_LENGTH], data[_HEADER_LENGTH:]
         )
+
 
 ##
 ## BanlanX - SP6xxE Device Proxy
@@ -227,7 +227,7 @@ class SP6XXE(UniledProxy):
         return None
 
     def match_ble_model(self, model: str) -> UniledBleModel | None:
-        """Match a device model name - Deprecated!"""
+        """Match a device model name"""
         return self.match_model_name(name=model)
 
     def match_ble_device(
