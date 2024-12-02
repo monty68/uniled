@@ -26,6 +26,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 UNILED_NET_DEVICE_TIMEOUT: Final = 5.0
+UNILED_NET_ERROR_BACKOFF_TIME = 0.15
 
 
 ##
@@ -180,7 +181,8 @@ class UniledNetDevice(UniledDevice):
                 to_send = len(commands)
                 for command in commands:
                     if self.available and command:
-                        await self._execute_command(command)
+                        if not await self._execute_command(command):
+                            return False
                     await asyncio.sleep(UNILED_NET_COMMAND_SETTLE_DELAY)
         except Exception as ex:
             _LOGGER.warning(
@@ -195,14 +197,17 @@ class UniledNetDevice(UniledDevice):
             self._close()
         return True
 
-    async def _execute_command(self, command: bytes) -> None:
+    async def _execute_command(self, command: bytes) -> bool:
         """Execute a single command."""
 
-        self._send_bytes(command)
+        if not self._send_bytes(command):
+            _LOGGER.warning("%s: Command send failed!", self.name)
+            return False
+        
         if (expected := self._model.length_response_header(self, command)) == 0:
-            return
+            return True
 
-        header = self._read_bytes(expected)
+        header = await self._async_read_bytes(expected)
         if len(header) != expected:
             raise Exception(
                 f"Response Header Error: read {len(header)}, expected {expected}"
@@ -212,14 +217,13 @@ class UniledNetDevice(UniledDevice):
         if expected == -1:
             raise Exception(f"Response Header Error")
         elif expected is None or expected == 0:
-            return
+            return True
 
-        payload = self._read_bytes(expected)
+        payload = await self._async_read_bytes(expected)
         if len(payload) != expected:
             raise Exception(
                 f"Response Payload Error: read {len(payload)}, expected {expected}"
             )
-
         try:
             if (
                 self._model.decode_response_payload(self, command, header, payload)
@@ -227,19 +231,19 @@ class UniledNetDevice(UniledDevice):
             ):
                 _LOGGER.debug("%s: Transaction successful", self.name)
                 self._fire_callbacks()
-                return
+                return True
             else:
                 _LOGGER.debug("%s: Transaction failed", self.name)
-
         except Exception as ex:
             _LOGGER.warning(
                 "%s: Response decoder exception!",
                 self.name,
                 exc_info=True,
             )
-
+        return False
+    
     @_socket_retry(attempts=2)  # type: ignore
-    def _send_bytes(self, bytes: bytearray) -> None:
+    def _send_bytes(self, bytes: bytearray) -> bool:
         assert self._socket is not None
         _LOGGER.debug(
             "%s => %s (%d)",
@@ -247,9 +251,12 @@ class UniledNetDevice(UniledDevice):
             "".join(f"{x:02X}" for x in bytes),
             len(bytes),
         )
-        self._socket.send(bytes)
-
-    def _read_bytes(self, expected: int) -> bytearray:
+        # self._socket.send(bytes)
+        if self._socket.sendall(bytes) is None:
+            return True
+        return False
+    
+    async def _async_read_bytes(self, expected: int) -> bytearray:
         assert self._socket is not None
         remaining = expected
         rx = bytearray()
@@ -265,15 +272,18 @@ class UniledNetDevice(UniledDevice):
                     _LOGGER.debug("%s: timed out reading %d bytes", self.name, expected)
                     break
                 chunk = self._socket.recv(remaining)
-                _LOGGER.debug(
-                    "%s <= %s (%d)",
-                    self.name,
-                    "".join(f"{x:02X}" for x in chunk),
-                    len(chunk),
-                )
+                chunk_size = len(chunk) if chunk else 0
                 if chunk:
+                    _LOGGER.debug(
+                        "%s <= %s (%d)",
+                        self.name,
+                        "".join(f"{x:02X}" for x in chunk),
+                        chunk_size,
+                    )
                     begin = time.monotonic()
-                remaining -= len(chunk)
+                elif chunk_size == 0:
+                    await asyncio.sleep(UNILED_NET_ERROR_BACKOFF_TIME)
+                remaining -= chunk_size
                 rx.extend(chunk)
             except OSError as ex:
                 _LOGGER.debug("%s: socket error (%s): %s", self.name, self.host, ex)
