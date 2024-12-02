@@ -32,7 +32,7 @@ def _socket_retry(attempts: int = UNILED_DEVICE_RETRYS) -> WrapFuncType:  # type
                     return ret
                 except OSError as ex:
                     _LOGGER.debug(
-                        "%s: socket error while calling %s: %s", self.ip_address, func, ex
+                        "%s: socket error while calling %s: %s", self.host, func, ex
                     )
                     if attempts_remaining:
                         continue
