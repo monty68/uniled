@@ -52,11 +52,7 @@ from .lib.zng.manager import (
     ZENGGE_DESCRIPTION,
     ZenggeManager,
 )
-from .lib.net.device import (
-    UNILED_TRANSPORT_NET,
-    UniledNetDevice, 
-    UniledNetModel
-)
+from .lib.net.device import UNILED_TRANSPORT_NET, UniledNetDevice, UniledNetModel
 from .const import (
     DOMAIN,
     ATTR_UL_CHIP_TYPE,
@@ -714,8 +710,8 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         """
         mac_address = device[ATTR_UL_MAC_ADDRESS]
         assert mac_address is not None
-        mac = UniledNetDevice.format_mac(mac_address)
-
+        # mac = UniledNetDevice.format_mac(mac_address)
+        mac = dr.format_mac(mac_address)
         await self.async_set_unique_id(mac)
         for entry in self._async_current_entries(include_ignore=True):
             if not (
@@ -771,7 +767,8 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         if not device[ATTR_UL_MODEL_NAME]:
             mac_address = device[ATTR_UL_MAC_ADDRESS]
             assert mac_address is not None
-            mac = UniledNetDevice.format_mac(mac_address)
+            # mac = UniledNetDevice.format_mac(mac_address)
+            mac = dr.format_mac(mac_address)
             try:
                 device = await async_discover_device(self.hass, host)
             except Exception:
@@ -780,9 +777,10 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
             if device[ATTR_UL_MODEL_NAME] or (
                 discovered_mac is not None
                 and (
-                    formatted_discovered_mac := UniledNetDevice.format_mac(
-                        discovered_mac
-                    )
+                    # formatted_discovered_mac := UniledNetDevice.format_mac(
+                    #    discovered_mac
+                    # )
+                    formatted_discovered_mac := dr.format_mac(discovered_mac)
                 )
                 and formatted_discovered_mac != mac
                 and UniledNetDevice.mac_matches_by_one(discovered_mac, mac)
