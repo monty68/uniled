@@ -166,64 +166,89 @@ class UniledNetDevice(UniledDevice):
             _LOGGER.debug("%s: Send command ignored, no data to send.", self.name)
             return False
 
-        if not isinstance(commands, list):
-            commands = [commands]
-
         if self._lock.locked():
             _LOGGER.debug(
                 "%s: Operation already in progress, waiting for it to complete...",
                 self.name,
             )
 
-        try:
-            async with self._lock:
-                self._connect_if_disconnected()
-                to_send = len(commands)
-                for command in commands:
-                    if self.available and command:
-                        if not await self._execute_command(command):
-                            return False
-                    await asyncio.sleep(UNILED_NET_COMMAND_SETTLE_DELAY)
-        except Exception as ex:
-            _LOGGER.warning(
-                "%s: Send exception!",
-                self.name,
-                exc_info=True,
-            )
-            self._close()
-            return False
+        if not isinstance(commands, list):
+            commands = [commands]
 
+        if retry is None:
+            retry = self.retry_count       
+        max_attempts = retry + 1
+        for attempt in range(max_attempts):
+            try:
+                return await self._execute_commands(commands)
+            except Exception as ex:
+                if attempt == retry:
+                    _LOGGER.error(
+                        "%s: Communication failed; stopping trying: %s",
+                        self.name,
+                        str(ex),
+                    )
+                    return False
+            except BrokenPipeError:
+                pass
+
+            self._close()
+            _LOGGER.debug(
+                "%s: Send command(s) failed, retry attempt %s of %s...",
+                self.name,
+                attempt + 1,
+                max_attempts,
+            )
+
+        raise RuntimeError("Unreachable")  
+
+    async def _execute_commands(self, commands: list[bytes]) -> bool:
+        """Execute command(s)."""
+        self._connect_if_disconnected()
+        for command in commands:
+            if self.available and command:
+                if not await self._execute_transaction(command):
+                    return False
+            await asyncio.sleep(UNILED_NET_COMMAND_SETTLE_DELAY)
         if self._model.close_after_send:
             self._close()
         return True
-
-    async def _execute_command(self, command: bytes) -> bool:
+    
+    async def _execute_transaction(self, command: bytes) -> bool:
         """Execute a single command."""
 
         if not self._send_bytes(command):
             _LOGGER.warning("%s: Command send failed!", self.name)
             return False
-        
+
         if (expected := self._model.length_response_header(self, command)) == 0:
             return True
 
         header = await self._async_read_bytes(expected)
         if len(header) != expected:
-            raise Exception(
-                f"Response Header Error: read {len(header)}, expected {expected}"
+            _LOGGER.warning(
+                "%s: Response Header Error: read %d, expected %d",
+                self.name,
+                len(header),
+                expected,
             )
-
+            return False
         expected = self._model.decode_response_header(self, command, header)
         if expected == -1:
-            raise Exception(f"Response Header Error")
+            _LOGGER.warning("%s: Response Header Error!", self.name)
+            return False
         elif expected is None or expected == 0:
             return True
 
         payload = await self._async_read_bytes(expected)
         if len(payload) != expected:
-            raise Exception(
-                f"Response Payload Error: read {len(payload)}, expected {expected}"
+            _LOGGER.warning(
+                "%s: Response Payload Error: read %d, expected %d",
+                self.name,
+                len(payload),
+                expected
             )
+            return False
         try:
             if (
                 self._model.decode_response_payload(self, command, header, payload)
@@ -241,7 +266,7 @@ class UniledNetDevice(UniledDevice):
                 exc_info=True,
             )
         return False
-    
+
     @_socket_retry(attempts=2)  # type: ignore
     def _send_bytes(self, bytes: bytearray) -> bool:
         assert self._socket is not None
@@ -255,7 +280,7 @@ class UniledNetDevice(UniledDevice):
         if self._socket.sendall(bytes) is None:
             return True
         return False
-    
+
     async def _async_read_bytes(self, expected: int) -> bytearray:
         assert self._socket is not None
         remaining = expected
