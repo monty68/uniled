@@ -21,6 +21,7 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+
 ##
 ## Uniled Base Device Class
 ##
@@ -51,7 +52,7 @@ class UniledDevice:
         if mac is None:
             return None
         if ":" not in mac:
-            mac = ':'.join(mac[i:i+2] for i in range(0,12,2))
+            mac = ":".join(mac[i : i + 2] for i in range(0, 12, 2))
         return mac.upper()
 
     @staticmethod
@@ -68,7 +69,7 @@ class UniledDevice:
 
     _model: UniledModel | None = None
     _config: dict | MappingProxyType | None = None
-    _started:bool = True
+    _started: bool = True
     _channels: list[UniledChannel] = list()
     _callbacks: list[Callable[[UniledChannel], None]] = list()
 
@@ -78,10 +79,10 @@ class UniledDevice:
 
     def __del__(self):
         """Delete the device"""
-        self._model = None
+        _LOGGER.debug("%s: Delete Device", self.name)
         if self._channels:
             self._channels.clear()
-        _LOGGER.debug("%s: Deleted Device", self.name)
+        self._model = None
 
     def _create_channels(self) -> None:
         """Create device channels."""
@@ -116,7 +117,7 @@ class UniledDevice:
             return self._model.model_name
         if hasattr(self, "_model_name"):
             return self._model_name
-        return None       
+        return None
 
     @property
     def model_code(self) -> int:

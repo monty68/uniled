@@ -41,8 +41,8 @@ class UniledNetDevice(UniledDevice):
     def __init__(
         self,
         discovery: UniledDiscovery,
-        timeout: float = UNILED_NET_DEVICE_TIMEOUT,
         options: Optional[Any] = None,
+        timeout: float = UNILED_NET_DEVICE_TIMEOUT,
     ) -> None:
         """Init the UniLED BLE Model"""
         self._socket: Optional[socket.socket] = None
@@ -52,8 +52,7 @@ class UniledNetDevice(UniledDevice):
         self._discovery = discovery
 
         assert isinstance(discovery, UniledDiscovery)
-        self._model = discovery.model
-        assert self._model is not None
+        assert self.model is not None
 
         _LOGGER.debug(
             "%s: Inititalizing (%s)...",
@@ -70,9 +69,23 @@ class UniledNetDevice(UniledDevice):
         return UNILED_TRANSPORT_NET
 
     @property
+    def model(self) -> UniledNetModel:
+        """Return the device model."""
+        if self._model is None and isinstance(self._discovery, UniledDiscovery):
+            self._model = self._discovery.model
+        return self._model
+
+    @property
+    def model_name(self) -> str | None:
+        """Return the device model name."""
+        if self.model is not None:
+            return self.model.model_name
+        return None
+
+    @property
     def name(self) -> str:
         """Get the name of the device."""
-        if self._discovery and self._discovery.get(ATTR_UL_LOCAL_NAME):
+        if self._discovery:
             name = self._discovery.get(ATTR_UL_LOCAL_NAME, self.model_name)
             if name is not None:
                 return name
@@ -88,8 +101,8 @@ class UniledNetDevice(UniledDevice):
     @property
     def port(self) -> int:
         """Return the network port."""
-        assert self._model is not None  # nosec
-        return self._model.port
+        assert self.model is not None  # nosec
+        return self.model.port
 
     @property
     def address(self) -> str | None:
@@ -101,7 +114,7 @@ class UniledNetDevice(UniledDevice):
     @property
     def available(self) -> bool:
         """Return if the UniLED device available."""
-        if self._model and self._available:
+        if self.model and self._available:
             return True
         return False
 
@@ -176,7 +189,7 @@ class UniledNetDevice(UniledDevice):
             commands = [commands]
 
         if retry is None:
-            retry = self.retry_count       
+            retry = self.retry_count
         max_attempts = retry + 1
         for attempt in range(max_attempts):
             try:
@@ -200,7 +213,7 @@ class UniledNetDevice(UniledDevice):
                 max_attempts,
             )
 
-        raise RuntimeError("Unreachable")  
+        raise RuntimeError("Unreachable")
 
     async def _execute_commands(self, commands: list[bytes]) -> bool:
         """Execute command(s)."""
@@ -213,7 +226,7 @@ class UniledNetDevice(UniledDevice):
         if self._model.close_after_send:
             self._close()
         return True
-    
+
     async def _execute_transaction(self, command: bytes) -> bool:
         """Execute a single command."""
 
@@ -246,7 +259,7 @@ class UniledNetDevice(UniledDevice):
                 "%s: Response Payload Error: read %d, expected %d",
                 self.name,
                 len(payload),
-                expected
+                expected,
             )
             return False
         try:
