@@ -239,9 +239,15 @@ class UniledOptionsFlowHandler(flow.OptionsFlowWithConfigEntry, UniledMeshHandle
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
-        self.coordinator: UniledUpdateCoordinator = self.hass.data[DOMAIN][
-            self.config_entry.entry_id
-        ]
+
+        if self.config_entry.entry_id in self.hass.data[DOMAIN]:
+            self.coordinator: UniledUpdateCoordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        else:
+            return self.async_abort(reason="unknown")
+
+        #self.coordinator: UniledUpdateCoordinator = self.hass.data[DOMAIN][
+        #    self.config_entry.entry_id
+        #]
 
         if self.config_entry.data.get(CONF_TRANSPORT) == UNILED_TRANSPORT_ZNG:
             self._mesh_set_context()

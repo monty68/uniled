@@ -127,7 +127,8 @@
         "mesh_not_supported": "Mesh not supported.",
         "no_devices_found": "No devices found on the network.",
         "no_response": "No response from device.",
-        "not_supported": "Device not supported."
+        "not_supported": "Device not supported.",
+        "unknown": "Unexpected error!"
       },
       "error": {
         "cannot_connect": "Failed to connect!",
