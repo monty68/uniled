@@ -8,7 +8,6 @@ from .sp601e import SP601E
 from .sp60xe import SP602E, SP608E
 from .banlanx2 import SP611E, SP617E, SP620E, SP621E
 from .banlanx3 import SP613E, SP614E, SP623E, SP624E
-#from .banlanx_6xx import SP6XXE
 from .sp63x_64xe import SP6XXE
 
 ##
