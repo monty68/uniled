@@ -186,7 +186,7 @@ async def async_discover_devices(
     return [
         device
         for device in scanner.get_device_info()
-        if device[ATTR_UL_IP_ADDRESS] == address
+        if device.ip_address == address
     ]
 
 
@@ -199,7 +199,7 @@ async def async_discover_device(
     for device in await async_discover_devices(
         hass, UNILED_DISCOVERY_DIRECTED_TIMEOUT, host
     ):
-        if device[ATTR_UL_IP_ADDRESS] == host:
+        if device.ip_address == host:
             return device
     return None
 
@@ -258,9 +258,9 @@ def async_name_from_discovery(
 ) -> str:
     """Convert a UNILED discovery to a human readable name."""
     return UniledDevice.human_readable_name(
-        device[ATTR_UL_LOCAL_NAME],
-        device[ATTR_UL_MODEL_NAME],
-        device[ATTR_UL_MAC_ADDRESS],
+        device.local_name,  #[ATTR_UL_LOCAL_NAME],
+        device.model_name,  #[ATTR_UL_MODEL_NAME],
+        device.mac_address  #[ATTR_UL_MAC_ADDRESS],
     )
 
 
@@ -291,7 +291,7 @@ def async_update_entry_from_discovery(
 ) -> bool:
     """Update a config entry from a UNILED discovery."""
     data_updates: dict[str, Any] = {}
-    mac_address = device[ATTR_UL_MAC_ADDRESS]
+    mac_address = device.mac_address    # [ATTR_UL_MAC_ADDRESS]
     assert mac_address is not None
     formatted_mac = UniledDevice.format_mac(mac_address)
     updates: dict[str, Any] = {}

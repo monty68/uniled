@@ -241,13 +241,15 @@ class UniledOptionsFlowHandler(flow.OptionsFlowWithConfigEntry, UniledMeshHandle
         """Manage the options."""
 
         if self.config_entry.entry_id in self.hass.data[DOMAIN]:
-            self.coordinator: UniledUpdateCoordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
+            self.coordinator: UniledUpdateCoordinator = self.hass.data[DOMAIN][
+                self.config_entry.entry_id
+            ]
         else:
             return self.async_abort(reason="unknown")
 
-        #self.coordinator: UniledUpdateCoordinator = self.hass.data[DOMAIN][
+        # self.coordinator: UniledUpdateCoordinator = self.hass.data[DOMAIN][
         #    self.config_entry.entry_id
-        #]
+        # ]
 
         if self.config_entry.data.get(CONF_TRANSPORT) == UNILED_TRANSPORT_ZNG:
             self._mesh_set_context()
@@ -714,14 +716,14 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         discovery since the dhcp mac can be one digit off from
         the udp discovery mac for devices with multiple network interfaces
         """
-        mac_address = device[ATTR_UL_MAC_ADDRESS]
+        mac_address = device.mac_address  # [ATTR_UL_MAC_ADDRESS]
         assert mac_address is not None
         # mac = UniledNetDevice.format_mac(mac_address)
         mac = dr.format_mac(mac_address)
         await self.async_set_unique_id(mac)
         for entry in self._async_current_entries(include_ignore=True):
             if not (
-                entry.data.get(CONF_HOST) == device[ATTR_UL_IP_ADDRESS]
+                entry.data.get(CONF_HOST) == device.ip_address  # [ATTR_UL_IP_ADDRESS]
                 or (
                     entry.unique_id
                     and ":" in entry.unique_id
@@ -754,10 +756,10 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         _LOGGER.debug(
             "Discovered '%s' (id=%d, model=%s) from '%s' @ %s",
             async_name_from_discovery(device),
-            device[ATTR_UL_MODEL_CODE],
-            device[ATTR_UL_MODEL_NAME],
-            device[ATTR_UL_SOURCE],
-            device[ATTR_UL_IP_ADDRESS],
+            device.model_code,  # [ATTR_UL_MODEL_CODE],
+            device.model_name,  # [ATTR_UL_MODEL_NAME],
+            device.source,  # [ATTR_UL_SOURCE],
+            device.ip_address,  # [ATTR_UL_IP_ADDRESS],
         )
 
     async def _async_network_discovery(self) -> FlowResult:
@@ -765,13 +767,13 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         assert self._discovered_device is not None
         device = self._discovered_device
         await self._async_set_discovered_mac(device, self._allow_update_mac)
-        host = device[ATTR_UL_IP_ADDRESS]
+        host = device.ip_address  # [ATTR_UL_IP_ADDRESS]
         for progress in self._async_in_progress():
             if progress.get("context", {}).get(CONF_HOST) == host:
                 return self.async_abort(reason="already_in_progress")
 
-        if not device[ATTR_UL_MODEL_NAME]:
-            mac_address = device[ATTR_UL_MAC_ADDRESS]
+        if not device.model_name:  # [ATTR_UL_MODEL_NAME]:
+            mac_address = device.mac_address  # [ATTR_UL_MAC_ADDRESS]
             assert mac_address is not None
             # mac = UniledNetDevice.format_mac(mac_address)
             mac = dr.format_mac(mac_address)
@@ -779,8 +781,9 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
                 device = await async_discover_device(self.hass, host)
             except Exception:
                 return self.async_abort(reason="cannot_connect")
-            discovered_mac = device[ATTR_UL_MAC_ADDRESS]
-            if device[ATTR_UL_MODEL_NAME] or (
+            discovered_mac = device.mac_address  # [ATTR_UL_MAC_ADDRESS]
+            # if device[ATTR_UL_MODEL_NAME] or (
+            if device.model_name or (
                 discovered_mac is not None
                 and (
                     # formatted_discovered_mac := UniledNetDevice.format_mac(
@@ -802,17 +805,17 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         """Confirm network discovery."""
         assert self._discovered_device is not None
         device = self._discovered_device
-        mac_address = device[ATTR_UL_MAC_ADDRESS]
+        mac_address = device.mac_address  # [ATTR_UL_MAC_ADDRESS]
         assert mac_address is not None
-        model = device[ATTR_UL_MODEL_NAME]
-        code = device[ATTR_UL_MODEL_CODE]
-        name = device[ATTR_UL_LOCAL_NAME]
+        model = device.model_name  # [ATTR_UL_MODEL_NAME]
+        code = device.model_code  # [ATTR_UL_MODEL_CODE]
+        name = device.local_name  # [ATTR_UL_LOCAL_NAME]
 
         placeholders = {
             "name": async_name_from_discovery(device),
             "device_name": name or mac_address,
             "model": f"({model})" if model else f"ID#: {code}",
-            "ip": device[ATTR_UL_IP_ADDRESS],
+            "ip": device.ip_address,  # [ATTR_UL_IP_ADDRESS],
         }
         self.context["title_placeholders"] = placeholders
 
@@ -826,7 +829,7 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
     @callback
     def _async_network_create_entry(self, device: UniledDiscovery):
         """Create network entry"""
-        if device[ATTR_UL_MODEL_NAME] is None:
+        if device.model_name is None:   # [ATTR_UL_MODEL_NAME] is None:
             raise AbortFlow("not_supported")
         # data: dict[str, Any] = {CONF_TRANSPORT: UNILED_TRANSPORT_NET}
         data: dict[str, Any] = {}
