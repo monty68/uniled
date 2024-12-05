@@ -338,6 +338,6 @@ SP110E = _LEDHUE(
     code=0x10,
     name="SP110E",
     info="RGB(W) SPI Controller",
-    data=b"\x10\x00",
+    data=b"\x10",
     channels=1,
 )

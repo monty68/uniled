@@ -728,7 +728,7 @@ SP620E = BanlanX2(
     code=0x1B,
     name="SP620E",
     info="USB SPI RGB (Music) Controller",
-    data=b"\x1b\x10",
+    data=b"\x1b",
     colors=3,
     intmic=True,
 )

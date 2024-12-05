@@ -506,7 +506,7 @@ SP602E = SP60xE(
     code=0x02,
     name="SP602E",
     info="4xSPI RGB (Music) Controller",
-    data=b"\x02\x02",
+    data=b"\x02",
     channels=4,
     triggers=4,
 )
@@ -515,7 +515,7 @@ SP608E = SP60xE(
     code=0x05,
     name="SP608E",
     info="8xSPI RGB (Music) Controller",
-    data=b"\x05\x02",
+    data=b"\x05",
     channels=8,
     triggers=4,
 )
