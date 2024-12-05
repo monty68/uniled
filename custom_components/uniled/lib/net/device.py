@@ -12,7 +12,6 @@ from ..const import (
     ATTR_UL_MODEL_NAME,
     ATTR_UL_POWER,
     UNILED_COMMAND_SETTLE_DELAY as UNILED_NET_COMMAND_SETTLE_DELAY,
-    UNILED_DISCONNECT_DELAY as UNILED_NET_DISCONNECT_DELAY,
     UNILED_TRANSPORT_NET,
 )
 from .retrys import _socket_retry
@@ -52,16 +51,15 @@ class UniledNetDevice(UniledDevice):
         self._discovery = discovery
 
         assert isinstance(discovery, UniledDiscovery)
-        assert self.model is not None
 
-        _LOGGER.debug(
-            "%s: Inititalizing (%s)...",
-            self.name,
-            self.model_name if not None else "-?-",
-        )
-
-        super().__init__(options)
-        self._create_channels()
+        if self.model is not None:
+            _LOGGER.debug(
+                "%s: Inititalizing (%s)...",
+                self.name,
+                self.model_name,
+            )
+            super().__init__(options)
+            self._create_channels()
 
     @property
     def transport(self) -> str:
@@ -86,7 +84,8 @@ class UniledNetDevice(UniledDevice):
     def name(self) -> str:
         """Get the name of the device."""
         if self._discovery:
-            name = self._discovery.get(ATTR_UL_LOCAL_NAME, self.model_name)
+            # name = self._discovery.get(ATTR_UL_LOCAL_NAME, self.model_name)
+            name = self._discovery.local_name
             if name is not None:
                 return name
         return self.short_address(self.address)
@@ -94,8 +93,8 @@ class UniledNetDevice(UniledDevice):
     @property
     def host(self) -> str | None:
         """Get the hostname of the device."""
-        if self._discovery and self._discovery.get(ATTR_UL_IP_ADDRESS):
-            return self._discovery[ATTR_UL_IP_ADDRESS]
+        if self._discovery:
+            return self._discovery.ip_address
         return None
 
     @property
@@ -107,8 +106,8 @@ class UniledNetDevice(UniledDevice):
     @property
     def address(self) -> str | None:
         """Return the (mac) address of the device."""
-        if self._discovery and self._discovery.get(ATTR_UL_MAC_ADDRESS):
-            return self._discovery[ATTR_UL_MAC_ADDRESS]
+        if self._discovery:
+            return self._discovery.mac_address
         return None
 
     @property
@@ -197,21 +196,20 @@ class UniledNetDevice(UniledDevice):
             except Exception as ex:
                 if attempt == retry:
                     _LOGGER.error(
-                        "%s: Communication failed; stopping trying: %s",
+                        "%s: Communication failed: %s, stopping trying!",
                         self.name,
                         str(ex),
                     )
                     return False
-            except BrokenPipeError:
-                pass
-
+                _LOGGER.debug(
+                    "%s: Communication failed with: %s, retry attempt %s of %s...",
+                    self.name,
+                    str(ex),
+                    attempt + 1,
+                    max_attempts,
+                )
             self._close()
-            _LOGGER.debug(
-                "%s: Send command(s) failed, retry attempt %s of %s...",
-                self.name,
-                attempt + 1,
-                max_attempts,
-            )
+            await asyncio.sleep(UNILED_NET_ERROR_BACKOFF_TIME)
 
         raise RuntimeError("Unreachable")
 
