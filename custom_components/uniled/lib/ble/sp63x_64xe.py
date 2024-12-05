@@ -132,7 +132,7 @@ class SP6XXE(UniledProxy):
 
     class SP632E_SP642E(SPTechSig):
         info = "PWM CCT (Music) Controller"
-        code = {0x21: "SP632E", 0x2D: "SP642E"}
+        code = {0x21: "SP632E", 0x2D: "SP642E", 0x4A: "SP642E"}
         conf = {0x03: SP6XXE_83()}
 
     class SP633E_SP643E(SPTechSig):
@@ -162,7 +162,7 @@ class SP6XXE(UniledProxy):
 
     class SP638E_SP648E(SPTechSig):
         info = "SPI RGB (Music) Controller"
-        code = {0x27: "SP638E", 0x33: "SP648E"}
+        code = {0x27: "SP638E", 0x33: "SP648E", 0x45: "SP648E", 0x4C: "SP648E"}
         conf = {0x06: SP6XXE_86()}
 
     class SP639E_SP649E(SPTechSig):
@@ -237,7 +237,8 @@ class SP6XXE(UniledProxy):
         if not hasattr(advertisement, "manufacturer_data"):
             return None
         for mid, data in advertisement.manufacturer_data.items():
-            if mid != SPTechBleModel.MANUFACTURER_ID or data[1] != 0x10:
+            # if mid != SPTechBleModel.MANUFACTURER_ID or data[1] != 0x10:
+            if mid != SPTechBleModel.MANUFACTURER_ID:
                 continue
             if (model := self.match_model_code(code=data[0])) is not None:
                 return model
