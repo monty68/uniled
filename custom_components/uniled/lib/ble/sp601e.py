@@ -1,42 +1,41 @@
-"""UniLED BLE Devices - SP LED (BanlanX SP601E)"""
+"""UniLED BLE Devices - SP LED (BanlanX SP601E)."""
+
 from __future__ import annotations
+
 from dataclasses import dataclass
+import logging
 from typing import Any, Final, cast
 
-from ..const import *  # I know!
-from ..channel import UniledChannel
-from ..features import (
-    UniledAttribute,
-    UniledGroup,
+from ..attributes import (
     ButtonAttribute,
     SceneAttribute,
     SelectAttribute,
+    UniledAttribute,
+)
+from ..channel import UniledChannel
+from ..chips import UNILED_CHIP_ORDER_RGB
+from ..const import *  # I know!
+from ..effects import UNILEDEffects, UNILEDEffectType
+from ..features import (
+    AudioInputFeature,
+    AudioSensitivityFeature,
+    ChipOrderFeature,
+    EffectDirectionFeature,
+    EffectLengthFeature,
+    EffectSpeedFeature,
+    EffectTypeFeature,
     LightStripFeature,
     SceneLoopFeature,
-    EffectTypeFeature,
-    EffectSpeedFeature,
-    EffectLengthFeature,
-    EffectDirectionFeature,
-    AudioSensitivityFeature,
-    AudioInputFeature,
-    ChipOrderFeature,
-)
-from ..effects import (
-    UNILEDEffectType,
-    UNILEDEffects,
+    UniledGroup,
 )
 from .device import (
-    UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
     BANLANX_MANUFACTURER,
     BANLANX_MANUFACTURER_ID,
+    UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
     ParseNotificationError,
     UniledBleDevice,
     UniledBleModel,
 )
-
-from ..chips import UNILED_CHIP_ORDER_RGB
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,7 +45,7 @@ _LOGGER = logging.getLogger(__name__)
 ##
 @dataclass(frozen=True)
 class _FX_STATIC:
-    """Effect and Attributes"""
+    """Effect and Attributes."""
 
     name: str = UNILEDEffects.SOLID
     colorable: bool = True
@@ -94,11 +93,15 @@ BANLANX601_EFFECT_SOUND: Final = 0x65
 
 BANLANX601_EFFECTS: Final = {
     BANLANX601_EFFECT_SOLID: _FX_STATIC(),
-    BANLANX601_EFFECT_PATTERN + 0: _FX_DYNAMIC(UNILEDEffects.RAINBOW, False, True, True),
+    BANLANX601_EFFECT_PATTERN + 0: _FX_DYNAMIC(
+        UNILEDEffects.RAINBOW, False, True, True
+    ),
     BANLANX601_EFFECT_PATTERN + 1: _FX_DYNAMIC(UNILEDEffects.RAINBOW_STARS),
     BANLANX601_EFFECT_PATTERN + 2: _FX_DYNAMIC(UNILEDEffects.STARS_TWINKLE, True),
     BANLANX601_EFFECT_PATTERN + 3: _FX_DYNAMIC(UNILEDEffects.FIRE, False, True, True),
-    BANLANX601_EFFECT_PATTERN + 4: _FX_DYNAMIC(UNILEDEffects.STACKING, True, True, True),
+    BANLANX601_EFFECT_PATTERN + 4: _FX_DYNAMIC(
+        UNILEDEffects.STACKING, True, True, True
+    ),
     BANLANX601_EFFECT_PATTERN + 5: _FX_DYNAMIC(UNILEDEffects.COMET, True, True, True),
     BANLANX601_EFFECT_PATTERN + 6: _FX_DYNAMIC(UNILEDEffects.WAVE, True, True, True),
     BANLANX601_EFFECT_PATTERN + 7: _FX_DYNAMIC("Chasing", True, True, True),
@@ -111,24 +114,35 @@ BANLANX601_EFFECTS: Final = {
     BANLANX601_EFFECT_PATTERN + 14: _FX_DYNAMIC(UNILEDEffects.GRADIENT),
     BANLANX601_EFFECT_PATTERN + 15: _FX_DYNAMIC("Wiping", True, True, True),
     BANLANX601_EFFECT_PATTERN + 16: _FX_DYNAMIC(UNILEDEffects.BREATH, True),
-    BANLANX601_EFFECT_PATTERN + 17: _FX_DYNAMIC("Full Color Comet Wiping", True, False, True),
+    BANLANX601_EFFECT_PATTERN + 17: _FX_DYNAMIC(
+        "Full Color Comet Wiping", True, False, True
+    ),
     BANLANX601_EFFECT_PATTERN + 18: _FX_DYNAMIC("Comet Wiping", True, False, True),
     BANLANX601_EFFECT_PATTERN + 19: _FX_DYNAMIC("Pixel Dot Wiping", True, False, True),
-    BANLANX601_EFFECT_PATTERN + 20: _FX_DYNAMIC("Full Color Meteor Rain", False, True, True),
+    BANLANX601_EFFECT_PATTERN + 20: _FX_DYNAMIC(
+        "Full Color Meteor Rain", False, True, True
+    ),
     BANLANX601_EFFECT_PATTERN + 21: _FX_DYNAMIC("Meteor Rain", True, True, True),
     BANLANX601_EFFECT_PATTERN + 22: _FX_DYNAMIC("Color Dots", False, True, True),
     BANLANX601_EFFECT_PATTERN + 23: _FX_DYNAMIC("Color Block", False, True, True),
     BANLANX601_EFFECT_SOUND + 0: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_SPECTRUM_FULL),
-    BANLANX601_EFFECT_SOUND
-    + 1: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_SPECTRUM_SINGLE, True),
+    BANLANX601_EFFECT_SOUND + 1: _FX_SOUND(
+        UNILEDEffects.SOUND_RHYTHM_SPECTRUM_SINGLE, True
+    ),
     BANLANX601_EFFECT_SOUND + 2: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_STARS_FULL),
-    BANLANX601_EFFECT_SOUND
-    + 3: _FX_SOUND(UNILEDEffects.SOUND_RHYTHM_STARS_SINGLE, True),
-    BANLANX601_EFFECT_SOUND
-    + 4: _FX_SOUND("Sound - Full Color Beat Injection", False, True, True),
+    BANLANX601_EFFECT_SOUND + 3: _FX_SOUND(
+        UNILEDEffects.SOUND_RHYTHM_STARS_SINGLE, True
+    ),
+    BANLANX601_EFFECT_SOUND + 4: _FX_SOUND(
+        "Sound - Full Color Beat Injection", False, True, True
+    ),
     BANLANX601_EFFECT_SOUND + 5: _FX_SOUND("Sound - Beat Injection", True, True, True),
-    BANLANX601_EFFECT_SOUND + 6: _FX_SOUND(UNILEDEffects.SOUND_ENERGY_GRADIENT, False, False, True),
-    BANLANX601_EFFECT_SOUND + 7: _FX_SOUND(UNILEDEffects.SOUND_ENERGY_SINGLE, True, False, True),
+    BANLANX601_EFFECT_SOUND + 6: _FX_SOUND(
+        UNILEDEffects.SOUND_ENERGY_GRADIENT, False, False, True
+    ),
+    BANLANX601_EFFECT_SOUND + 7: _FX_SOUND(
+        UNILEDEffects.SOUND_ENERGY_SINGLE, True, False, True
+    ),
     BANLANX601_EFFECT_SOUND + 8: _FX_SOUND(UNILEDEffects.SOUND_PULSE_GRADIENT),
     BANLANX601_EFFECT_SOUND + 9: _FX_SOUND(UNILEDEffects.SOUND_PULSE_SINGLE, True),
     BANLANX601_EFFECT_SOUND + 10: _FX_SOUND("Sound - Full Color Ripple"),
@@ -372,7 +386,7 @@ class BanlanX601(UniledBleModel):
                     }
                 )
 
-                if (timers := data.pop(0) if len(data) >= 1 else 0):
+                if timers := data.pop(0) if len(data) >= 1 else 0:
                     TIMER_DATA_SIZE = 7
                     timer_id = 0
                     while len(data) >= TIMER_DATA_SIZE and timer_id < timers:

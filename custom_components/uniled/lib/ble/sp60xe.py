@@ -1,55 +1,52 @@
 """UniLED BLE Devices - SP LED (BanlanX SP60xE)"""
+
 from __future__ import annotations
+
 from dataclasses import dataclass
+import logging
 from typing import Any, Final, cast
 
-from ..const import *  # I know!
-from ..channel import UniledChannel
-from ..features import (
-    UniledAttribute,
-    UniledGroup,
+from ..attributes import (
     ButtonAttribute,
     SceneAttribute,
     SelectAttribute,
+    UniledAttribute,
+    UniledGroup,
+)
+from ..channel import UniledChannel
+from ..chips import UNILED_CHIP_ORDER_RGB
+from ..const import *  # I know!
+from ..effects import UNILEDEffects, UNILEDEffectType
+from ..features import (
+    AudioInputFeature,
+    AudioSensitivityFeature,
+    ChipOrderFeature,
+    EffectDirectionFeature,
+    EffectLengthFeature,
+    EffectSpeedFeature,
+    EffectTypeFeature,
     LightStripFeature,
     SceneLoopFeature,
-    EffectTypeFeature,
-    EffectSpeedFeature,
-    EffectLengthFeature,
-    EffectDirectionFeature,
-    AudioSensitivityFeature,
-    AudioInputFeature,
-    ChipOrderFeature,
 )
-from ..effects import (
-    UNILEDEffectType,
-    UNILEDEffects,
+from .device import (
+    BANLANX_MANUFACTURER,
+    BANLANX_MANUFACTURER_ID,
+    UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
+    ParseNotificationError,
+    UniledBleDevice,
+    UniledBleModel,
 )
-
 from .sp601e import (
-    ATTR_UL_SCENE_SAVE_SELECT,
     ATTR_UL_SCENE_SAVE_BUTTON,
-    SceneSaveSelect,
-    SceneSaveButton,
+    ATTR_UL_SCENE_SAVE_SELECT,
     BANLANX601_AUDIO_INPUTS as BANLANX60X_AUDIO_INPUTS,
     BANLANX601_EFFECT_PATTERN as BANLANX60X_EFFECT_PATTERN,
     BANLANX601_EFFECT_SOLID as BANLANX60X_EFFECT_SOLID,
     BANLANX601_EFFECT_SOUND as BANLANX60X_EFFECT_SOUND,
     BANLANX601_EFFECTS as BANLANX60X_EFFECTS,
+    SceneSaveButton,
+    SceneSaveSelect,
 )
-
-from .device import (
-    UUID_BASE_FORMAT as BANLANX_UUID_FORMAT,
-    BANLANX_MANUFACTURER,
-    BANLANX_MANUFACTURER_ID,
-    ParseNotificationError,
-    UniledBleDevice,
-    UniledBleModel,
-)
-
-from ..chips import UNILED_CHIP_ORDER_RGB
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,11 +55,12 @@ BANLANX60X_MAX_SCENES = 9
 BANLANX60X_MAX_EFFECT_SPEED = 10
 BANLANX60X_MAX_EFFECT_LENGTH = 240
 
+
 ##
 ## BanlanX - SP60xE Protocol Implementation
 ##
 class SP60xE(UniledBleModel):
-    """BanlanX - SP60xE Protocol Implementation"""
+    """BanlanX - SP60xE Protocol Implementation."""
 
     triggers: int
 
@@ -185,7 +183,7 @@ class SP60xE(UniledBleModel):
                         effect = data[1]
                         order = data[2]
                         level = data[3]
-                        speed = data[4]                       
+                        speed = data[4]
                         length = int.from_bytes(data[5:7], byteorder="big")
                         direction = data[7]
                         rgb = (data[8], data[9], data[10])
@@ -268,10 +266,12 @@ class SP60xE(UniledBleModel):
                     }
                 )
 
-                if (gain := data.pop(0) if len(data) >= 1 else None) is not None and master_power:
+                if (
+                    gain := data.pop(0) if len(data) >= 1 else None
+                ) is not None and master_power:
                     device.master.status.set(ATTR_UL_SENSITIVITY, gain)
 
-                if (timers := data.pop(0) if len(data) >= 1 else 0):
+                if timers := data.pop(0) if len(data) >= 1 else 0:
                     TIMER_DATA_SIZE = 7
                     timer_id = 0
                     while len(data) >= TIMER_DATA_SIZE and timer_id < timers:
@@ -320,7 +320,9 @@ class SP60xE(UniledBleModel):
                         )
 
                     if gain is not None:
-                        device.master.features.append(AudioSensitivityFeature(BANLANX60X_MAX_SENSITIVITY))
+                        device.master.features.append(
+                            AudioSensitivityFeature(BANLANX60X_MAX_SENSITIVITY)
+                        )
 
                     if input is not None:
                         device.master.features.append(AudioInputFeature())
@@ -519,4 +521,3 @@ SP608E = SP60xE(
     channels=8,
     triggers=4,
 )
-
