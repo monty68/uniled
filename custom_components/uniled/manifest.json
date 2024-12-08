@@ -44,10 +44,13 @@
   "integration_type": "hub",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/monty68/uniled/issues",
-  "loggers": ["uniled", "uniled_scanner"],
+  "loggers": [
+    "uniled",
+    "uniled_scanner"
+  ],
   "requirements": [
     "pycryptodome>=3.17",
     "cryptography"
   ],
-  "version": "3.0.4"
+  "version": "3.0.5"
 }
