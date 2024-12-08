@@ -1,85 +1,78 @@
-"""UniLED Network Device Discovery. (with thanks to flux_led)"""
+"""UniLED Network Device Discovery (with thanks to flux_led)."""
 
 from __future__ import annotations
-from typing import Any, List, Optional, Tuple, Callable, Final
-from collections.abc import Mapping
+
+import asyncio
+from collections.abc import Callable, Mapping
+import contextlib
+import logging
+import time
+from typing import Any
 
 from homeassistant import config_entries
 from homeassistant.components import network
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
+from homeassistant.const import CONF_CODE, CONF_HOST, CONF_MODEL, CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, discovery_flow
 from homeassistant.util.network import is_ip_address
-from homeassistant.const import CONF_ADDRESS, CONF_HOST, CONF_MODEL, CONF_NAME
+
 from .const import (
-    ATTR_UL_LOCAL_NAME,
     ATTR_UL_IP_ADDRESS,
+    ATTR_UL_LOCAL_NAME,
     ATTR_UL_MAC_ADDRESS,
     ATTR_UL_MODEL_NAME,
-    ATTR_UL_TRANSPORT,
     CONF_UL_TRANSPORT as CONF_TRANSPORT,
     DOMAIN,
     UNILED_DISCOVERY,
     UNILED_DISCOVERY_DIRECTED_TIMEOUT,
 )
-
-from .lib.net.scanner import UniledNetScanner
 from .lib.device import UniledDevice
-from .lib.discovery import (
-    CONF_TO_DISCOVERY,
-    UniledDiscovery,
-)
-
-import contextlib
-import sys
-import time
-import asyncio
-import logging
+from .lib.discovery import CONF_TO_DISCOVERY, UniledDiscovery
+from .lib.net.scanner import UniledNetScanner
 
 _LOGSCAN = logging.getLogger("uniled_scanner")
 _LOGGER = logging.getLogger(__name__)
 
-if sys.version_info[:2] < (3, 11):
-    from async_timeout import timeout as asyncio_timeout
-else:
-    from asyncio import timeout as asyncio_timeout
-
 
 class UniledUDPScanner(asyncio.DatagramProtocol):
+    """UniLED UDP Scanner Class."""
+
     def __init__(
         self,
-        destination: Tuple[str, int],
-        on_response: Callable[[bytes, Tuple[str, int]], None],
+        destination: tuple[str, int],
+        on_response: Callable[[bytes, tuple[str, int]], None],
     ) -> None:
         """Init the discovery protocol."""
         self.transport = None
         self.destination = destination
         self.on_response = on_response
 
-    def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
+    def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         """Trigger on_response."""
         self.on_response(data, addr)
 
-    def error_received(self, ex: Optional[Exception]) -> None:
+    def error_received(self, exc: Exception | None) -> None:
         """Handle error."""
-        _LOGSCAN.debug("UniledUDPScanner error: %s", ex)
+        _LOGSCAN.debug("UniledUDPScanner error: %s", exc)
 
-    def connection_lost(self, ex: Optional[Exception]) -> None:
-        """The connection is lost."""
+    def connection_lost(self, exc: Exception | None) -> None:
+        """Lost connection."""
 
 
 class UniledScanner(UniledNetScanner):
-    """UNILED Scanner"""
+    """UniLED Network Scanner."""
 
     def __init__(self) -> None:
+        """Initialize the scanner."""
         self.loop = asyncio.get_running_loop()
         super().__init__()
 
     async def _async_send_messages(
         self,
-        messages: List[bytes],
+        messages: list[bytes],
         sender: asyncio.DatagramTransport,
-        destination: Tuple[str, int],
+        destination: tuple[str, int],
     ) -> None:
         """Send messages with a short delay between them."""
         last_idx = len(messages) - 1
@@ -91,9 +84,9 @@ class UniledScanner(UniledNetScanner):
     async def _async_run_scan(
         self,
         transport: asyncio.DatagramTransport,
-        destination: Tuple[str, int],
+        destination: tuple[str, int],
         timeout: int,
-        found_all_future: "asyncio.Future[bool]",
+        found_all_future: asyncio.Future[bool],
     ) -> None:
         """Send the scans."""
         discovery_messages = self._get_discovery_messages()
@@ -102,9 +95,9 @@ class UniledScanner(UniledNetScanner):
         time_out = timeout / self.BROADCAST_FREQUENCY
         while True:
             try:
-                async with asyncio_timeout(time_out):
+                async with asyncio.timeout(time_out):
                     await asyncio.shield(found_all_future)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             else:
                 return  # found_all
@@ -117,18 +110,18 @@ class UniledScanner(UniledNetScanner):
             await self._async_send_messages(discovery_messages, transport, destination)
 
     async def async_scan(
-        self, timeout: int = 10, address: Optional[str] = None
-    ) -> List[UniledDiscovery]:
+        self, timeout: int = 10, address: str | None = None
+    ) -> list[UniledDiscovery]:
         """Discover UNILED (SpNet) Devices."""
         sock = self._create_socket()
         destination = self._destination_from_address(address)
-        found_all_future: "asyncio.Future[bool]" = self.loop.create_future()
+        found_all_future: asyncio.Future[bool] = self.loop.create_future()
 
-        def _on_response(data: bytes, addr: Tuple[str, int]) -> None:
+        def _on_response(data: bytes, addr: tuple[str, int]) -> None:
             # Ignore echo's
             if data in self.ALL_MESSAGES:
                 return
-            _LOGSCAN.debug("response: %s <= %s", addr, data)
+            _LOGSCAN.debug("Response: %s <= %s (%d)", addr, data.hex(), len(data))
             if self._process_response(data, addr, address, self._discoveries):
                 with contextlib.suppress(asyncio.InvalidStateError):
                     found_all_future.set_result(True)
@@ -157,10 +150,10 @@ async def async_discover_devices(
     """Discover devices."""
 
     if address:
-        _LOGSCAN.debug("Probing %s...", address)
+        _LOGSCAN.debug("Probing device '%s'", address)
         targets = [address]
     else:
-        _LOGGER.debug("Scanning...")
+        _LOGGER.debug("Scanning started")
         targets = [
             str(address)
             for address in await network.async_get_ipv4_broadcast_addresses(hass)
@@ -177,16 +170,21 @@ async def async_discover_devices(
         )
     ):
         if isinstance(discovered, Exception):
-            _LOGGER.debug("Scanning %s failed with error: %s", targets[idx], discovered)
+            _LOGGER.debug(
+                "Scanning '%s' failed with error: %s", targets[idx], discovered
+            )
             continue
 
     if not address:
+        _LOGGER.debug("Scanning complete %s", scanner.get_device_info())
         return scanner.get_device_info()
+
+    _LOGSCAN.debug("Probe complete %s", scanner.get_device_info())
 
     return [
         device
         for device in scanner.get_device_info()
-        if device.ip_address == address
+        if device[ATTR_UL_IP_ADDRESS] == address
     ]
 
 
@@ -199,7 +197,7 @@ async def async_discover_device(
     for device in await async_discover_devices(
         hass, UNILED_DISCOVERY_DIRECTED_TIMEOUT, host
     ):
-        if device.ip_address == host:
+        if device[ATTR_UL_IP_ADDRESS] == host:
             return device
     return None
 
@@ -230,7 +228,9 @@ def async_build_cached_discovery(entry: ConfigEntry) -> UniledDiscovery:
         ip_address=data[CONF_HOST],
         local_name=data.get(CONF_NAME),
         model_name=data.get(CONF_MODEL),
+        model_code=data.get(CONF_CODE),
     )
+
 
 @callback
 def async_get_discovery(hass: HomeAssistant, host: str) -> UniledDiscovery | None:
@@ -258,9 +258,9 @@ def async_name_from_discovery(
 ) -> str:
     """Convert a UNILED discovery to a human readable name."""
     return UniledDevice.human_readable_name(
-        device.local_name,  #[ATTR_UL_LOCAL_NAME],
-        device.model_name,  #[ATTR_UL_MODEL_NAME],
-        device.mac_address  #[ATTR_UL_MAC_ADDRESS],
+        device[ATTR_UL_LOCAL_NAME],
+        device[ATTR_UL_MODEL_NAME],
+        device[ATTR_UL_MAC_ADDRESS],
     )
 
 
@@ -291,9 +291,9 @@ def async_update_entry_from_discovery(
 ) -> bool:
     """Update a config entry from a UNILED discovery."""
     data_updates: dict[str, Any] = {}
-    mac_address = device.mac_address    # [ATTR_UL_MAC_ADDRESS]
+    mac_address = device[ATTR_UL_MAC_ADDRESS]
     assert mac_address is not None
-    formatted_mac = UniledDevice.format_mac(mac_address)
+    formatted_mac = dr.format_mac(mac_address)
     updates: dict[str, Any] = {}
     if not entry.unique_id or (
         allow_update_mac

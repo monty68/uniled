@@ -1,11 +1,15 @@
 """UniLED NETwork Device Handler."""
 
 from __future__ import annotations
-from typing import Any, Final, Optional
-from ..discovery import UniledDiscovery
-from ..device import UniledDevice
-from .model import UniledNetModel
-from ..const import (
+
+import asyncio
+import logging
+import select
+import socket
+import time
+from typing import Any, Final
+
+from ..const import (  # noqa: TID252
     ATTR_UL_IP_ADDRESS,
     ATTR_UL_LOCAL_NAME,
     ATTR_UL_MAC_ADDRESS,
@@ -14,13 +18,10 @@ from ..const import (
     UNILED_COMMAND_SETTLE_DELAY as UNILED_NET_COMMAND_SETTLE_DELAY,
     UNILED_TRANSPORT_NET,
 )
+from ..device import UniledDevice  # noqa: TID252
+from ..discovery import UniledDiscovery, discovery_model  # noqa: TID252
+from .model import UniledNetModel
 from .retrys import _socket_retry
-
-import time
-import select
-import socket
-import asyncio
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,33 +33,35 @@ UNILED_NET_ERROR_BACKOFF_TIME = 0.15
 ## UniLed NETwork Device Handler
 ##
 class UniledNetDevice(UniledDevice):
-    """UniLED NETwork Device Class"""
+    """UniLED NETwork Device Class."""
 
     ##
     ## Initialize device instance
     ##
     def __init__(
         self,
-        discovery: UniledDiscovery,
-        options: Optional[Any] = None,
+        discovery: UniledDiscovery | None,
+        options: dict[str, Any] | None = None,
         timeout: float = UNILED_NET_DEVICE_TIMEOUT,
     ) -> None:
-        """Init the UniLED BLE Model"""
-        self._socket: Optional[socket.socket] = None
+        """Init the UniLED Network Device."""
+        self._socket: socket.socket | None = None
         self._lock = asyncio.Lock()
         self._timeout: float = timeout
         self._available = False
+        self._unavailable_reason = None
+        self._model = None
         self._discovery = discovery
+        super().__init__(options)
 
-        assert isinstance(discovery, UniledDiscovery)
+        assert discovery is not None
 
         if self.model is not None:
             _LOGGER.debug(
-                "%s: Inititalizing (%s)...",
+                "%s: Inititalizing (%s)",
                 self.name,
                 self.model_name,
             )
-            super().__init__(options)
             self._create_channels()
 
     @property
@@ -69,8 +72,8 @@ class UniledNetDevice(UniledDevice):
     @property
     def model(self) -> UniledNetModel:
         """Return the device model."""
-        if self._model is None and isinstance(self._discovery, UniledDiscovery):
-            self._model = self._discovery.model
+        if self._model is None and self._discovery:
+            self._model = discovery_model(self._discovery)
         return self._model
 
     @property
@@ -78,14 +81,15 @@ class UniledNetDevice(UniledDevice):
         """Return the device model name."""
         if self.model is not None:
             return self.model.model_name
+        if self._discovery:
+            return self._discovery.get(ATTR_UL_MODEL_NAME, None)
         return None
 
     @property
     def name(self) -> str:
         """Get the name of the device."""
         if self._discovery:
-            # name = self._discovery.get(ATTR_UL_LOCAL_NAME, self.model_name)
-            name = self._discovery.local_name
+            name = self._discovery.get(ATTR_UL_LOCAL_NAME, self.model_name)
             if name is not None:
                 return name
         return self.short_address(self.address)
@@ -94,7 +98,7 @@ class UniledNetDevice(UniledDevice):
     def host(self) -> str | None:
         """Get the hostname of the device."""
         if self._discovery:
-            return self._discovery.ip_address
+            return self._discovery.get(ATTR_UL_IP_ADDRESS, None)
         return None
 
     @property
@@ -107,7 +111,7 @@ class UniledNetDevice(UniledDevice):
     def address(self) -> str | None:
         """Return the (mac) address of the device."""
         if self._discovery:
-            return self._discovery.mac_address
+            return self._discovery.get(ATTR_UL_MAC_ADDRESS, None)
         return None
 
     @property
@@ -118,7 +122,7 @@ class UniledNetDevice(UniledDevice):
         return False
 
     @property
-    def discovery(self) -> Optional[UniledDiscovery]:
+    def discovery(self) -> UniledDiscovery | None:
         """Return the discovery data."""
         return self._discovery
 
@@ -128,11 +132,13 @@ class UniledNetDevice(UniledDevice):
         self._discovery = value
 
     def set_available(self, reason: str) -> None:
+        """Set device as available."""
         _LOGGER.debug("%s: Set available: %s", self.name, reason)
         self._unavailable_reason = None
         self._available = True
 
     def set_unavailable(self, reason: str) -> None:
+        """Set device as unavailable."""
         _LOGGER.debug("%s: Set unavailable: %s", self.name, reason)
         self._unavailable_reason = reason
         self._available = False
@@ -142,7 +148,7 @@ class UniledNetDevice(UniledDevice):
         """Update the device."""
         _LOGGER.debug("%s: Update!", self.name)
         if not (query := self.model.build_state_query(self)):
-            raise Exception("Update - Failed: no state query command available!")
+            raise Exception("Update - Failed: no state query command available!")  # noqa: TRY002
         if not await self.send(query, retry):
             return False
         valid = 0
@@ -162,7 +168,7 @@ class UniledNetDevice(UniledDevice):
         return True
 
     async def stop(self) -> None:
-        """Stop the device"""
+        """Stop the device."""
         if self.available:
             _LOGGER.debug("%s: Stop", self.name)
             async with self._lock:
@@ -175,12 +181,12 @@ class UniledNetDevice(UniledDevice):
         """Send command(s) to a device."""
 
         if not commands:
-            _LOGGER.debug("%s: Send command ignored, no data to send.", self.name)
+            _LOGGER.debug("%s: Send command ignored, no data to send", self.name)
             return False
 
         if self._lock.locked():
             _LOGGER.debug(
-                "%s: Operation already in progress, waiting for it to complete...",
+                "%s: Operation already in progress, waiting for it to complete",
                 self.name,
             )
 
@@ -193,7 +199,7 @@ class UniledNetDevice(UniledDevice):
         for attempt in range(max_attempts):
             try:
                 return await self._execute_commands(commands)
-            except Exception as ex:
+            except Exception as ex:  # noqa: BLE001
                 if attempt == retry:
                     _LOGGER.error(
                         "%s: Communication failed: %s, stopping trying!",
@@ -202,7 +208,7 @@ class UniledNetDevice(UniledDevice):
                     )
                     return False
                 _LOGGER.debug(
-                    "%s: Communication failed with: %s, retry attempt %s of %s...",
+                    "%s: Communication failed with: %s, retry attempt %s of %s",
                     self.name,
                     str(ex),
                     attempt + 1,
@@ -227,7 +233,6 @@ class UniledNetDevice(UniledDevice):
 
     async def _execute_transaction(self, command: bytes) -> bool:
         """Execute a single command."""
-
         if not self._send_bytes(command):
             _LOGGER.warning("%s: Command send failed!", self.name)
             return False
@@ -248,7 +253,7 @@ class UniledNetDevice(UniledDevice):
         if expected == -1:
             _LOGGER.warning("%s: Response Header Error!", self.name)
             return False
-        elif expected is None or expected == 0:
+        if expected is None or expected == 0:
             return True
 
         payload = await self._async_read_bytes(expected)
@@ -268,9 +273,8 @@ class UniledNetDevice(UniledDevice):
                 _LOGGER.debug("%s: Transaction successful", self.name)
                 self._fire_callbacks()
                 return True
-            else:
-                _LOGGER.debug("%s: Transaction failed", self.name)
-        except Exception as ex:
+            _LOGGER.debug("%s: Transaction failed", self.name)
+        except Exception:  # noqa: BLE001
             _LOGGER.warning(
                 "%s: Response decoder exception!",
                 self.name,
@@ -278,7 +282,7 @@ class UniledNetDevice(UniledDevice):
             )
         return False
 
-    @_socket_retry(attempts=2)  # type: ignore
+    @_socket_retry(attempts=2)
     def _send_bytes(self, bytes: bytearray) -> bool:
         assert self._socket is not None
         _LOGGER.debug(
@@ -287,7 +291,6 @@ class UniledNetDevice(UniledDevice):
             "".join(f"{x:02X}" for x in bytes),
             len(bytes),
         )
-        # self._socket.send(bytes)
         if self._socket.sendall(bytes) is None:
             return True
         return False
@@ -323,7 +326,6 @@ class UniledNetDevice(UniledDevice):
                 rx.extend(chunk)
             except OSError as ex:
                 _LOGGER.debug("%s: socket error (%s): %s", self.name, self.host, ex)
-                pass
             finally:
                 self._socket.setblocking(True)
         return rx
@@ -333,12 +335,12 @@ class UniledNetDevice(UniledDevice):
         if self._socket is None:
             self._connect()
 
-    @_socket_retry(attempts=0)  # type: ignore
+    @_socket_retry(attempts=0)
     def _connect(self) -> None:
         self._close()
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.settimeout(self._timeout)
-        _LOGGER.debug("%s: Connect %s:%d...", self.name, self.host, self.port)
+        _LOGGER.debug("%s: Connect %s:%d", self.name, self.host, self.port)
         self._socket.connect((self.host, self.port))
 
     def _close(self) -> None:

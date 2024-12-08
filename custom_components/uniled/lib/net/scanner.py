@@ -1,23 +1,27 @@
-"""UniLED Network Device Scanner. (with thanks to flux_led)"""
+"""UniLED Network Device Scanner (with thanks to flux_led)."""
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Tuple, Union
 
-from ..discovery import ATTR_UL_MODEL_NAME, UNILED_DISCOVERY_SOURCE_UDP, UniledDiscovery
-from .device import UNILED_TRANSPORT_NET, UniledDevice
-
-import logging
 import asyncio
+import logging
 import select
 import socket
 import time
+
+from ..discovery import (  # noqa: TID252
+    ATTR_UL_MODEL_NAME,
+    UNILED_DISCOVERY_SOURCE_UDP,
+    UniledDiscovery,
+    discovery_model,
+)
+from .device import UNILED_TRANSPORT_NET, UniledDevice
 
 # _LOGGER = logging.getLogger(__name__)
 _LOGGER = logging.getLogger("uniled_scanner")
 
 
 class UniledNetScanner:
-    """UniLED Network Device Scanner Class"""
+    """UniLED Network Device Scanner Class."""
 
     SPNET_DISCOVERY_PORT = 6454
     SPNET_DISCOVERY_MESSAGE = bytes.fromhex("53704e65740000200000000002e0")
@@ -30,9 +34,11 @@ class UniledNetScanner:
     ALL_MESSAGES = {SPNET_DISCOVERY_MESSAGE}
 
     def __init__(self) -> None:
-        self._discoveries: Dict[str, UniledDiscovery] = {}
+        """Initialize Network Scanner."""
+        self._discoveries: dict[str, UniledDiscovery] = {}
 
     def _create_socket(self) -> socket.socket:
+        """Create a UDP socket."""
         return self._create_udp_socket(self.SPNET_DISCOVERY_PORT)
 
     def _create_udp_socket(self, discovery_port: int) -> socket.socket:
@@ -48,30 +54,32 @@ class UniledNetScanner:
         sock.setblocking(False)
         return sock
 
-    def _destination_from_address(self, address: Optional[str]) -> Tuple[str, int]:
+    def _destination_from_address(self, address: str | None) -> tuple[str, int]:
         if address is None:
             address = self.BROADCAST_ADDRESS
         return (address, self.SPNET_DISCOVERY_PORT)
 
     def _get_discovery_messages(
         self,
-    ) -> List[bytes]:
+    ) -> list[bytes]:
         return [self.SPNET_DISCOVERY_MESSAGE]
 
     def _send_message(
         self,
-        sender: Union[socket.socket, asyncio.DatagramTransport],
-        destination: Tuple[str, int],
+        sender: socket.socket | asyncio.DatagramTransport,
+        destination: tuple[str, int],
         message: bytes,
     ) -> None:
-        _LOGGER.debug("Send UDP: %s => %s", destination, message.hex())
+        _LOGGER.debug(
+            "Send UDP: %s => %s (%d)", destination, message.hex(), len(message)
+        )
         sender.sendto(message, destination)
 
     def _send_messages(
         self,
-        messages: List[bytes],
-        sender: Union[socket.socket, asyncio.DatagramTransport],
-        destination: Tuple[str, int],
+        messages: list[bytes],
+        sender: socket.socket | asyncio.DatagramTransport,
+        destination: tuple[str, int],
     ) -> None:
         """Send messages with a short delay between them."""
         for idx, message in enumerate(messages):
@@ -81,9 +89,9 @@ class UniledNetScanner:
 
     def _process_spnet(
         self,
-        from_address: Tuple[str, int],
+        from_address: tuple[str, int],
         decoded_data: str,
-        response_list: Dict[str, UniledDiscovery],
+        response_list: dict[str, UniledDiscovery],
     ) -> None:
         """Process 'SpNet' response data."""
         from_ipaddr = from_address[0]
@@ -99,9 +107,8 @@ class UniledNetScanner:
             return
 
         _LOGGER.debug(
-            "%s: Checking support for: '%s' (%s) - ID#: %s ...",
+            "Checking support for: '%s' (%s) - ID#: %s",
             from_ipaddr,
-            mac,
             name,
             hex(code),
         )
@@ -118,11 +125,10 @@ class UniledNetScanner:
 
         data = response_list.setdefault(from_ipaddr, discovery)
 
-        if (model := discovery.model) is not None:
+        if (model := discovery_model(discovery)) is not None:
             _LOGGER.debug(
-                "%s: Device '%s' (%s) identified as '%s', by %s.",
+                "Device '%s' (%s) identified as '%s', by %s",
                 from_ipaddr,
-                mac,
                 name,
                 model.model_name,
                 model.manufacturer,
@@ -131,19 +137,18 @@ class UniledNetScanner:
             return
 
         _LOGGER.debug(
-            "%s: Device '%s' (%s) is unknown or not supported, ID#: %s.",
+            "Device '%s' (%s) is unknown or not supported, ID#: %s",
             from_ipaddr,
-            mac,
             name,
             hex(code),
         )
 
     def _process_response(
         self,
-        data: Optional[bytes],
-        from_address: Tuple[str, int],
-        address: Optional[str],
-        response_list: Dict[str, UniledDiscovery],
+        data: bytes | None,
+        from_address: tuple[str, int],
+        address: str | None,
+        response_list: dict[str, UniledDiscovery],
     ) -> bool:
         """Process a response.
 
@@ -159,7 +164,7 @@ class UniledNetScanner:
             self._process_spnet(
                 from_address, data[len(self.SPNET_DISCOVERY_RESPONSE) :], response_list
             )
-        except Exception as ex:
+        except Exception:  # noqa: BLE001
             _LOGGER.warning(
                 "Response decoder exception!",
                 exc_info=True,
@@ -168,12 +173,12 @@ class UniledNetScanner:
 
         if address is None or address not in response_list:
             return False
-        response = response_list[address]
+        # response = response_list[address]
         return True
 
     def scan(
-        self, timeout: int = 10, address: Optional[str] = None
-    ) -> List[UniledDiscovery]:
+        self, timeout: int = 10, address: str | None = None
+    ) -> list[UniledDiscovery]:
         """Scan for devices.
 
         If an address is provided, the scan will return
@@ -204,8 +209,10 @@ class UniledNetScanner:
                     data, addr = sock.recvfrom(self.MAX_RESPONSE_SIZE)
                     if data in discovery_messages:
                         continue
-                    _LOGGER.debug("response: %s <= %s", addr, data.hex())
-                except socket.timeout:
+                    _LOGGER.debug(
+                        "Response: %s <= %s (%d)", addr, data.hex(), len(data)
+                    )
+                except TimeoutError:
                     continue
                 if self._process_response(data, addr, address, self._discoveries):
                     found_all = True
@@ -213,15 +220,17 @@ class UniledNetScanner:
         return self.found_devices
 
     @property
-    def found_devices(self) -> List[UniledDiscovery]:
+    def found_devices(self) -> list[UniledDiscovery]:
         """Return only complete device discoveries."""
         return [info for info in self._discoveries.values() if info["mac_address"]]
 
     def get_device_info_by_mac(self, mac: str) -> UniledDiscovery:
+        """Get discovered device by mac address."""
         for b in self.found_devices:
             if b["mac_address"] == mac:
                 return b
         return b
 
-    def get_device_info(self) -> List[UniledDiscovery]:
+    def get_device_info(self) -> list[UniledDiscovery]:
+        """Get discovered devices."""
         return self.found_devices

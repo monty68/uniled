@@ -70,15 +70,16 @@ class UniledDevice:
     _model: UniledModel | None = None
     _config: dict | MappingProxyType | None = None
     _started: bool = True
-    _channels: list[UniledChannel] = list()
-    _callbacks: list[Callable[[UniledChannel], None]] = list()
+    _channels: list[UniledChannel] = []
+    _callbacks: list[Callable[[UniledChannel], None]] = []
 
     def __init__(self, config: Any) -> None:
-        if isinstance(config, dict) or isinstance(config, MappingProxyType):
+        """Initialize the base device."""
+        if isinstance(config, MappingProxyType):
             self._config = config
 
     def __del__(self):
-        """Delete the device"""
+        """Delete the device."""
         _LOGGER.debug("%s: Delete Device", self.name)
         if self._channels:
             self._channels.clear()
@@ -144,21 +145,24 @@ class UniledDevice:
 
     @property
     def master(self) -> UniledMaster | None:
-        """Return the master channel"""
-        return None if not len(self.channel_list) else self.channel_list[0]
+        """Return the master channel."""
+        if self.channel_list:
+            return self.channel_list[0]
+        return None
+        # return None if not len(self.channel_list) else self.channel_list[0]
 
     @property
     def channel_list(self) -> list[UniledChannel]:
-        """Return the number of channels"""
+        """Return the number of channels."""
         return self._channels
 
     @property
     def channels(self) -> int:
-        """Return the number of channels"""
+        """Return the number of channels."""
         return len(self.channel_list)
 
     def channel(self, channel_id: int) -> UniledChannel | None:
-        """Return a specified channel"""
+        """Return a specified channel."""
         try:
             return self.channel_list[channel_id]
         except IndexError:
@@ -167,14 +171,14 @@ class UniledDevice:
 
     @property
     def update_interval(self) -> int:
-        """Device update interval"""
+        """Device update interval."""
         if self._config:
             return self._config.get(CONF_UL_UPDATE_INTERVAL, UNILED_UPDATE_SECONDS)
         return UNILED_UPDATE_SECONDS
 
     @property
     def retry_count(self) -> int:
-        """Device retry count"""
+        """Device retry count."""
         if self._config:
             return self._config.get(CONF_UL_RETRY_COUNT, UNILED_DEVICE_RETRYS)
         return UNILED_DEVICE_RETRYS
@@ -212,27 +216,27 @@ class UniledDevice:
             callback(self)
 
     def get_list(self, channel_id: int, name: str) -> list:
-        """Get a channel (id) attribute list"""
+        """Get a channel (id) attribute list."""
         if channel := self.channel(channel_id) is not None:
             return self.get_list(channel, name)
         return []
 
     def get_list(self, channel: UniledChannel, name: str) -> list:
-        """Get a channel attribute list"""
+        """Get a channel attribute list."""
         return self._model.fetch_attribute_list(self, channel, name)
 
     def get_state(self, channel_id: int, name: str, default: Any = None) -> Any:
-        """Get a channel (id) attribute state"""
+        """Get a channel (id) attribute state."""
         if channel := self.channel(channel_id) is not None:
             return self.get_state(channel, name, default)
         return default
 
     def get_state(self, channel: UniledChannel, name: str, default: Any = None) -> Any:
-        """Get a channel attribute state"""
+        """Get a channel attribute state."""
         return channel.get(name, default)
 
     async def async_set_state(self, channel_id: int, attr: str, state: Any) -> bool:
-        """Set a channel (id) attribute state"""
+        """Set a channel (id) attribute state."""
         if not (channel := self.channel(channel_id)):
             return False
         return await self.async_set_state(self, channel, attr, state)
@@ -240,7 +244,7 @@ class UniledDevice:
     async def async_set_state(
         self, channel: UniledChannel, attr: str, state: Any
     ) -> bool:
-        """Set a channel attribute state"""
+        """Set a channel attribute state."""
         command = self._model.build_command(self, channel, attr, state)
         if command:
             success = await self.send(command) if command else False
@@ -252,13 +256,13 @@ class UniledDevice:
         return False
 
     async def async_set_multi_state(self, channel_id: int, **kwargs) -> None:
-        """Set a channel (id) multi attribute states"""
+        """Set a channel (id) multi attribute states."""
         if not (channel := self.channel(channel_id)):
             return False
         return await self.async_set_multi_state(self, channel, **kwargs)
 
     async def async_set_multi_state(self, channel: UniledChannel, **kwargs) -> bool:
-        """Set a channel multi attribute states"""
+        """Set a channel multi attribute states."""
         commands = self._model.build_multi_commands(self, channel, **kwargs)
         if not commands:
             return True
@@ -268,11 +272,11 @@ class UniledDevice:
 
     @abstractmethod
     def match_model_name(self, name: str) -> UniledModel | None:
-        """Match a device model code(s)"""
+        """Match a device model code(s)."""
 
     @abstractmethod
     def match_model_code(self, code: int) -> UniledModel | None:
-        """Match a device model code(s)"""
+        """Match a device model code(s)."""
 
     @property
     @abstractmethod
@@ -302,7 +306,7 @@ class UniledDevice:
 
     @abstractmethod
     async def stop(self) -> None:
-        """Stop the device"""
+        """Stop the device."""
 
     @abstractmethod
     async def send(
