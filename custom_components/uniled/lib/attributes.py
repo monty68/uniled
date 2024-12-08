@@ -1,22 +1,25 @@
 """UniLED Attributes."""
-from __future__ import annotations
-from dataclasses import dataclass
-from typing import Any
-from enum import IntEnum
-from .const import *
 
-dataclass(frozen=True)
+from __future__ import annotations
+
+from enum import IntEnum
+from typing import Any
+
+from .const import ATTR_UL_SCENE
+
+
 class UniledGroup(IntEnum):
-    """UniLED Attribute Group"""
+    """UniLED Attribute Group."""
 
     STANDARD = 0
     NEEDS_ON = 1
     CONFIGURATION = 2
     DIAGNOSTIC = 3
-    OPTION = 128 # config_flow option!
+    OPTION = 128  # config_flow option!
+
 
 class UniledAttribute:
-    """UniLED Base Attribute Class"""
+    """UniLED Base Attribute Class."""
 
     def __init__(
         self,
@@ -29,6 +32,7 @@ class UniledAttribute:
         group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
+        """Initialize base attribute."""
         self._platform = platform
         self._attr = attr
         self._name = name
@@ -77,7 +81,7 @@ class UniledAttribute:
 
 
 class SensorAttribute(UniledAttribute):
-    """UniLED Sensor Attribute Class"""
+    """UniLED Sensor Attribute Class."""
 
     def __init__(
         self,
@@ -89,20 +93,11 @@ class SensorAttribute(UniledAttribute):
         group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        super().__init__(
-           "sensor",
-           attr,
-           name,
-           icon,
-           key,
-           enabled,
-           group,
-           extra 
-        )
+        super().__init__("sensor", attr, name, icon, key, enabled, group, extra)
 
 
 class SelectAttribute(UniledAttribute):
-    """UniLED Select Attribute Class"""
+    """UniLED Select Attribute Class."""
 
     def __init__(
         self,
@@ -114,20 +109,11 @@ class SelectAttribute(UniledAttribute):
         group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        super().__init__(
-           "select",
-           attr,
-           name,
-           icon,
-           key,
-           enabled,
-           group,
-           extra 
-        )
+        super().__init__("select", attr, name, icon, key, enabled, group, extra)
 
 
 class SwitchAttribute(UniledAttribute):
-    """UniLED Switch Attribute Class"""
+    """UniLED Switch Attribute Class."""
 
     def __init__(
         self,
@@ -140,25 +126,16 @@ class SwitchAttribute(UniledAttribute):
         group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        super().__init__(
-           "switch",
-           attr,
-           name,
-           icon_on,
-           key,
-           enabled,
-           group,
-           extra 
-        )
+        super().__init__("switch", attr, name, icon_on, key, enabled, group, extra)
         self._icon2 = icon_off
 
     def state_icon(self, state: bool = True) -> str:
-        """Return icon depending on state"""
+        """Return icon depending on state."""
         return self._icon if state or not self._icon2 else self._icon2
 
 
 class ButtonAttribute(UniledAttribute):
-    """UniLED Sensor Attribute Class"""
+    """UniLED Sensor Attribute Class."""
 
     def __init__(
         self,
@@ -171,16 +148,7 @@ class ButtonAttribute(UniledAttribute):
         group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        super().__init__(
-           "button",
-           attr,
-           name,
-           icon,
-           key,
-           enabled,
-           group,
-           extra 
-        )
+        super().__init__("button", attr, name, icon, key, enabled, group, extra)
         self._value = value
 
     @property
@@ -189,7 +157,7 @@ class ButtonAttribute(UniledAttribute):
 
 
 class NumberAttribute(UniledAttribute):
-    """UniLED Number Attribute Class"""
+    """UniLED Number Attribute Class."""
 
     _min: int
     _max: int
@@ -208,16 +176,7 @@ class NumberAttribute(UniledAttribute):
         group: UniledGroup = UniledGroup.STANDARD,
         extra: list | None = None,
     ) -> None:
-        super().__init__(
-           "number",
-           attr,
-           name,
-           icon,
-           key,
-           enabled,
-           group,
-           extra 
-        )
+        super().__init__("number", attr, name, icon, key, enabled, group, extra)
         self._max = max
         self._min = min
         self._inc = inc
@@ -234,21 +193,16 @@ class NumberAttribute(UniledAttribute):
     def step(self) -> int:
         return self._inc
 
+
 class SceneAttribute(UniledAttribute):
-    """UniLED Scene Attribute Class"""
+    """UniLED Scene Attribute Class."""
+
     def __init__(
         self,
         scene_id: int,
         extra: list | None = None,
     ) -> None:
-        super().__init__(
-           "scene",
-           ATTR_UL_SCENE,
-           None,
-           "mdi:star",
-           None,
-           extra=extra
-        )
+        super().__init__("scene", ATTR_UL_SCENE, None, "mdi:star", None, extra=extra)
         self._scene_id = scene_id
 
     @property
@@ -262,4 +216,3 @@ class SceneAttribute(UniledAttribute):
     @property
     def key(self) -> int:
         return f"scene_{self._scene_id}"
-    

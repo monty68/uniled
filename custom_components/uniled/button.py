@@ -1,28 +1,23 @@
 """Platform for UniLED button integration."""
-from __future__ import annotations
-from typing import cast
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from __future__ import annotations
+
+import logging
 
 from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .entity import (
     AddEntitiesCallback,
-    UniledUpdateCoordinator,
+    Platform,
     UniledChannel,
     UniledEntity,
-    Platform,
+    UniledUpdateCoordinator,
     async_uniled_entity_setup,
 )
-
-from .lib.attributes import (
-    UniledAttribute,
-    ButtonAttribute,
-)
-
-import logging
+from .lib.attributes import ButtonAttribute, UniledAttribute
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,7 +66,7 @@ class UniledButtonEntity(
             self._attr_device_class = ButtonDeviceClass.UPDATE
 
     async def async_press(self) -> None:
-        """Button Pressed!"""
+        """Button Pressed."""
         value = self.device.get_state(self.channel, self.feature.attr)
         value = (
             not value if isinstance(self.feature.value, bool) else self.feature.value

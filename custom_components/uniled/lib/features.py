@@ -1,63 +1,67 @@
 """UniLED Features."""
+
 from __future__ import annotations
-from typing import Final
 
 from .attributes import (
-    UniledAttribute,
-    UniledGroup,
     # BinaryAttribute,
-    ButtonAttribute,
+    # ButtonAttribute,
     NumberAttribute,
-    SceneAttribute,
+    # SceneAttribute,
     SelectAttribute,
     SensorAttribute,
     SwitchAttribute,
-    ATTR_UL_POWER,
-    ATTR_UL_LIGHT_TYPE,
-    ATTR_UL_LIGHT_MODE,
+    UniledAttribute,
+    UniledGroup,
+)
+from .const import (
+    ATTR_HA_COLOR_TEMP_KELVIN,
+    ATTR_UL_AUDIO_INPUT,
+    ATTR_UL_CHIP_ORDER,
+    ATTR_UL_CHIP_TYPE,
+    ATTR_UL_COEXISTENCE,
     ATTR_UL_EFFECT,
-    ATTR_UL_EFFECT_TYPE,
+    ATTR_UL_EFFECT_DIRECTION,
+    ATTR_UL_EFFECT_LENGTH,
     ATTR_UL_EFFECT_LOOP,
     ATTR_UL_EFFECT_PLAY,
     ATTR_UL_EFFECT_SPEED,
-    ATTR_UL_EFFECT_LENGTH,
-    ATTR_UL_EFFECT_DIRECTION,
-    ATTR_UL_AUDIO_INPUT,
-    ATTR_UL_SENSITIVITY,
-    ATTR_UL_CHIP_TYPE,
-    ATTR_UL_CHIP_ORDER,
-    ATTR_UL_ONOFF_EFFECT,
-    ATTR_UL_ONOFF_SPEED,
-    ATTR_UL_ONOFF_PIXELS,
+    ATTR_UL_EFFECT_TYPE,
+    ATTR_UL_LIGHT_MODE,
+    ATTR_UL_LIGHT_TYPE,
     ATTR_UL_ON_POWER,
-    ATTR_UL_COEXISTENCE,
+    ATTR_UL_ONOFF_EFFECT,
+    ATTR_UL_ONOFF_PIXELS,
+    ATTR_UL_ONOFF_SPEED,
+    ATTR_UL_POWER,
+    ATTR_UL_SCENE_LOOP,
     ATTR_UL_SEGMENT_COUNT,
     ATTR_UL_SEGMENT_PIXELS,
-    ATTR_UL_SCENE_LOOP,
-    ATTR_HA_COLOR_TEMP_KELVIN,
+    ATTR_UL_SENSITIVITY,
 )
 
 
 class LightFeature(UniledAttribute):
-    """UniLED Light Feature Class"""
+    """UniLED Light Feature Class."""
 
     def __init__(self, extra: list | None = None) -> None:
+        """Initialize."""
         super().__init__(
-           "light",
-           ATTR_UL_POWER,
-           "Light",
-           "mdi:lightbulb",
-           "light",
-           True,
-           UniledGroup.STANDARD,
-           extra 
+            "light",
+            ATTR_UL_POWER,
+            "Light",
+            "mdi:lightbulb",
+            "light",
+            True,
+            UniledGroup.STANDARD,
+            extra,
         )
 
 
 class LampFeature(LightFeature):
-    """UniLED Lamp Feature Class"""
+    """UniLED Lamp Feature Class."""
 
     def __init__(self, extra: list | None = None) -> None:
+        """Initialize."""
         super().__init__(extra)
         self._name = "Lamp"
         self._icon = "mdi:lamp"
@@ -65,9 +69,10 @@ class LampFeature(LightFeature):
 
 
 class LightBulbFeature(LightFeature):
-    """UniLED Light Bulb Feature Class"""
+    """UniLED Light Bulb Feature Class."""
 
     def __init__(self, extra: list | None = None) -> None:
+        """Initialize."""
         super().__init__(extra)
         self._name = "Bulb"
         self._icon = "mdi:lightbulb"
@@ -75,40 +80,41 @@ class LightBulbFeature(LightFeature):
 
 
 class LightStripFeature(LightFeature):
-    """UniLED Light Strip Feature Class"""
+    """UniLED Light Strip Feature Class."""
 
     def __init__(self, extra: list | None = None) -> None:
+        """Initialize."""
         super().__init__(extra)
         self._name = "Light"
         self._icon = "mdi:led-strip-variant"
         self._key = "strip"
 
+
 class EffectTypeFeature(SensorAttribute):
-    """UniLED Effect Type Feature Class"""
+    """UniLED Effect Type Feature Class."""
 
     def __init__(self) -> None:
+        """Initialize."""
         super().__init__(
-            ATTR_UL_EFFECT_TYPE,
-            "Effect Type",
-            "mdi:magic-staff",
-            enabled=False
+            ATTR_UL_EFFECT_TYPE, "Effect Type", "mdi:magic-staff", enabled=False
         )
+
 
 class EffectNameFeature(SensorAttribute):
-    """UniLED Effect Name Feature Class"""
+    """UniLED Effect Name Feature Class."""
 
     def __init__(self) -> None:
+        """Initialize."""
         super().__init__(
-            ATTR_UL_EFFECT,
-            "Effect Name",
-            "mdi:magic-staff",
-            enabled=False
+            ATTR_UL_EFFECT, "Effect Name", "mdi:magic-staff", enabled=False
         )
 
+
 class EffectSpeedFeature(NumberAttribute):
-    """UniLED Effect Speed Feature Class"""
+    """UniLED Effect Speed Feature Class."""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
+        """Initialize."""
         super().__init__(
             ATTR_UL_EFFECT_SPEED,
             "Effect Speed",
@@ -121,9 +127,10 @@ class EffectSpeedFeature(NumberAttribute):
 
 
 class EffectLengthFeature(NumberAttribute):
-    """UniLED Effect Length Feature Class"""
+    """UniLED Effect Length Feature Class."""
 
     def __init__(self, max: int, min: int = 1, inc: int = 1) -> None:
+        """Initialize."""
         super().__init__(
             ATTR_UL_EFFECT_LENGTH,
             "Effect Length",

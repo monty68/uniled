@@ -1,28 +1,23 @@
 """Platform for UniLED switch integration."""
-from __future__ import annotations
-from typing import cast
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from __future__ import annotations
+
+import logging
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .entity import (
     AddEntitiesCallback,
-    UniledUpdateCoordinator,
+    Platform,
     UniledChannel,
     UniledEntity,
-    Platform,
+    UniledUpdateCoordinator,
     async_uniled_entity_setup,
 )
-
-from .lib.attributes import (
-    UniledAttribute,
-    SwitchAttribute,
-)
-
-import logging
+from .lib.attributes import SwitchAttribute, UniledAttribute
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,10 +63,10 @@ class UniledSwitchEntity(
     ) -> None:
         """Initialize a UniLED switch control."""
         super().__init__(coordinator, channel, feature)
-    
+
     @property
     def icon(self) -> str | None:
-        """Return Icon based on switch state"""
+        """Return Icon based on switch state."""
         return self.feature.state_icon(self.is_on) if self.available else "mdi:help"
 
     @property

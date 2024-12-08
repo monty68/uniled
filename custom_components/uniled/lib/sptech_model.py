@@ -534,14 +534,33 @@ class SPTechModel(SPTechFX):
         data: bytearray,
     ) -> bytearray | None:
         """Decode Chunk Type #4"""
-        _LOGGER.debug("%s: Decode Chunk #%d: %s (%d)", device.name, chunk, data.hex(), len(data))
-        timers: list[dict[str, Any]] = device.master.get(ATTR_UL_TIMERS, [])
+        # _LOGGER.debug("%s: Decode Chunk #%d: %s (%d)", device.name, chunk, data.hex(), len(data))
+        timers: dict[int, dict[str, Any]] = device.master.get(ATTR_UL_TIMERS, {})
 
-        # For each timer set, there are 7 bytes that follow
+        # 01 01 01 6a 01 12 38 - On  @ 07:30 PM - Sun, Tue, Thu, Sat & Enabled
+        # 02 01 00 15 00 65 f4 - Off @ 07:15 AM - Mon, Wed, Fri & Enabled
+        # 02 01 00 15 00 69 78 - Off @ 07:30 AM - Mon, Wed, Fri & Enabled
         #
-        # 01 01 01 6a 01 12 38 - On @ 07:30 PM - Sun, Tue, Thu, Sat & Enabled
+        # For each timer set, there are 7 bytes
         #
-        timers.append({"timer": data})
+        # 01 - Timer ID Number
+        # 02 - State, 0=Disabled, 1=Enabled
+        # 03 - Action, 0=Turn Off, 1=Turn On
+        # 04 - Days, Bits: |?|S|S|M|T|W|T|F|
+        # 05 - ? 0=AM, 1=PM
+        # 06 - ?
+        # 07 - ?
+        #
+        id = data[0]
+        time = int.from_bytes(data[5:], byteorder="big")
+        timers.update({id: {
+            ATTR_UL_STATUS: bool(data[1]),
+            ATTR_UL_POWER: bool(data[2]),
+            "days": data[3],
+            "meridiem": data[4],
+            "time": time,
+        }})
+        device.master.set(ATTR_UL_TIMERS, timers)
         return None
 
     ## Message Chunk 5 - Effect Layout

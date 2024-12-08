@@ -1,28 +1,23 @@
 """Platform for UniLED number integration."""
+
 from __future__ import annotations
-from typing import cast
-
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-
-from homeassistant.components.select import SelectEntity
-
-from .entity import (
-    UniledUpdateCoordinator,
-    UniledChannel,
-    UniledEntity,
-    Platform,
-    AddEntitiesCallback,
-    async_uniled_entity_setup,
-)
-
-from .lib.attributes import (
-    UniledAttribute,
-    SelectAttribute,
-)
 
 import logging
+
+from homeassistant.components.select import SelectEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .entity import (
+    AddEntitiesCallback,
+    Platform,
+    UniledChannel,
+    UniledEntity,
+    UniledUpdateCoordinator,
+    async_uniled_entity_setup,
+)
+from .lib.attributes import SelectAttribute, UniledAttribute
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,7 +63,7 @@ class UniledSelectEntity(
         """Handle updating _attr values."""
         super()._async_update_attrs()
         options = self.device.get_list(self.channel, self.feature.attr)
-        self._attr_options = list() if options is None else options
+        self._attr_options = [] if options is None else options
         self._attr_current_option = self.device.get_state(
             self.channel, self.feature.attr
         )

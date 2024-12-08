@@ -1,26 +1,18 @@
 """Platform for UniLED light integration."""
+
 from __future__ import annotations
-from typing import Any
+
 from datetime import datetime, timedelta
+import logging
+from typing import Any
 
-from homeassistant.core import HomeAssistant, callback, CALLBACK_TYPE
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-
-from homeassistant.util.color import (
-    color_temperature_to_rgbww,
-    rgbww_to_color_temperature,
-    color_temperature_kelvin_to_mired,
-    color_temperature_mired_to_kelvin,
-)
+import voluptuous as vol
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
-    ATTR_COLOR_TEMP_KELVIN,
     ATTR_COLOR_TEMP,
+    ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
     ATTR_RGBW_COLOR,
@@ -29,50 +21,53 @@ from homeassistant.components.light import (
     ATTR_TRANSITION,
     ATTR_WHITE,
     LIGHT_TURN_ON_SCHEMA,
+    ColorMode,
     LightEntity,
     LightEntityFeature,
-    ColorMode,
-    color_supported,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.helpers import entity_platform
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util.color import (
+    color_temperature_kelvin_to_mired,
+    color_temperature_mired_to_kelvin,
+    color_temperature_to_rgbww,
+    rgbww_to_color_temperature,
 )
 
 from .entity import (
-    UniledUpdateCoordinator,
+    DOMAIN,
+    AddEntitiesCallback,
+    Platform,
     UniledChannel,
     UniledEntity,
-    Platform,
+    UniledUpdateCoordinator,
     async_uniled_entity_setup,
-    AddEntitiesCallback,
-    DOMAIN,
 )
-
 from .lib.attributes import UniledAttribute
-
 from .lib.const import (
-    ATTR_HA_MIN_COLOR_TEMP_KELVIN,
     ATTR_HA_MAX_COLOR_TEMP_KELVIN,
-    ATTR_HA_MIN_MIREDS,
     ATTR_HA_MAX_MIREDS,
+    ATTR_HA_MIN_COLOR_TEMP_KELVIN,
+    ATTR_HA_MIN_MIREDS,
     ATTR_UL_CCT_COLOR,
     ATTR_UL_DEVICE_FORCE_REFRESH,
-    ATTR_UL_DEVICE_NEEDS_ON,
+    ATTR_UL_EFFECT_DIRECTION,
+    ATTR_UL_EFFECT_LENGTH,
     ATTR_UL_EFFECT_LOOP,
     ATTR_UL_EFFECT_PLAY,
     ATTR_UL_EFFECT_SPEED,
-    ATTR_UL_EFFECT_LENGTH,
-    ATTR_UL_EFFECT_DIRECTION,
     ATTR_UL_LIGHT_MODE,
-    ATTR_UL_SENSITIVITY,
     ATTR_UL_RGB2_COLOR,
+    ATTR_UL_SENSITIVITY,
     UNILED_DEFAULT_MAX_KELVIN,
-    UNILED_DEFAULT_MIN_KELVIN,
     UNILED_DEFAULT_MAX_MIREDS,
+    UNILED_DEFAULT_MIN_KELVIN,
     UNILED_DEFAULT_MIN_MIREDS,
 )
-
-import homeassistant.helpers.config_validation as cv
-import voluptuous as vol
-import asyncio
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,7 +80,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the UniLED number platform."""
-    coordinator: UniledUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    # coordinator: UniledUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     platform = entity_platform.async_get_current_platform()
 
     ## @todo Build service more dynamically!
@@ -161,13 +156,14 @@ class UniledLightEntity(
         if not isinstance(modes, set):
             _LOGGER.warning("%s: Modes: %s is not a set!", self.device.name, modes)
         return modes
-    
+
     @property
     def __supported_color_modes(self) -> set[ColorMode] | set[str] | None:
         """Supported color modes."""
         if self.channel.has(ATTR_SUPPORTED_COLOR_MODES):
             return self.channel.get(ATTR_SUPPORTED_COLOR_MODES, {ColorMode.ONOFF})
-        elif self.channel.has(ATTR_RGBWW_COLOR):
+
+        if self.channel.has(ATTR_RGBWW_COLOR):
             self._attr_supported_color_modes = {ColorMode.RGBWW}
             self._attr_color_mode = ColorMode.RGBWW
         elif self.channel.has(ATTR_RGBW_COLOR):
@@ -253,7 +249,8 @@ class UniledLightEntity(
         """Return the kelvin value of this light."""
         if self.channel.has(ATTR_COLOR_TEMP_KELVIN):
             return self.channel.get(ATTR_COLOR_TEMP_KELVIN)
-        elif self.channel.has(ATTR_UL_CCT_COLOR):
+
+        if self.channel.has(ATTR_UL_CCT_COLOR):
             cold, warm, level, kelvin = self.channel.get(ATTR_UL_CCT_COLOR)
             if not kelvin:
                 kelvin, level = rgbww_to_color_temperature(
@@ -262,16 +259,15 @@ class UniledLightEntity(
                     self.max_color_temp_kelvin,
                 )
             return kelvin
-        elif self.channel.has(ATTR_COLOR_TEMP):
-            kelvin = color_temperature_mired_to_kelvin(
-                self.channel.get(ATTR_COLOR_TEMP)
-            )
-            return kelvin
+
+        if self.channel.has(ATTR_COLOR_TEMP):
+            return color_temperature_mired_to_kelvin(self.channel.get(ATTR_COLOR_TEMP))
+
         return self._attr_color_temp_kelvin
 
     @property
     def max_color_temp_kelvin(self) -> int:
-        """Max Color Temp in Kelvin"""
+        """Max Color Temp in Kelvin."""
         if self.channel.has(ATTR_HA_MAX_COLOR_TEMP_KELVIN):
             return self.channel.get(
                 ATTR_HA_MAX_COLOR_TEMP_KELVIN, UNILED_DEFAULT_MAX_KELVIN
@@ -284,7 +280,7 @@ class UniledLightEntity(
 
     @property
     def min_color_temp_kelvin(self) -> int:
-        """Max Color Temp in Kelvin"""
+        """Max Color Temp in Kelvin."""
         if self.channel.has(ATTR_HA_MIN_COLOR_TEMP_KELVIN):
             return self.channel.get(
                 ATTR_HA_MIN_COLOR_TEMP_KELVIN, UNILED_DEFAULT_MIN_KELVIN
@@ -297,12 +293,12 @@ class UniledLightEntity(
 
     @property
     def effect(self) -> str | None:
-        """Effect Name"""
+        """Effect Name."""
         return self.device.get_state(self.channel, ATTR_EFFECT)
 
     @property
     def effect_list(self) -> list | None:
-        """Effect List"""
+        """Effect List."""
         return self.device.get_list(self.channel, ATTR_EFFECT)
 
     async def async_turn_on(self, **kwargs):
@@ -314,7 +310,7 @@ class UniledLightEntity(
         await self.async_set_state(**{**kwargs, self.feature.attr: False})
 
     async def async_set_state(self, **kwargs: Any) -> None:
-        """Control a light"""
+        """Control a light."""
         success = False
         async with self.coordinator.lock:
             # Any transition time

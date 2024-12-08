@@ -1,18 +1,21 @@
 """UniLED Update Coordinator."""
+
 from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
+import logging
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.debounce import Debouncer
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, ConfigEntryError
+from homeassistant.helpers.update_coordinator import (
+    ConfigEntryError,
+    DataUpdateCoordinator,
+    UpdateFailed,
+)
 
-from .const import UNILED_REFRESH_DELAY
 from .lib.device import UniledDevice
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,20 +31,20 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
         self.lock = asyncio.Lock()
         self.title = entry.title
         self.entry = entry
-        cooldown = 0.1 # UNILED_REFRESH_DELAY
+        cooldown = 0.1  # UNILED_REFRESH_DELAY
         super().__init__(
             hass,
             _LOGGER,
             name=f"{self.device.name}",
             update_method=self._async_update,
-            update_interval=timedelta(seconds = device.update_interval),
+            update_interval=timedelta(seconds=device.update_interval),
             request_refresh_debouncer=Debouncer(
                 hass, _LOGGER, cooldown=cooldown, immediate=True
             ),
         )
 
     def __del__(self):
-        """Destroy the class"""
+        """Destroy the class."""
         _LOGGER.debug("%s: Coordinator destroyed", self.device.name)
 
     async def _async_update(self) -> None:
@@ -60,7 +63,7 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
         if self.entry.state not in valid_states:
             if self.device.available:
                 await self.device.stop()
-            raise UpdateFailed("Invalid entry state: %s", self.entry.state)
+            raise UpdateFailed(f"Invalid entry state: {self.entry.state}")
 
         if self.device.started:
             success = False
@@ -75,4 +78,3 @@ class UniledUpdateCoordinator(DataUpdateCoordinator):
         else:
             pass
             # raise UpdateFailed("Device not started")
-   

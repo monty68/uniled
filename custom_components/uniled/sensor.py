@@ -1,41 +1,33 @@
 """Platform for UniLED number integration."""
+
 from __future__ import annotations
+
 from dataclasses import dataclass
+import logging
 from typing import Any
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    # SensorEntityDescription,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from homeassistant.components.sensor import (
-    SensorEntityDescription,
-    SensorDeviceClass,
-    SensorStateClass,
-    SensorEntity,
-)
-from homeassistant.const import (
-    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
-)
-from .lib.attributes import (
-    UniledAttribute,
-    UniledGroup,
-    SensorAttribute,
-)
+from .const import ATTR_UL_MAC_ADDRESS as EXTRA_ATTRIBUTE_MAC_ADDRESS
 from .entity import (
-    UniledUpdateCoordinator,
+    AddEntitiesCallback,
+    Platform,
     UniledChannel,
     UniledEntity,
-    Platform,
-    AddEntitiesCallback,
+    UniledUpdateCoordinator,
     async_uniled_entity_setup,
 )
-from .const import ATTR_UL_RSSI
-
+from .lib.attributes import SensorAttribute, UniledAttribute, UniledGroup
 from .lib.net.device import UNILED_TRANSPORT_NET
-
-EXTRA_ATTRIBUTE_MAC_ADDRESS = "mac_address"
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -91,9 +83,10 @@ class UniledSensorEntity(
 
 @dataclass
 class RSSIFeature(SensorAttribute):
-    """UniLED RSSI Feature Class"""
+    """UniLED RSSI Feature Class."""
 
     def __init__(self) -> None:
+        """Initialize RSSI Feature."""
         super().__init__(
             None,
             "RSSI",
