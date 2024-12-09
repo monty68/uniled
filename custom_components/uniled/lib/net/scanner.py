@@ -119,8 +119,8 @@ class UniledNetScanner:
             mac_address=mac,
             ip_address=from_ipaddr,
             local_name=name,
-            model_name=None,
             model_code=code,
+            model_name=None,
         )
 
         data = response_list.setdefault(from_ipaddr, discovery)

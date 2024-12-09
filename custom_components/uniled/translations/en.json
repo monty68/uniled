@@ -1,253 +1,254 @@
 {
-    "title": "Universal Light Controller",
-    "entity": {
-      "channel": {
-        "master": {
-          "name": "Master"
-        },
-        "channel_1": {
-          "name": "Channel 1"
-        },
-        "channel_2": {
-          "name": "Channel 2"
-        },
-        "channel_3": {
-          "name": "Channel 3"  
-        },
-        "channel_4": {
-          "name": "Channel 4"  
-        },
-        "channel_5": {
-          "name": "Channel 5"  
-        },
-        "channel_6": {
-          "name": "Channel 6"  
-        },
-        "channel_7": {
-          "name": "Channel 7"  
-        },
-        "channel_8": {
-          "name": "Channel 8"  
-        }
+  "title": "Universal Light Controller",
+  "entity": {
+    "channel": {
+      "master": {
+        "name": "Master"
       },
-      "scene": {
-        "scene_0": {
-          "name": "Scene #1"
-        },
-        "scene_1": {
-          "name": "Scene #2"
-        },
-        "scene_2": {
-          "name": "Scene #3"
-        },
-        "scene_3": {
-          "name": "Scene #4"
-        },
-        "scene_4": {
-          "name": "Scene #5"
-        },
-        "scene_5": {
-          "name": "Scene #6"
-        },
-        "scene_6": {
-          "name": "Scene #7"
-        },
-        "scene_7": {
-          "name": "Scene #8"
-        },
-        "scene_8": {
-          "name": "Scene #9"
-        }
+      "channel_1": {
+        "name": "Channel 1"
+      },
+      "channel_2": {
+        "name": "Channel 2"
+      },
+      "channel_3": {
+        "name": "Channel 3"
+      },
+      "channel_4": {
+        "name": "Channel 4"
+      },
+      "channel_5": {
+        "name": "Channel 5"
+      },
+      "channel_6": {
+        "name": "Channel 6"
+      },
+      "channel_7": {
+        "name": "Channel 7"
+      },
+      "channel_8": {
+        "name": "Channel 8"
+      }
+    },
+    "scene": {
+      "scene_0": {
+        "name": "Scene #1"
+      },
+      "scene_1": {
+        "name": "Scene #2"
+      },
+      "scene_2": {
+        "name": "Scene #3"
+      },
+      "scene_3": {
+        "name": "Scene #4"
+      },
+      "scene_4": {
+        "name": "Scene #5"
+      },
+      "scene_5": {
+        "name": "Scene #6"
+      },
+      "scene_6": {
+        "name": "Scene #7"
+      },
+      "scene_7": {
+        "name": "Scene #8"
+      },
+      "scene_8": {
+        "name": "Scene #9"
+      }
+    },
+    "light": {
+      "bulb": {
+        "name": "Bulb"
+      },
+      "lamp": {
+        "name": "Lamp"
       },
       "light": {
-        "bulb": {
-          "name": "Bulb"
-        },
-        "lamp": {
-          "name": "Lamp"
-        },
-        "light": {
-          "name": "Light"
-        },
-        "strip": {
-          "name": "Strip"
-        }
+        "name": "Light"
       },
-      "number": {
-        "effect_speed": {
-          "name": "Effect Speed"
-        },
-        "effect_length": {
-          "name": "Effect Length"
-        },
-        "sensitivity": {
-          "name": "Audio Input Sensitivity"
-        }
-      },
-      "select": {
-        "audio_input": {
-          "name": "Audio Input"
-        },
-        "light_mode": {
-          "name": "Light Mode"
-        }
-      },
-      "sensor": {
-        "effect_type": {
-          "name": "Effect Type",
-          "state": {
-            "static": "Static",
-            "dynamic": "Dynamic",
-            "sound": "Sound"
-          }
-        },
-        "rssi": {
-          "name": "Signal strength"
-        }
-      },
-      "switch": {
-        "effect_direction": {
-          "name": "Effect Direction"
-        },
-        "effect_loop": {
-          "name": "Loop Effects"
-        },
-        "effect_play": {
-          "name": "Effect Play/Pause"
-        },
-        "scene_loop": {
-          "name": "Loop Scenes"
-        }
+      "strip": {
+        "name": "Strip"
       }
     },
-    "config": {
-      "abort": {
-        "already_configured": "Device is already configured.",
-        "already_in_progress": "Configuration flow is already in progress.",
-        "mesh_not_supported": "Mesh not supported.",
-        "no_devices_found": "No devices found on the network.",
-        "no_response": "No response from device.",
-        "not_supported": "Device not supported.",
-        "unknown": "Unexpected error!"
+    "number": {
+      "effect_speed": {
+        "name": "Effect Speed"
       },
-      "error": {
-        "cannot_connect": "Failed to connect!",
-        "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs).",
-        "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs).",
-        "mesh_login": "Failed to login to mesh cloud (check logs).",
-        "mesh_no_devices": "No devices matching mesh ID found in the cloud.",
-        "unknown": "Unexpected error!"
+      "effect_length": {
+        "name": "Effect Length"
       },
-      "flow_title": "{name}",
-      "step": {
-        "user": {
-          "data": {
-            "address": "Device"
-          },
-          "description": "Choose a device to set up"
-        },
-        "network_confirm": {
-          "title": "Network Discovery",
-          "description": "Do you want to set up {device_name} - {model} @ {ip}?"
-        },
-        "bluetooth_confirm": {
-          "title": "Bluetooth Discovery",
-          "description": "Confirm you want to set up {name}?"
-        },
-        "mesh_cloud": {
-          "title": "{mesh_title} Cloud Credentials",
-          "description": "Provide the credentials you use in the (Magic Hue/Hao Deng) app.",
-          "data": {
-            "username": "Username (email)",
-            "password": "Password",
-            "country": "Country"
-          }
-        }
+      "sensitivity": {
+        "name": "Audio Input Sensitivity"
       }
     },
-    "options": {
-      "abort": {
-        "no_configurable": "Nothing to configure!",
-        "not_available": "Device is not available/connected."
+    "select": {
+      "audio_input": {
+        "name": "Audio Input"
       },
-      "error": {
-        "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs).",
-        "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs).",
-        "mesh_login": "Failed to login to mesh cloud (check logs).",
-        "mesh_no_devices": "No devices matching mesh ID found in the cloud.",
-        "unknown": "Unexpected error!"
+      "light_mode": {
+        "name": "Light Mode"
+      }
+    },
+    "sensor": {
+      "effect_type": {
+        "name": "Effect Type",
+        "state": {
+          "static": "Static",
+          "dynamic": "Dynamic",
+          "sound": "Sound"
+        }
       },
-      "step": {
-        "conf_menu": {
-          "title": "Configuration Options",
-          "menu_options": {
-            "channels": "Configure Device",
-            "tune_comms": "Tune Device Communications"
-          }
+      "rssi": {
+        "name": "Signal strength"
+      }
+    },
+    "switch": {
+      "effect_direction": {
+        "name": "Effect Direction"
+      },
+      "effect_loop": {
+        "name": "Loop Effects"
+      },
+      "effect_play": {
+        "name": "Effect Play/Pause"
+      },
+      "scene_loop": {
+        "name": "Loop Scenes"
+      }
+    }
+  },
+  "config": {
+    "abort": {
+      "already_configured": "Device is already configured.",
+      "already_in_progress": "Configuration flow is already in progress.",
+      "mac_mismatch": "MAC Mismatch, multihomed devices not supported.",
+      "mesh_not_supported": "Mesh not supported.",
+      "no_devices_found": "No devices found on the network.",
+      "no_response": "No response from device.",
+      "not_supported": "Device not supported.",
+      "unknown": "Unexpected error!"
+    },
+    "error": {
+      "cannot_connect": "Failed to connect!",
+      "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs).",
+      "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs).",
+      "mesh_login": "Failed to login to mesh cloud (check logs).",
+      "mesh_no_devices": "No devices matching mesh ID found in the cloud.",
+      "unknown": "Unexpected error!"
+    },
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "data": {
+          "address": "Device"
         },
-        "channels": {
-          "title": "Channel Configuration",
-          "data": {
-            "channel": "Choose a channel to configure:"
-          }
-        },
-        "conf_type": {
-          "title": "{channel_name} Configuration",
-          "data": {
-            "light_type": "Light configuration type",
-            "chip_type": "LED IC type"
-          },
-          "data_description": {
-            "light_type": "The light configuration and wiring (refer to the products manual for more details).",
-            "chip_type": "The IC type of the LED's connected to the device."
-          }
-        },
-        "conf_channel": {
-          "title": "{channel_name} Configuration",
-          "data": {
-            "chip_order": "LED ordering",
-            "onoff_effect": "Light on/off effect type",
-            "onoff_speed": "Light on/off effect speed",
-            "onoff_pixels": "Light on/off effect, pixels count",
-            "coexistence": "Coexistence of colored and white LED's",
-            "on_power": "Power on state"
-          },
-          "data_description": {
-            "chip_order": "The order of the {chip_type} LED's connected to the device.",
-            "onoff_effect": "The effect to use when the light is turned on or off.",
-            "onoff_speed": "The speed of the effect when the light is turned on or off.",
-            "onoff_pixels": "The number of pixels used by the effect when the light is turned on or off.",
-            "coexistence": "In static modes only, determines if both colored and white LED's coexist or if they are controlled independently.",
-            "on_power": "Determines the state of the light when power is applied/restored to the device."
-          }
-        },
-        "tune_comms": {
-          "title": "Tune Device Communications",
-          "data": {
-            "retry_count": "Retry Counter",
-            "update_interval": "Polling interval"
-          },
-          "data_description": {
-            "retry_count": "The number of retrys when attempting to communicate with a device.",
-            "update_interval": "The interval in seconds between polling a device for status updates."
-          }
-        },
-        "mesh_menu": {
-          "title": "Configuration Options",
-          "menu_options": {
-            "mesh_cloud": "{mesh_title} Cloud Credentials",
-            "tune_comms": "Tune Device Communications"
-          }
-        },
-        "mesh_cloud": {
-          "title": "{mesh_title} Cloud Credentials",
-          "description": "Update the credentials you use in the (Magic Hue/Hao Deng) app",
-          "data": {
-            "username": "Username (email)",
-            "password": "Password",
-            "country": "Country"
-          }
+        "description": "Choose a device to set up"
+      },
+      "network_confirm": {
+        "title": "Network Discovery",
+        "description": "Do you want to set up {device_name} - {model} @ {ip}?"
+      },
+      "bluetooth_confirm": {
+        "title": "Bluetooth Discovery",
+        "description": "Confirm you want to set up {name}?"
+      },
+      "mesh_cloud": {
+        "title": "{mesh_title} Cloud Credentials",
+        "description": "Provide the credentials you use in the (Magic Hue/Hao Deng) app.",
+        "data": {
+          "username": "Username (email)",
+          "password": "Password",
+          "country": "Country"
         }
       }
     }
+  },
+  "options": {
+    "abort": {
+      "no_configurable": "Nothing to configure!",
+      "not_available": "Device is not available/connected."
+    },
+    "error": {
+      "mesh_devices": "Failed to fetch mesh devices from the cloud (check logs).",
+      "mesh_fetch": "Failed to fetch mesh details from the cloud (check logs).",
+      "mesh_login": "Failed to login to mesh cloud (check logs).",
+      "mesh_no_devices": "No devices matching mesh ID found in the cloud.",
+      "unknown": "Unexpected error!"
+    },
+    "step": {
+      "conf_menu": {
+        "title": "Configuration Options",
+        "menu_options": {
+          "channels": "Configure Device",
+          "tune_comms": "Tune Device Communications"
+        }
+      },
+      "channels": {
+        "title": "Channel Configuration",
+        "data": {
+          "channel": "Choose a channel to configure:"
+        }
+      },
+      "conf_type": {
+        "title": "{channel_name} Configuration",
+        "data": {
+          "light_type": "Light configuration type",
+          "chip_type": "LED IC type"
+        },
+        "data_description": {
+          "light_type": "The light configuration and wiring (refer to the products manual for more details).",
+          "chip_type": "The IC type of the LED's connected to the device."
+        }
+      },
+      "conf_channel": {
+        "title": "{channel_name} Configuration",
+        "data": {
+          "chip_order": "LED ordering",
+          "onoff_effect": "Light on/off effect type",
+          "onoff_speed": "Light on/off effect speed",
+          "onoff_pixels": "Light on/off effect, pixels count",
+          "coexistence": "Coexistence of colored and white LED's",
+          "on_power": "Power on state"
+        },
+        "data_description": {
+          "chip_order": "The order of the {chip_type} LED's connected to the device.",
+          "onoff_effect": "The effect to use when the light is turned on or off.",
+          "onoff_speed": "The speed of the effect when the light is turned on or off.",
+          "onoff_pixels": "The number of pixels used by the effect when the light is turned on or off.",
+          "coexistence": "In static modes only, determines if both colored and white LED's coexist or if they are controlled independently.",
+          "on_power": "Determines the state of the light when power is applied/restored to the device."
+        }
+      },
+      "tune_comms": {
+        "title": "Tune Device Communications",
+        "data": {
+          "retry_count": "Retry Counter",
+          "update_interval": "Polling interval"
+        },
+        "data_description": {
+          "retry_count": "The number of retrys when attempting to communicate with a device.",
+          "update_interval": "The interval in seconds between polling a device for status updates."
+        }
+      },
+      "mesh_menu": {
+        "title": "Configuration Options",
+        "menu_options": {
+          "mesh_cloud": "{mesh_title} Cloud Credentials",
+          "tune_comms": "Tune Device Communications"
+        }
+      },
+      "mesh_cloud": {
+        "title": "{mesh_title} Cloud Credentials",
+        "description": "Update the credentials you use in the (Magic Hue/Hao Deng) app",
+        "data": {
+          "username": "Username (email)",
+          "password": "Password",
+          "country": "Country"
+        }
+      }
+    }
+  }
 }

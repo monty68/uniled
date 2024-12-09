@@ -66,8 +66,8 @@ class UniledDiscovery(TypedDict):
     mac_address: str | None = None
     ip_address: str | None = None
     local_name: str | None = None
-    model_name: str | None = None
     model_code: int | None = None
+    model_name: str | None = None
 
     @staticmethod
     def match_model_name(transport: str, name: str) -> UniledModel | None:

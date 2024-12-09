@@ -176,7 +176,7 @@ async def async_discover_devices(
             continue
 
     if not address:
-        _LOGGER.debug("Scanning complete %s", scanner.get_device_info())
+        _LOGGER.debug("Scanning complete")
         return scanner.get_device_info()
 
     _LOGSCAN.debug("Probe complete %s", scanner.get_device_info())
@@ -223,8 +223,8 @@ def async_build_cached_discovery(entry: ConfigEntry) -> UniledDiscovery:
     data = entry.data
     return UniledDiscovery(
         transport=data.get(CONF_TRANSPORT),
-        source="cache",
-        mac_address=UniledDevice.format_mac(entry.unique_id),
+        source="cfg",
+        mac_address=dr.format_mac(entry.unique_id),
         ip_address=data[CONF_HOST],
         local_name=data.get(CONF_NAME),
         model_name=data.get(CONF_MODEL),
@@ -253,13 +253,11 @@ def async_clear_discovery_cache(hass: HomeAssistant, host: str) -> None:
 
 
 @callback
-def async_name_from_discovery(
-    device: UniledDiscovery, model_code: int | None = None
-) -> str:
+def async_name_from_discovery(device: UniledDiscovery) -> str:
     """Convert a UNILED discovery to a human readable name."""
     return UniledDevice.human_readable_name(
+        None,
         device[ATTR_UL_LOCAL_NAME],
-        device[ATTR_UL_MODEL_NAME],
         device[ATTR_UL_MAC_ADDRESS],
     )
 
@@ -274,8 +272,7 @@ def async_populate_data_from_discovery(
     for conf_key, discovery_key in CONF_TO_DISCOVERY.items():
         if (
             device.get(discovery_key) is not None
-            and conf_key
-            not in data_updates  # Prefer the model num from TCP instead of UDP
+            and conf_key not in data_updates
             and current_data.get(conf_key) != device[discovery_key]  # type: ignore[literal-required]
         ):
             data_updates[conf_key] = device[discovery_key]  # type: ignore[literal-required]
@@ -286,8 +283,7 @@ def async_update_entry_from_discovery(
     hass: HomeAssistant,
     entry: config_entries.ConfigEntry,
     device: UniledDiscovery,
-    model_name: str | None,
-    allow_update_mac: bool,
+    allow_update_mac: bool = False,
 ) -> bool:
     """Update a config entry from a UNILED discovery."""
     data_updates: dict[str, Any] = {}
@@ -295,22 +291,29 @@ def async_update_entry_from_discovery(
     assert mac_address is not None
     formatted_mac = dr.format_mac(mac_address)
     updates: dict[str, Any] = {}
+
     if not entry.unique_id or (
         allow_update_mac
         and entry.unique_id != formatted_mac
         and UniledDevice.mac_matches_by_one(formatted_mac, entry.unique_id)
     ):
         updates["unique_id"] = formatted_mac
-    if model_name and entry.data.get(CONF_MODEL) != model_name:
-        data_updates[CONF_MODEL] = model_name
     async_populate_data_from_discovery(entry.data, data_updates, device)
-    if is_ip_address(entry.title):
-        updates["title"] = async_name_from_discovery(device, model_name)
-    title_matches_name = entry.title == entry.data.get(CONF_NAME)
+
+    device_title = async_name_from_discovery(device)
+    title_matches_name = entry.title == device_title
+    if not title_matches_name:
+        updates["title"] = device_title
+
+    # _LOGGER.error(entry.title)
+    # _LOGGER.error(entry.data)
+    # _LOGGER.error(data_updates)
+    # _LOGGER.error(device)
+
     if data_updates or title_matches_name:
+        _LOGGER.debug("Update entry: %s", data_updates)
         updates["data"] = {**entry.data, **data_updates}
-        if title_matches_name:
-            del updates["data"][CONF_NAME]
+
     # If the title has changed and the config entry is loaded, a listener is
     # in place, and we should not reload
     if updates and not ("title" in updates and entry.state is ConfigEntryState.LOADED):

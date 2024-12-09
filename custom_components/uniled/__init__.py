@@ -42,6 +42,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     ATTR_UL_MAC_ADDRESS,
+    ATTR_UL_MODEL_NAME,
     CONF_UL_TRANSPORT as CONF_TRANSPORT,
     DOMAIN,
     UNILED_COMMAND_SETTLE_DELAY,
@@ -91,13 +92,11 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
 ]
 
-CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+# CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the UNILED component."""
-
-    _LOGGER.warning("**** Starting scanner background task ****")
 
     domain_data = hass.data.setdefault(DOMAIN, {})
     domain_data[UNILED_DISCOVERY] = await async_discover_devices(
@@ -107,6 +106,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     @callback
     def _async_start_background_discovery(*_: Any) -> None:
         """Run discovery in the background."""
+        _LOGGER.info("**** Starting scanner background task ****")
         hass.async_create_background_task(_async_discovery(), UNILED_DISCOVERY)
 
     async def _async_discovery(*_: Any) -> None:
@@ -206,40 +206,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     elif transport == UNILED_TRANSPORT_NET:
-        discovery_cached = True
         host = entry.data[CONF_HOST]
+        discovery = async_build_cached_discovery(entry)
 
-        if discovery := async_get_discovery(hass, host):
-            discovery_cached = False
-        else:
-            discovery = async_build_cached_discovery(entry)
-        uniled = UniledNetDevice(discovery=discovery, options=entry.options)
-        if not uniled.model:
-            raise ConfigEntryError(f"Could not resolve model for device {host}")
-
-        # UDP probe after successful connect only
-        if discovery_cached:
-            if directed_discovery := await async_discover_device(hass, host):
-                uniled.discovery = discovery = directed_discovery
-                discovery_cached = False
+        if directed_discovery := await async_discover_device(hass, host):
+            if discovery[ATTR_UL_MODEL_NAME] != directed_discovery[ATTR_UL_MODEL_NAME]:
+                raise ConfigEntryNotReady(
+                    f"Unexpected device model found at {host}; Expected "
+                    f"'{discovery[ATTR_UL_MODEL_NAME]}', found "
+                    f"'directed_discovery[ATTR_UL_MODEL_NAME]'"
+                )
+            discovery = directed_discovery
 
         if entry.unique_id and (mac := discovery.get(ATTR_UL_MAC_ADDRESS)):
             mac = dr.format_mac(cast(str, mac))
-            if not uniled.mac_matches_by_one(mac, entry.unique_id):
-                # The device is offline and another device is now using the ip address
+            if entry.unique_id != mac:
                 raise ConfigEntryNotReady(
-                    f"Unexpected device found at {host}; Expected {entry.unique_id}, found"
-                    f" {mac}"
+                    f"Unexpected device found at {host}; Expected "
+                    f"{entry.unique_id}, found "
+                    f"{mac}"
                 )
 
-        if not discovery_cached:
-            # Only update the entry once we have verified the unique id
-            # is either missing or we have verified it matches
-            async_update_entry_from_discovery(
-                hass, entry, discovery, uniled.model_name, True
-            )
-
-        # await _async_migrate_unique_ids(hass, entry)
+        uniled = UniledNetDevice(discovery=discovery, options=entry.options)
+        if not uniled.model:
+            raise ConfigEntryError(f"Could not resolve model for device {host}")
+        uniled.discovery = discovery
 
     else:
         raise ConfigEntryError(
@@ -247,11 +238,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     coordinator = UniledUpdateCoordinator(hass, uniled, entry)
+
     if not await coordinator.device.startup():
         raise ConfigEntryNotReady("Failed to startup")
 
     if not coordinator.device.available:
-        ## Device is not available, so attempt first connection
+        ## Device is not available, so attempt a connection
         startup_event = asyncio.Event()
         cancel_first_update = coordinator.device.register_callback(
             lambda *_: startup_event.set()
@@ -285,18 +277,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             gc.collect()
             raise ConfigEntryNotReady("No response from device") from ex
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
-
-    async def _async_stop(event: Event) -> None:
-        """Close the connection."""
-        await _async_shutdown_coordinator(hass, coordinator)
-
-    entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
-    )
-
     if transport == UNILED_TRANSPORT_NET:
 
         async def _async_handle_discovered_device() -> None:
@@ -313,6 +293,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _async_handle_discovered_device,
             )
         )
+
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
+    async def _async_stop(event: Event) -> None:
+        """Close the connection."""
+        await _async_shutdown_coordinator(hass, coordinator)
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+    )
 
     _LOGGER.debug(
         "*** Added UniLED device entry for: %s, ID: %s, Unique ID: %s",
@@ -454,7 +446,8 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
     await _async_shutdown_coordinator(hass, coordinator, rediscover=False)
     await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY * 3)
-    await hass.config_entries.async_reload(entry.entry_id)
+    result = await hass.config_entries.async_reload(entry.entry_id)
+    _LOGGER.info("%s: Reload result %s", coordinator.device.name, result)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
@@ -465,16 +458,7 @@ async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
         _LOGGER.info("%s: Unloading", coordinator.device.name)
         await coordinator.device.shutdown()
 
-    unload_ok = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, component)
-                for component in PLATFORMS
-            ]
-        )
-    )
-
-    if unload_ok:
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
         if coordinator:
             if coordinator.device.transport != UNILED_TRANSPORT_NET:
@@ -486,7 +470,19 @@ async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
             del coordinator
         gc.collect()
 
+    _LOGGER.debug("Unloaded: %s", unload_ok)
+
     return unload_ok
+
+
+#   device: AIOWifiLedBulb = hass.data[DOMAIN][entry.entry_id].device
+#    platforms = PLATFORMS_BY_TYPE[device.device_type]
+#    if unload_ok := await hass.config_entries.async_unload_platforms(entry, platforms):
+#        # Make sure we probe the device again in case something has changed externally
+#        async_clear_discovery_cache(hass, entry.data[CONF_HOST])
+#        del hass.data[DOMAIN][entry.entry_id]
+#        await device.async_stop()
+#    return unload_ok
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry):
