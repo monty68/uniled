@@ -144,6 +144,20 @@ class UniledNetDevice(UniledDevice):
         self._available = False
         self._close()
 
+    async def startup(self, event=None) -> bool:
+        """Startup the device."""
+        if not self._started:
+            try:
+                success = await self.update(retry=3)
+                _LOGGER.debug("%s: Startup state: %s", self.name, success)
+            except Exception as exc:  # noqa: BLE001
+                _LOGGER.warning(
+                    "%s: Startup - Failed, exception: %s", self.name, str(exc)
+                )
+                success = False
+            self._started = success
+        return self._started
+
     async def update(self, retry: int | None = None) -> bool:
         """Update the device."""
         _LOGGER.debug("%s: Update!", self.name)
