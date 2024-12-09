@@ -1,40 +1,35 @@
-"""UniLED SPTech Common Components"""
+"""UniLED SPTech Common Components."""
 
 from __future__ import annotations
+
 from collections import namedtuple
+from dataclasses import dataclass
+import logging
 from typing import Any, Final
 
+from .channel import UniledChannel
 from .const import *  # I know!
 from .device import UniledDevice
-from .channel import UniledChannel
-from .sptech_conf import (
-    UNILEDEffectType,
-    UNILEDEffects,
-    SPTechConf,
-    SPTechFX,
-)
 from .features import (
-    UniledAttribute,
-    LightStripFeature,
-    EffectTypeFeature,
+    AudioInputFeature,
+    AudioSensitivityFeature,
+    ChipOrderFeature,
+    CoexistenceFeature,
+    EffectDirectionFeature,
+    EffectLengthFeature,
     EffectLoopFeature,
     EffectPlayFeature,
     EffectSpeedFeature,
-    EffectLengthFeature,
-    EffectDirectionFeature,
-    AudioInputFeature,
-    AudioSensitivityFeature,
+    EffectTypeFeature,
     LightModeFeature,
+    LightStripFeature,
     LightTypeFeature,
-    ChipOrderFeature,
     OnOffEffectFeature,
-    OnOffSpeedFeature,
     OnOffPixelsFeature,
-    CoexistenceFeature,
+    OnOffSpeedFeature,
     OnPowerFeature,
 )
-
-import logging
+from .sptech_conf import SPTechConf, SPTechFX, UNILEDEffects, UNILEDEffectType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +42,7 @@ RGBWW = namedtuple("RGBWW", ["r", "g", "b", "cw", "ww"])
 ## BanlanX - SPTech Common Model Implementation
 ##
 class SPTechModel(SPTechFX):
-    """BanlanX - SPTech Common Model Implementation"""
+    """BanlanX - SPTech Common Model Implementation."""
 
     MANUFACTURER_NAME: Final = "SPLED (BanlanX)"
 
@@ -132,7 +127,7 @@ class SPTechModel(SPTechFX):
     encoder_key: int = 0
 
     def __encoder(self, device: UniledDevice, cmd: int, data: bytearray) -> bytearray:
-        """Encode BanlanX Message. (currently not supported)"""
+        """Encode BanlanX Message (currently not supported)."""
         bytes: int = len(data) & 0xFFFF
         message = self.__header_magic(device)
         message.append(cmd & 0xFF)
@@ -149,7 +144,7 @@ class SPTechModel(SPTechFX):
         return message
 
     def __header_magic(self, device: UniledDevice) -> bytearray:
-        """Return Message Header Magic Byte(s)"""
+        """Return Message Header Magic Byte(s)."""
         return bytearray(
             self.HEADER_NET_PACKET
             if device.transport == UNILED_TRANSPORT_NET
@@ -159,7 +154,7 @@ class SPTechModel(SPTechFX):
     def __header_validate(
         self, device: UniledDevice, header: bytearray
     ) -> bytearray | None:
-        """Validate and return message header payload"""
+        """Validate and return message header payload."""
         magic_data = self.__header_magic(device)
         magic_size = len(magic_data)
         if not header.startswith(magic_data):
@@ -169,13 +164,13 @@ class SPTechModel(SPTechFX):
     def __header_extract_command(
         self, device: UniledDevice, header: bytearray
     ) -> int | None:
-        """Return Message Header Command Byte"""
+        """Return Message Header Command Byte."""
         if (payload := self.__header_validate(device, header)) is not None:
             return payload[self.HEADER_PAYLOAD_COMMAND]
         return None
 
     def length_response_header(self, device: UniledDevice, command: bytearray) -> int:
-        """Expected header length of a command response"""
+        """Expected header length of a command response."""
         if (payload := self.__header_validate(device, command)) is not None:
             if payload[self.HEADER_PAYLOAD_COMMAND] == self.cmd.STATUS_QUERY:
                 return len(self.__header_magic(device)) + self.HEADER_PAYLOAD_LENGTH
@@ -184,7 +179,7 @@ class SPTechModel(SPTechFX):
     def decode_response_header(
         self, device: UniledDevice, command: bytearray, header: bytearray
     ) -> int | None:
-        """Decode a response header"""
+        """Decode a response header."""
         if (header := self.__header_validate(device, header)) is None:
             raise Exception(f"Response Header Invalid")
         payload_size = int.from_bytes(
@@ -255,7 +250,7 @@ class SPTechModel(SPTechFX):
         chunk: int,
         data: bytearray,
     ) -> bytearray | None:
-        """Decode Chunk Type #1"""
+        """Decode Chunk Type #1."""
         device.master.status.replace(
             {
                 ATTR_UL_DEVICE_FORCE_REFRESH: True,
@@ -269,7 +264,7 @@ class SPTechModel(SPTechFX):
             }
         )
 
-        device.features = [
+        device.master.features = [
             OnOffEffectFeature(),
             OnOffSpeedFeature(),
             OnOffPixelsFeature(self.MAX_ONOFF_PIXELS),
@@ -298,7 +293,7 @@ class SPTechModel(SPTechFX):
         chunk: int,
         data: bytearray,
     ) -> bytearray | None:
-        """Decode Chunk Type #2 (and #3)"""
+        """Decode Chunk Type #2 (and #3)."""
         device.master.status.update(
             {"unknown2.0": data[0], ATTR_UL_POWER: bool(power := data[1])}
         )
@@ -316,7 +311,7 @@ class SPTechModel(SPTechFX):
         length = data[15]
         direction = data[16]
         gain = data[17]
-        input = data[18]
+        audio = data[18]
         effect_color = (data[19], data[20], data[21])
         effect_white = (data[22], data[23])
         data = data[24:]
@@ -326,8 +321,8 @@ class SPTechModel(SPTechFX):
 
         if cfg.order and len(cfg.order) > 1:
             device.master.features.append(ChipOrderFeature())
-            device.master.status.set(ATTR_UL_CHIP_ORDER, 
-                self.chip_order_name(cfg.order, order)
+            device.master.status.set(
+                ATTR_UL_CHIP_ORDER, self.chip_order_name(cfg.order, order)
             )
 
         device.master.status.update(
@@ -387,7 +382,7 @@ class SPTechModel(SPTechFX):
                 )
 
                 audio_input = (
-                    self.str_if_key_in(input, self.DICTOF_AUDIO_INPUTS)
+                    self.str_if_key_in(audio, self.DICTOF_AUDIO_INPUTS)
                     if power and self.is_sound_mode(mode)
                     else None
                 )
@@ -553,13 +548,17 @@ class SPTechModel(SPTechFX):
         #
         id = data[0]
         time = int.from_bytes(data[5:], byteorder="big")
-        timers.update({id: {
-            ATTR_UL_STATUS: bool(data[1]),
-            ATTR_UL_POWER: bool(data[2]),
-            "days": data[3],
-            "meridiem": data[4],
-            "time": time,
-        }})
+        timers.update(
+            {
+                id: {
+                    ATTR_UL_STATUS: bool(data[1]),
+                    ATTR_UL_POWER: bool(data[2]),
+                    "days": data[3],
+                    "meridiem": data[4],
+                    "time": time,
+                }
+            }
+        )
         device.master.set(ATTR_UL_TIMERS, timers)
         return None
 
@@ -978,8 +977,8 @@ class SPTechModel(SPTechFX):
         self, device: UniledDevice, channel: UniledChannel, value: str
     ) -> bytearray | None:
         """The bytes to send for an input change"""
-        input = self.int_if_str_in(str(value), self.DICTOF_AUDIO_INPUTS, 0x00)
-        return self.__encoder(device, self.cmd.AUDIO_INPUT, bytearray([input]))
+        audio = self.int_if_str_in(str(value), self.DICTOF_AUDIO_INPUTS, 0x00)
+        return self.__encoder(device, self.cmd.AUDIO_INPUT, bytearray([audio]))
 
     def fetch_audio_input_list(
         self, device: UniledDevice, channel: UniledChannel
