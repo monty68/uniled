@@ -25,7 +25,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+# from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
 from homeassistant.helpers.typing import UndefinedType
@@ -58,6 +59,7 @@ from .const import (
     DOMAIN,
     UNILED_ENTITY_ATTRIBUTES,
     UNILED_OPTIONS_ATTRIBUTES,
+    # UNILED_SIGNAL_STATE_UPDATED,
     UNILED_STATE_CHANGE_LATENCY,
 )
 from .coordinator import UniledUpdateCoordinator

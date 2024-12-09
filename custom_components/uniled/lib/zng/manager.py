@@ -1,4 +1,5 @@
 """UniLED ZNG (Zengge Mesh) Device Handler."""
+
 ##
 ## With huge thanks to SleepyNinja0o for the great work deciphering and developing code for Zengge mesh devices
 ##
@@ -581,7 +582,7 @@ class ZenggeManager(UniledBleDevice):
     async def startup(self, event=None) -> bool:
         """Startup the mesh."""
         if self.started or self._starting:
-            return
+            return True
         _LOGGER.info("%s: Starting mesh...", self.name)
         self._starting = True
         async with self._operation_lock:
@@ -777,8 +778,8 @@ class ZenggeManager(UniledBleDevice):
 
         if reply[0] == 0x0D:
             self._mesh_session = pckt.make_session_key(
-                node.mesh_key.encode(),     # self.mesh_key.encode(),
-                node.mesh_pass.encode(),    # self.mesh_pass.encode(),
+                node.mesh_key.encode(),  # self.mesh_key.encode(),
+                node.mesh_pass.encode(),  # self.mesh_pass.encode(),
                 session_random,
                 reply[1:9],
             )
