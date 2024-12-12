@@ -210,7 +210,7 @@ class UniledNetDevice(UniledDevice):
                 self.name,
             )
 
-        async with self._operation_lock:
+        async with self._lock:
             for attempt in range(max_attempts):
                 try:
                     return await self._execute_commands(commands)
