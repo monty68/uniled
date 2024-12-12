@@ -60,9 +60,7 @@ from .discovery import (
     async_clear_discovery_cache,
     async_discover_device,
     async_discover_devices,
-    async_get_discovery,
     async_trigger_discovery,
-    async_update_entry_from_discovery,
 )
 from .lib.ble.device import (
     UNILED_TRANSPORT_BLE,
@@ -98,23 +96,23 @@ PLATFORMS: list[Platform] = [
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the UNILED component."""
 
-    domain_data = hass.data.setdefault(DOMAIN, {})
-    domain_data[UNILED_DISCOVERY] = await async_discover_devices(
-        hass, UNILED_DISCOVERY_STARTUP_TIMEOUT
-    )
+    # domain_data = hass.data.setdefault(DOMAIN, {})
+    # domain_data[UNILED_DISCOVERY] = await async_discover_devices(
+    #    hass, UNILED_DISCOVERY_STARTUP_TIMEOUT
+    # )
 
-    @callback
-    def _async_start_background_discovery(*_: Any) -> None:
-        """Run discovery in the background."""
-        _LOGGER.info("**** Starting scanner background task ****")
-        hass.async_create_background_task(_async_discovery(), UNILED_DISCOVERY)
+    # async_trigger_discovery(hass, domain_data[UNILED_DISCOVERY])
 
     async def _async_discovery(*_: Any) -> None:
         async_trigger_discovery(
             hass, await async_discover_devices(hass, UNILED_DISCOVERY_SCAN_TIMEOUT)
         )
 
-    async_trigger_discovery(hass, domain_data[UNILED_DISCOVERY])
+    @callback
+    def _async_start_background_discovery(*_: Any) -> None:
+        """Run discovery in the background."""
+        _LOGGER.info("Starting background scanner task")
+        hass.async_create_background_task(_async_discovery(), UNILED_DISCOVERY)
 
     hass.bus.async_listen_once(
         EVENT_HOMEASSISTANT_STARTED, _async_start_background_discovery
@@ -446,8 +444,7 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY)
     await _async_shutdown_coordinator(hass, coordinator, rediscover=False)
     await asyncio.sleep(UNILED_COMMAND_SETTLE_DELAY * 3)
-    result = await hass.config_entries.async_reload(entry.entry_id)
-    _LOGGER.info("%s: Reload result %s", coordinator.device.name, result)
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
@@ -470,19 +467,7 @@ async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
             del coordinator
         gc.collect()
 
-    _LOGGER.debug("Unloaded: %s", unload_ok)
-
     return unload_ok
-
-
-#   device: AIOWifiLedBulb = hass.data[DOMAIN][entry.entry_id].device
-#    platforms = PLATFORMS_BY_TYPE[device.device_type]
-#    if unload_ok := await hass.config_entries.async_unload_platforms(entry, platforms):
-#        # Make sure we probe the device again in case something has changed externally
-#        async_clear_discovery_cache(hass, entry.data[CONF_HOST])
-#        del hass.data[DOMAIN][entry.entry_id]
-#        await device.async_stop()
-#    return unload_ok
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry):
