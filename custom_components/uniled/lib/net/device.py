@@ -196,38 +196,41 @@ class UniledNetDevice(UniledDevice):
             _LOGGER.debug("%s: Send command ignored, no data to send", self.name)
             return False
 
+        if not isinstance(commands, list):
+            commands = [commands]
+
+        if retry is None:
+            retry = self.retry_count
+
+        max_attempts = retry + 1
+
         if self._lock.locked():
             _LOGGER.debug(
                 "%s: Operation already in progress, waiting for it to complete",
                 self.name,
             )
 
-        if not isinstance(commands, list):
-            commands = [commands]
-
-        if retry is None:
-            retry = self.retry_count
-        max_attempts = retry + 1
-        for attempt in range(max_attempts):
-            try:
-                return await self._execute_commands(commands)
-            except Exception as ex:  # noqa: BLE001
-                if attempt == retry:
-                    _LOGGER.error(
-                        "%s: Communication failed: %s, stopping trying!",
+        async with self._operation_lock:
+            for attempt in range(max_attempts):
+                try:
+                    return await self._execute_commands(commands)
+                except Exception as ex:  # noqa: BLE001
+                    if attempt == retry:
+                        _LOGGER.error(
+                            "%s: Communication failed: %s, stopping trying!",
+                            self.name,
+                            str(ex),
+                        )
+                        return False
+                    _LOGGER.debug(
+                        "%s: Communication failed with: %s, retry attempt %s of %s",
                         self.name,
                         str(ex),
+                        attempt + 1,
+                        max_attempts,
                     )
-                    return False
-                _LOGGER.debug(
-                    "%s: Communication failed with: %s, retry attempt %s of %s",
-                    self.name,
-                    str(ex),
-                    attempt + 1,
-                    max_attempts,
-                )
-            self._close()
-            await asyncio.sleep(UNILED_NET_ERROR_BACKOFF_TIME)
+                self._close()
+                await asyncio.sleep(UNILED_NET_ERROR_BACKOFF_TIME)
 
         raise RuntimeError("Unreachable")
 
