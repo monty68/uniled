@@ -155,7 +155,7 @@ class UniledChannel:
 
     @context.setter
     def context(self, value: Any):
-        """Set the channels feature list."""
+        """Set the channels context."""
         self._context = value
 
     def get(self, attr: str, default: Any = None) -> Any:
@@ -185,7 +185,7 @@ class UniledChannel:
         def unregister_callback() -> None:
             if callback not in self._callbacks:
                 _LOGGER.warning(
-                    "attempt to unregister noexistent callback: %s", callback
+                    "attempt to unregister non-existent callback: %s", callback
                 )
             if callback in self._callbacks:
                 self._callbacks.remove(callback)
