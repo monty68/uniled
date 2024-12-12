@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta
 import logging
-from typing import Any
+from typing import Any, Final
 
 import voluptuous as vol
 
@@ -39,7 +40,6 @@ from homeassistant.util.color import (
 )
 
 from .entity import (
-    DOMAIN,
     AddEntitiesCallback,
     Platform,
     UniledChannel,
@@ -72,6 +72,8 @@ from .lib.const import (
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 1
+
+UNILED_COMMAND_SETTLE_TIME: Final = 0.3
 
 
 async def async_setup_entry(
@@ -407,6 +409,7 @@ class UniledLightEntity(
             and success
             and not gradual
         ):
+            await asyncio.sleep(UNILED_COMMAND_SETTLE_TIME)
             await self.coordinator.async_request_refresh()
 
     async def update_during_transition(self, when: int) -> None:
