@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from collections import namedtuple
 from dataclasses import dataclass
+from enum import IntEnum
 import logging
 from typing import Any, Final
 
 from .channel import UniledChannel
-from .const import *  # I know!
+from .const import *
 from .device import UniledDevice
 from .features import (
     AudioInputFeature,
@@ -92,15 +93,20 @@ class SPTechModel(SPTechFX):
 
     @dataclass
     class DIYSolidSlot:
+        """DIY Solid Slot."""
+
         pixels: int = 0
         color: RGB = RGB(0, 0, 0)
 
-        def __init__(self, data: bytearray):
+        def __init__(self, data: bytearray) -> None:
+            """Initialize a DIY solid slot."""
             self.pixels = data[0] & 0xFF
             self.color = RGB(data[1], data[2], data[3])
 
     @dataclass(frozen=True)
     class cmd(IntEnum):
+        """Supported Command Numbers."""
+
         STATUS_QUERY = 0x02
         ONOFF_OPTIONS = 0x08
         COEXISTENCE = 0x0A
@@ -128,18 +134,18 @@ class SPTechModel(SPTechFX):
 
     def __encoder(self, device: UniledDevice, cmd: int, data: bytearray) -> bytearray:
         """Encode BanlanX Message (currently not supported)."""
-        bytes: int = len(data) & 0xFFFF
+        data_size: int = len(data) & 0xFFFF
         message = self.__header_magic(device)
         message.append(cmd & 0xFF)
         message.append(self.encoder_key & 0xFF)
         if device.transport == UNILED_TRANSPORT_NET:
             message.append(0x00)
             message.append(0x00)
-            message.extend(bytes.to_bytes(2, byteorder="big"))
+            message.extend(data_size.to_bytes(2, byteorder="big"))
         else:
             message.append(0x01)
             message.append(0x00)
-            message.append(bytes & 0xFF)
+            message.append(data_size & 0xFF)
         message.extend(data)
         return message
 
@@ -170,7 +176,7 @@ class SPTechModel(SPTechFX):
         return None
 
     def length_response_header(self, device: UniledDevice, command: bytearray) -> int:
-        """Expected header length of a command response."""
+        """Return the (if any) expected header length of a command response."""
         if (payload := self.__header_validate(device, command)) is not None:
             if payload[self.HEADER_PAYLOAD_COMMAND] == self.cmd.STATUS_QUERY:
                 return len(self.__header_magic(device)) + self.HEADER_PAYLOAD_LENGTH
@@ -197,7 +203,10 @@ class SPTechModel(SPTechFX):
         header: bytearray,
         data: bytearray,
     ) -> bool:
-        """Decode response payload data"""
+        """Decode response payload data."""
+        device.master.status.replace({})
+        device.master.features = []
+
         # Packet Format, 0x00 = 1 Byte Length Fields, 0x01 = 2 Byte Length Fields
         length_fields = data.pop(0)
         while len(data):
@@ -222,7 +231,7 @@ class SPTechModel(SPTechFX):
                             undecoded.hex(),
                             len(undecoded),
                         )
-                except Exception as ex:
+                except Exception as ex:  # noqa: BLE001
                     _LOGGER.warning(
                         "%s: Exception decoding chunk %d: %s",
                         device.name,
@@ -264,12 +273,14 @@ class SPTechModel(SPTechFX):
             }
         )
 
-        device.master.features = [
-            OnOffEffectFeature(),
-            OnOffSpeedFeature(),
-            OnOffPixelsFeature(self.MAX_ONOFF_PIXELS),
-            OnPowerFeature(),
-        ]
+        device.master.features.extend(
+            [
+                OnOffEffectFeature(),
+                OnOffSpeedFeature(),
+                OnOffPixelsFeature(self.MAX_ONOFF_PIXELS),
+                OnPowerFeature(),
+            ]
+        )
 
         cfg: SPTechConf = self.match_light_type_config(data[10])
         if not cfg:
@@ -500,7 +511,7 @@ class SPTechModel(SPTechFX):
         chunk: int,
         data: bytearray,
     ) -> bytearray | None:
-        """Decode Chunk Type #3"""
+        """Decode Chunk Type #3."""
         device.master.status.update(
             {
                 "unknown3.0": data.pop(0),
@@ -528,7 +539,7 @@ class SPTechModel(SPTechFX):
         chunk: int,
         data: bytearray,
     ) -> bytearray | None:
-        """Decode Chunk Type #4"""
+        """Decode Chunk Type #4."""
         # _LOGGER.debug("%s: Decode Chunk #%d: %s (%d)", device.name, chunk, data.hex(), len(data))
         timers: dict[int, dict[str, Any]] = device.master.get(ATTR_UL_TIMERS, {})
 
@@ -546,11 +557,11 @@ class SPTechModel(SPTechFX):
         # 06 - ?
         # 07 - ?
         #
-        id = data[0]
+        tid = data[0]
         time = int.from_bytes(data[5:], byteorder="big")
         timers.update(
             {
-                id: {
+                tid: {
                     ATTR_UL_STATUS: bool(data[1]),
                     ATTR_UL_POWER: bool(data[2]),
                     "days": data[3],
@@ -570,7 +581,7 @@ class SPTechModel(SPTechFX):
         chunk: int,
         data: bytearray,
     ) -> bytearray | None:
-        """Decode Chunk Type #5"""
+        """Decode Chunk Type #5."""
         device.master.status.update(
             {
                 "unknown5.0": data.pop(0),
@@ -613,13 +624,16 @@ class SPTechModel(SPTechFX):
 
     ## Message Chunk 6 - Network Information
     ##
+    ## 3765386462653432376166363166303364366663653463633165306530363065
+    ## 7 A 8 d b A 4 2 7 a f 6 1 f 0 3 d 6 f c e 4 c c 1 e 0 e 0 6 0 e
+    ##
     def decode_chunk_6(
         self,
         device: UniledDevice,
         chunk: int,
         data: bytearray,
     ) -> bytearray | None:
-        """Decode Chunk Type #6"""
+        """Decode Chunk Type #6."""
         string_count = int.from_bytes(data[0:2], byteorder="big")
         data = data[2:]
         for string_idx in range(string_count):
