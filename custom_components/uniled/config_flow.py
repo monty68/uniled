@@ -512,12 +512,14 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
             transport=UNILED_TRANSPORT_NET,
             source=UNILED_DISCOVERY_SOURCE_DHCP,
             ip_address=discovery_info.ip,
-            mac_address=UniledNetDevice.format_mac(discovery_info.macaddress),
+            mac_address=dr.format_mac(discovery_info.macaddress),
             local_name=None,
             model_code=None,
             model_name=None,
         )
-        _LOGGER.debug("DHCP Discovered: %s", discovery_info.ip)
+        _LOGGER.debug(
+            "DHCP Discovered: %s (%s)", discovery_info.ip, discovery_info.macaddress
+        )
         return await self._async_network_discovery()
 
     async def async_step_integration_discovery(
@@ -535,7 +537,6 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
         assert mac_address is not None
         mac = dr.format_mac(mac_address)
         self.host = device[ATTR_UL_IP_ADDRESS]
-        await self.async_set_unique_id(mac)
 
         if device[ATTR_UL_MODEL_CODE] is None:
             try:
@@ -550,14 +551,19 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
             if not device:
                 return self.async_abort(reason="no_response")
             _LOGGER.debug("Probe found: %s", device)
+
+            mac_address = device[ATTR_UL_MAC_ADDRESS]
+            mac = dr.format_mac(mac_address)
             self._discovered_device = device
+
+        await self.async_set_unique_id(mac)
 
         for entry in self._async_current_entries(include_ignore=True):
             # Skip if not an existing entry with a mac (in range) of the discovered device
             if not (
                 entry.unique_id
                 and ":" in entry.unique_id
-                and UniledNetDevice.mac_matches_by_one(entry.unique_id, mac)
+                and UniledNetDevice.mac_matches_by_two(entry.unique_id, mac)
             ):
                 continue
 
@@ -593,8 +599,9 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
             return self.async_abort(reason="already_in_progress")
 
         _LOGGER.debug(
-            "Discovered '%s' (local=%s, code=%s, model=%s)",
+            "Discovered '%s' (mac=%s, local=%s, code=%s, model=%s)",
             device[ATTR_UL_IP_ADDRESS],
+            device[ATTR_UL_MAC_ADDRESS],
             device[ATTR_UL_LOCAL_NAME],
             device[ATTR_UL_MODEL_CODE],
             device[ATTR_UL_MODEL_NAME],
