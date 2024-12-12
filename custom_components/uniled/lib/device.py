@@ -67,6 +67,18 @@ class UniledDevice:
         mac_int_2 = int(formatted_mac_2.replace(":", ""), 16)
         return abs(mac_int_1 - mac_int_2) < 2
 
+    @staticmethod
+    def mac_matches_by_two(formatted_mac_1: str, formatted_mac_2: str) -> bool:
+        """Check if a mac address is only one or two digits off.
+
+        Some of the devices have two mac addresses which are
+        one ortwo off from each other. We need to treat them as
+        the same since its the same device.
+        """
+        mac_int_1 = int(formatted_mac_1.replace(":", ""), 16)
+        mac_int_2 = int(formatted_mac_2.replace(":", ""), 16)
+        return abs(mac_int_1 - mac_int_2) < 3
+
     _model: UniledModel | None = None
     _config: dict | MappingProxyType | None = None
     _started: bool = True
