@@ -26,7 +26,7 @@ from .retrys import _socket_retry
 _LOGGER = logging.getLogger(__name__)
 
 UNILED_NET_DEVICE_TIMEOUT: Final = 5.0
-UNILED_NET_ERROR_BACKOFF_TIME = 0.15
+UNILED_NET_ERROR_BACKOFF_TIME = 0.3
 
 
 ##
@@ -58,9 +58,7 @@ class UniledNetDevice(UniledDevice):
 
         if self.model is not None:
             _LOGGER.debug(
-                "%s: Inititalizing (%s)",
-                self.name,
-                self.model_name,
+                "%s: Inititalizing: %s (%s)", self.name, self.model_name, self.address
             )
             self._create_channels()
 
