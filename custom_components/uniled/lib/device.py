@@ -1,23 +1,22 @@
 """UniLED Light Device."""
 
 from __future__ import annotations
+
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Any
+import logging
 from types import MappingProxyType
+from typing import Any
+
 from .channel import UniledChannel
+from .const import (
+    CONF_UL_RETRY_COUNT,
+    CONF_UL_UPDATE_INTERVAL,
+    UNILED_DEVICE_RETRYS,
+    UNILED_UPDATE_SECONDS,
+)
 from .master import UniledMaster
 from .model import UniledModel
-
-
-from .const import (
-    UNILED_UPDATE_SECONDS,
-    UNILED_DEVICE_RETRYS,
-    CONF_UL_UPDATE_INTERVAL,
-    CONF_UL_RETRY_COUNT,
-)
-
-import logging
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -79,14 +78,13 @@ class UniledDevice:
         mac_int_2 = int(formatted_mac_2.replace(":", ""), 16)
         return abs(mac_int_1 - mac_int_2) < 3
 
-    _model: UniledModel | None = None
-    _config: dict | MappingProxyType | None = None
-    _started: bool = True
-    _channels: list[UniledChannel] = []
-    _callbacks: list[Callable[[UniledChannel], None]] = []
-
     def __init__(self, config: Any) -> None:
         """Initialize the base device."""
+        self._model: UniledModel | None = None
+        self._config: dict | MappingProxyType | None = None
+        self._started: bool = True
+        self._channels: list[UniledChannel] = []
+        self._callbacks: list[Callable[[UniledChannel], None]] = []
         if isinstance(config, MappingProxyType):
             self._config = config
 
@@ -115,7 +113,7 @@ class UniledDevice:
                 else:
                     self._channels.append(UniledChannel(count + index))
         elif count > total:
-            for index in range(count - total):
+            for index in range(count - total):  # noqa: B007
                 self._channels.pop()
 
     @property
