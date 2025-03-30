@@ -699,7 +699,7 @@ class SP630E(Signature):
 dataclass(frozen=True)
 
 
-class SP631E_SP641E(Signature):
+class SP631E_SP641E_SP651E(Signature):
     info = "PWM Single Color (Music) Controller"
     conf = {
         0x01: CFG_81(),
@@ -707,119 +707,120 @@ class SP631E_SP641E(Signature):
     ids = {
         0x20: "SP631E",
         0x2C: "SP641E",
+        0x38: "SP651E",
     }
 
 
 dataclass(frozen=True)
 
 
-class SP632E_SP642E(Signature):
+class SP632E_SP642E_SP652E(Signature):
     info = "PWM CCT (Music) Controller"
     conf = {
         0x03: CFG_83(),
     }
-    ids = {0x21: "SP632E", 0x2D: "SP642E"}
+    ids = {0x21: "SP632E", 0x2D: "SP642E", 0x39: "SP652E"}
 
 
 dataclass(frozen=True)
 
 
-class SP633E_SP643E(Signature):
+class SP633E_SP643E_SP653E(Signature):
     info = "PWM RGB (Music) Controller"
     conf = {
         0x05: CFG_85(),
     }
-    ids = {0x22: "SP633E", 0x2E: "SP643E"}
+    ids = {0x22: "SP633E", 0x2E: "SP643E", 0x3A: "SP653E"}
 
 
 dataclass(frozen=True)
 
 
-class SP634E_SP644E(Signature):
+class SP634E_SP644E_SP654E(Signature):
     info = "PWM RGBW (Music) Controller"
     conf = {
         0x07: CFG_87(),
     }
-    ids = {0x23: "SP634E", 0x2F: "SP644E"}
+    ids = {0x23: "SP634E", 0x2F: "SP644E", 0x3B: "SP654E"}
 
 
 dataclass(frozen=True)
 
 
-class SP635E_SP645E(Signature):
+class SP635E_SP645E_SP655E(Signature):
     info = "PWM RGBCCT (Music) Controller"
     conf = {
         0x0A: CFG_8A(),
     }
-    ids = {0x24: "SP635E", 0x30: "SP645E"}
+    ids = {0x24: "SP635E", 0x30: "SP645E", 0x3C: "SP655E"}
 
 
 dataclass(frozen=True)
 
 
-class SP636E_SP646E(Signature):
+class SP636E_SP646E_SP656E(Signature):
     info = "SPI Single Color (Music) Controller"
     conf = {
         0x02: CFG_82(),
     }
-    ids = {0x25: "SP636E", 0x31: "SP646E"}
+    ids = {0x25: "SP636E", 0x31: "SP646E", 0x3D: "SP656E"}
 
 
 dataclass(frozen=True)
 
 
-class SP637E_SP647E(Signature):
+class SP637E_SP647E_SP657E(Signature):
     info = "SPI CCT (Music) Controller"
     conf = {0x04: CFG_84(), 0x0D: CFG_8D()}
-    ids = {0x26: "SP637E", 0x32: "SP647E"}
+    ids = {0x26: "SP637E", 0x32: "SP647E", 0x3E: "SP657E"}
 
 
 dataclass(frozen=True)
 
 
-class SP638E_SP648E(Signature):
+class SP638E_SP648E_SP658E(Signature):
     info = "SPI RGB (Music) Controller"
     conf = {
         0x06: CFG_86(),
     }
-    ids = {0x27: "SP638E", 0x33: "SP648E"}
+    ids = {0x27: "SP638E", 0x33: "SP648E", 0x3F: "SP658E"}
 
 
 dataclass(frozen=True)
 
 
-class SP639E_SP649E(Signature):
+class SP639E_SP649E_SP659E(Signature):
     info = "SPI RGBW (Music) Controller"
     conf = {
         0x08: CFG_88(),
     }
-    ids = {0x28: "SP639E", 0x34: "SP649E"}
+    ids = {0x28: "SP639E", 0x34: "SP649E", 0x40: "SP659E"}
 
 
 dataclass(frozen=True)
 
 
-class SP63AE_SP64AE(Signature):
+class SP63AE_SP64AE_SP65AE(Signature):
     info = "SPI RGBCCT (Music) Controller"
     conf = {
         0x0B: CFG_8B(),
         0x0E: CFG_8E(),
     }
-    ids = {0x29: "SP63AE", 0x35: "SP64AE"}
+    ids = {0x29: "SP63AE", 0x35: "SP64AE", 0x41: "SP65AE"}
 
 
 MODEL_SIGNATURE_LIST: Final = [
     SP630E,
-    SP631E_SP641E,
-    SP632E_SP642E,
-    SP633E_SP643E,
-    SP634E_SP644E,
-    SP635E_SP645E,
-    SP636E_SP646E,
-    SP637E_SP647E,
-    SP638E_SP648E,
-    SP639E_SP649E,
-    SP63AE_SP64AE,
+    SP631E_SP641E_SP651E,
+    SP632E_SP642E_SP652E,
+    SP633E_SP643E_SP653E,
+    SP634E_SP644E_SP654E,
+    SP635E_SP645E_SP655E,
+    SP636E_SP646E_SP656E,
+    SP637E_SP647E_SP657E,
+    SP638E_SP648E_SP658E,
+    SP639E_SP649E_SP659E,
+    SP63AE_SP64AE_SP65AE,
 ]
 
 
