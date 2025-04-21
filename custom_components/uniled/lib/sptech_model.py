@@ -1098,7 +1098,7 @@ class SPTechModel(SPTechFX):
             if light_type in self.configs:
                 return self.configs[light_type]
             if len(self.configs) > 1:
-                return next(iter(self.configs))
+                return self.configs[next(iter(self.configs))]
         return None
 
     def match_channel_effect_type(
