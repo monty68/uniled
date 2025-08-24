@@ -774,7 +774,7 @@ class SPTechModel(SPTechFX):
             )
         elif (mode := int(value)) not in self.DICTOF_ON_POWER_STATES:
             return None
-        return self.__encoder(self.cmd.ON_POWER, bytearray([mode]))
+        return self.__encoder(device, self.cmd.ON_POWER, bytearray([mode]))
 
     def fetch_on_power_list(
         self, device: UniledDevice, channel: UniledChannel
