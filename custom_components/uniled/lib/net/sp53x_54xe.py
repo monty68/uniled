@@ -153,6 +153,13 @@ class SP5XXE(UniledProxy):
         code = {0x56: "SP538E", 0x63: "SP548E", 0x69: "SP548E"}
         conf = {0x06: SP5XXE_86()}
 
+    class SP537E(SPTechSig):
+        """SP537E."""
+
+        info = "SPI CCT (Music) Controller"
+        code = {0x55: "SP537E"}
+        conf = {0x04: SP5XXE_84(), 0x0D: SP5XXE_8D()}
+
     class SP539E_SP549E(SPTechSig):
         """SP539E & SP549E."""
 
@@ -162,6 +169,7 @@ class SP5XXE(UniledProxy):
 
     MODEL_SIGNATURE_LIST: Final = [
         SP530E,
+        SP537E,
         SP538E_SP548E,
         SP539E_SP549E,
     ]
