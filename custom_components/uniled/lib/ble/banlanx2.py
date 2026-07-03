@@ -270,6 +270,25 @@ BANLANX2_COLORABLE_EFFECTS: Final = (
     0xD6,
 )
 
+# Host-driven "Player" audio-spectrum streaming.
+#
+# When the audio input is set to "Player" (0x01) and a sound-reactive effect
+# is selected, the official app streams a live 16-band audio spectrum to the
+# controller at roughly 10Hz. The controller then renders its native sound
+# effects (Rhythm Spectrum, VU Meter, ...) from this streamed data instead of
+# its built-in microphone, which lets a host drive the lights from any audio
+# source (for example system/loopback audio). Discovered by capturing the
+# official app's BLE traffic (Android btsnoop_hci.log).
+#
+#   A0 6D 10 <b0> <b1> ... <b15>
+#
+#   0xA0       = BanlanX v2 command prefix
+#   0x6D       = audio-spectrum command
+#   0x10       = payload length (16 bytes)
+#   <b0..b15>  = per-band magnitudes, low -> high frequency, each 0x00 - 0xFF
+BANLANX2_AUDIO_SPECTRUM_COMMAND: Final = 0x6D
+BANLANX2_AUDIO_SPECTRUM_BANDS: Final = 16
+
 
 class BanlanX2(UniledBleModel):
     """BanlanX v2 Protocol Implementation"""
@@ -671,6 +690,35 @@ class BanlanX2(UniledBleModel):
     ) -> list | None:
         """Return list of light modes"""
         return list(BANLANX2_AUDIO_INPUTS.values())
+
+    def build_audio_spectrum_command(
+        self,
+        device: UniledBleDevice,
+        channel: UniledChannel,
+        spectrum: list[int],
+    ) -> bytearray:
+        """Build a host-driven "Player" mode audio spectrum message.
+
+        Streams a 16-band audio spectrum to the controller for use with the
+        "Player" audio input (0x01). Bands are ordered low -> high frequency
+        and each is clamped to 0x00 - 0xFF. Should be sent periodically
+        (~10Hz) while the input is "Player" and a sound-reactive effect is
+        active; the controller renders its native sound effect from this data
+        instead of its built-in microphone. See notes above the class.
+        """
+        bands = [
+            max(0, min(0xFF, int(value)))
+            for value in spectrum[:BANLANX2_AUDIO_SPECTRUM_BANDS]
+        ]
+        bands += [0x00] * (BANLANX2_AUDIO_SPECTRUM_BANDS - len(bands))
+        return bytearray(
+            [
+                0xA0,
+                BANLANX2_AUDIO_SPECTRUM_COMMAND,
+                BANLANX2_AUDIO_SPECTRUM_BANDS,
+                *bands,
+            ]
+        )
 
     def build_chip_order_command(
         self, device: UniledBleDevice, channel: UniledChannel, value: str | None = None
