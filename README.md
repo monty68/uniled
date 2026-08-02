@@ -54,7 +54,7 @@
 
 You can install this component through [HACS](https://hacs.xyz/) to easily receive updates.
 
-After installing HACS, visit the HACS _Integrations_ pane and add `https://github.com/monty68/uniled` as an `Integration` by following [these instructions](https://hacs.xyz/docs/faq/custom_repositories/). You'll then be able to install it through the _Integrations_ pane.
+After installing HACS, visit the HACS _Integrations_ pane and add `https://github.com/satvilla/uniled` as an `Integration` by following [these instructions](https://hacs.xyz/docs/faq/custom_repositories/). You'll then be able to install it through the _Integrations_ pane.
 
 ### Manual Installation
 
@@ -94,7 +94,7 @@ If you want to contribute to UniLED, please read the [Contribution guidelines](C
 
 ***
 
-[uniled]: https://github.com/monty68/uniled
+[uniled]: https://github.com/satvilla/uniled
 [ha-logo]: docs/img/ha-logo-32x32.png
 [SP107E]: docs/sp107e.md
 [SP110E]: docs/sp110e.md
@@ -102,7 +102,7 @@ If you want to contribute to UniLED, please read the [Contribution guidelines](C
 [SP61xE]: docs/sp61Xe.md
 [SP620E]: docs/sp620e.md
 [Info]: info.md
-[user_profile]: https://github.com/monty68
+[user_profile]: https://github.com/satvilla
 [maintenance-shield]: https://img.shields.io/badge/maintainer-Monty-blue.svg?style=for-the-badge
 [buymecoffee]: https://www.buymeacoffee.com/monty68
 [buymecoffeebadge]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg?style=for-the-badge
