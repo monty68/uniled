@@ -1080,7 +1080,7 @@ class BanlanX6xx(SP6xxEProxy):
                             device.master.set(ATTR_HA_WHITE, white_level)
                             white_mode = COLOR_MODE_WHITE
                             supported_color_modes.add(white_mode)
-                        else:
+                        elif cfg.white:
                             # Fix Issue #73, #77
                             # supported_color_modes = set(white_mode)
                             supported_color_modes.add(white_mode)
