@@ -12,7 +12,6 @@ import voluptuous as vol
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
-    ATTR_COLOR_TEMP,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
@@ -26,6 +25,11 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
+
+try:
+    from homeassistant.components.light import ATTR_COLOR_TEMP
+except ImportError:
+    ATTR_COLOR_TEMP = "color_temp"
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_platform
@@ -143,18 +147,20 @@ class UniledLightEntity(
     @property
     def color_mode(self) -> ColorMode | str | None:
         """Return the color mode of the light."""
-        if self.channel.has(ATTR_COLOR_MODE):
-            return self.channel.get(ATTR_COLOR_MODE, ColorMode.ONOFF)
-        if not self._attr_color_mode:
-            supported = self.supported_color_modes()
-            if supported and len(supported) and not self._attr_color_mode:
-                return supported[0]
-        return self._attr_color_mode
+        mode = self.channel.get(ATTR_COLOR_MODE, None)
+        supported = self.supported_color_modes
+        if supported:
+            if mode in supported:
+                return mode
+            return next(iter(supported))
+        return mode or self._attr_color_mode or ColorMode.ONOFF
 
     @property
     def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
         """Supported color modes."""
         modes = self.__supported_color_modes
+        if isinstance(modes, set) and len(modes) > 1 and ColorMode.BRIGHTNESS in modes:
+            modes = set(modes) - {ColorMode.BRIGHTNESS}
         if not isinstance(modes, set):
             _LOGGER.warning("%s: Modes: %s is not a set!", self.device.name, modes)
         return modes

@@ -80,24 +80,63 @@ class SPTechBleModel(SPTechModel, UniledBleModel):
         _HEADER_BYTE = 0x53
         _MESSAGE_TYPE = 1
         _MESSAGE_KEY = 2
-        _MESSAGE_LENGTH = 5
+        _TOTAL_PACKETS = 3
+        _PACKET_INDEX = 4
+        _PAYLOAD_LENGTH = 5
 
         packet_length = len(data)
         if packet_length < _HEADER_LENGTH:
             raise ParseNotificationError("Packet is undersized")
         if data[0] != _HEADER_BYTE or data[_MESSAGE_TYPE] != self.cmd.STATUS_QUERY:
             raise ParseNotificationError("Packet is invalid")
-        message_length = data[_MESSAGE_LENGTH]
-        expected_length = message_length + _HEADER_LENGTH
+        chunk_length = data[_PAYLOAD_LENGTH]
+        expected_length = chunk_length + _HEADER_LENGTH
         if packet_length != expected_length:
             raise ParseNotificationError(
                 f"Packet payload size mismatch: {packet_length} vs {expected_length}"
             )
         if message_key := data[_MESSAGE_KEY]:  # noqa: F841
             raise ParseNotificationError("Encoded packet - currently unsupported")
-        return self.decode_response_payload(
-            device, (), data[:_HEADER_LENGTH], data[_HEADER_LENGTH:]
-        )
+
+        total_packets = data[_TOTAL_PACKETS]
+        packet_index = data[_PACKET_INDEX]
+
+        if total_packets <= 1:
+            return self.decode_response_payload(
+                device, (), data[:_HEADER_LENGTH], data[_HEADER_LENGTH:]
+            )
+
+        if packet_index == 0:
+            device._sptech_buffer = {
+                "total": total_packets,
+                "expected": 1,
+                "header": data[:_HEADER_LENGTH],
+                "payload": bytearray(
+                    data[_HEADER_LENGTH : _HEADER_LENGTH + chunk_length]
+                ),
+            }
+            return None
+
+        if (
+            not hasattr(device, "_sptech_buffer")
+            or device._sptech_buffer["total"] != total_packets
+        ):
+            return None
+
+        if packet_index == device._sptech_buffer["expected"]:
+            device._sptech_buffer["payload"].extend(
+                data[_HEADER_LENGTH : _HEADER_LENGTH + chunk_length]
+            )
+            device._sptech_buffer["expected"] += 1
+            if device._sptech_buffer["expected"] == total_packets:
+                header = device._sptech_buffer["header"]
+                full_payload = device._sptech_buffer["payload"]
+                delattr(device, "_sptech_buffer")
+                return self.decode_response_payload(device, (), header, full_payload)
+            return None
+
+        delattr(device, "_sptech_buffer")
+        return None
 
 
 ##
@@ -186,6 +225,36 @@ class SP6XXE(UniledProxy):
         code = {0x2B: "SP63CE", 0x37: "SP64CE"}
         conf = {0x0C: SP6XXE_8C()}
 
+    class SP530E(SPTechSig):
+        info = "RGB(CW) SPI/PWM (Music) Controller"
+        code = {0x4E: "SP530E"}
+        conf = {
+            0x81: SP6XXE_81(),  # PWM Mono
+            0x83: SP6XXE_83(),  # PWM CCT
+            0x85: SP6XXE_85(),  # PWM RGB
+            0x87: SP6XXE_87(),  # PWM RGBW
+            0x8A: SP6XXE_8A(),  # PWM RGBCCT
+            0x82: SP6XXE_82(),  # SPI - Mono
+            0x84: SP6XXE_84(),  # SPI - CCT (1)
+            0x8D: SP6XXE_8D(),  # SPI - CCT (2)
+            0x86: SP6XXE_86(),  # SPI - RGB
+            0x88: SP6XXE_88(),  # SPI - RGBW
+            0x8B: SP6XXE_8B(),  # SPI - RGBCCT (1)
+            0x8E: SP6XXE_8E(),  # SPI - RGBCCT (2)
+            0x89: SP6XXE_89(),  # SPI - RGB + 1 CH PWM
+            0x8C: SP6XXE_8C(),  # SPI - RGB + 2 CH PWM
+        }
+
+    class SP538E_SP548E(SPTechSig):
+        info = "SPI RGB (Music) Controller"
+        code = {0x56: "SP538E", 0x63: "SP548E", 0x69: "SP548E", 0x94: "SP548E"}
+        conf = {0x06: SP6XXE_86()}
+
+    class SP539E_SP549E(SPTechSig):
+        info = "SPI RGBW (Music) Controller"
+        code = {0x57: "SP539E", 0x64: "SP549E"}
+        conf = {0x08: SP6XXE_88()}
+
     MODEL_SIGNATURE_LIST: Final = [
         SP630E,
         SP631E_SP641E,
@@ -200,6 +269,9 @@ class SP6XXE(UniledProxy):
         SP63AE_SP64AE,
         SP63BE_SP64BE,
         SP63CE_SP64CE,
+        SP530E,
+        SP538E_SP548E,
+        SP539E_SP549E,
     ]
 
     def _make_model(self, model: SPTechSig, code: int) -> SPTechBleModel:

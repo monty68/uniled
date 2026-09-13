@@ -1,6 +1,6 @@
 {
   "domain": "uniled",
-  "name": "Universal Light Controller",
+  "name": "UniLED (Universal Light Controller)",
   "bluetooth": [
     {
       "manufacturer_id": 63517
@@ -19,6 +19,12 @@
     },
     {
       "local_name": "SP1*"
+    },
+    {
+      "local_name": "SP5*"
+    },
+    {
+      "local_name": "SP6*"
     }
   ],
   "codeowners": [

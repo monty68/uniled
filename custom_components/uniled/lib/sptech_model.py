@@ -260,18 +260,25 @@ class SPTechModel(SPTechFX):
         data: bytearray,
     ) -> bytearray | None:
         """Decode Chunk Type #1."""
-        device.master.status.replace(
-            {
-                ATTR_UL_DEVICE_FORCE_REFRESH: True,
-                "unknown1.0": data[0],
-                "unknown1.1": data[1],
-                ATTR_UL_INFO_FIRMWARE: data[2:10].decode("utf-8"),
-                ATTR_UL_ONOFF_EFFECT: data[11],
-                ATTR_UL_ONOFF_SPEED: data[12],
-                ATTR_UL_ONOFF_PIXELS: int.from_bytes(data[13:15], byteorder="big"),
-                ATTR_UL_ON_POWER: data[16],
-            }
-        )
+        if len(data) < 11:
+            return None
+        fw = data[2:10].decode("utf-8", errors="ignore") if len(data) >= 10 else ""
+        status = {
+            ATTR_UL_DEVICE_FORCE_REFRESH: True,
+            "unknown1.0": data[0],
+            "unknown1.1": data[1],
+            ATTR_UL_INFO_FIRMWARE: fw,
+        }
+        if len(data) > 11:
+            status[ATTR_UL_ONOFF_EFFECT] = data[11]
+        if len(data) > 12:
+            status[ATTR_UL_ONOFF_SPEED] = data[12]
+        if len(data) >= 15:
+            status[ATTR_UL_ONOFF_PIXELS] = int.from_bytes(data[13:15], byteorder="big")
+        if len(data) > 16:
+            status[ATTR_UL_ON_POWER] = data[16]
+
+        device.master.status.replace(status)
 
         device.master.features.extend(
             [
@@ -293,7 +300,9 @@ class SPTechModel(SPTechFX):
 
         if cfg.coexistence:
             device.master.features.append(CoexistenceFeature())
-            device.master.status.set(ATTR_UL_COEXISTENCE, bool(data[15]))
+            device.master.status.set(
+                ATTR_UL_COEXISTENCE, bool(data[15]) if len(data) > 15 else False
+            )
         return None
 
     ## Message Chunk 2 - Device Mode, Status & Settings
@@ -469,17 +478,24 @@ class SPTechModel(SPTechFX):
                             device.master.set(ATTR_HA_WHITE, level_white)
                             white_mode = COLOR_MODE_WHITE
                             supported_color_modes.add(white_mode)
-                        else:
-                            # Fix Issues #73 and #77
-                            # supported_color_modes = set(white_mode)
+                        elif not cfg.hue:
                             supported_color_modes.add(white_mode)
 
                         device.master.set(
                             ATTR_HA_SUPPORTED_COLOR_MODES, supported_color_modes
                         )
+                        active_color_mode = (
+                            COLOR_MODE_RGB if self.is_color_mode(mode) else white_mode
+                        )
+                        if active_color_mode not in supported_color_modes:
+                            active_color_mode = (
+                                next(iter(supported_color_modes))
+                                if supported_color_modes
+                                else ColorMode.ONOFF
+                            )
                         device.master.set(
                             ATTR_HA_COLOR_MODE,
-                            COLOR_MODE_RGB if self.is_color_mode(mode) else white_mode,
+                            active_color_mode,
                         )
                     device.master.set(
                         ATTR_HA_BRIGHTNESS,
@@ -657,7 +673,8 @@ class SPTechModel(SPTechFX):
         data: bytearray,
     ) -> bytearray | None:
         """Decode Chunk Type #7"""
-        device.master.set(ATTR_UL_POWER_FUN_SWITCH, data.pop(0))
+        if data:
+            device.master.set(ATTR_UL_POWER_FUN_SWITCH, data.pop(0))
         return data
 
     ## Message Chunk 10 - Unknown

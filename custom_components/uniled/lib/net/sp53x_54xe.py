@@ -150,7 +150,7 @@ class SP5XXE(UniledProxy):
         """SP538E & SP548E."""
 
         info = "SPI RGB (Music) Controller"
-        code = {0x56: "SP538E", 0x63: "SP548E", 0x69: "SP548E"}
+        code = {0x56: "SP538E", 0x63: "SP548E", 0x69: "SP548E", 0x94: "SP548E"}
         conf = {0x06: SP5XXE_86()}
 
     class SP539E_SP549E(SPTechSig):
