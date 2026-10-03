@@ -12,7 +12,6 @@ import voluptuous as vol
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
-    ATTR_COLOR_TEMP,
     ATTR_COLOR_TEMP_KELVIN,
     ATTR_EFFECT,
     ATTR_RGB_COLOR,
@@ -49,6 +48,7 @@ from .entity import (
 )
 from .lib.attributes import UniledAttribute
 from .lib.const import (
+    ATTR_HA_COLOR_TEMP as ATTR_COLOR_TEMP,  # Removed from HA Core light component
     ATTR_HA_MAX_COLOR_TEMP_KELVIN,
     ATTR_HA_MAX_MIREDS,
     ATTR_HA_MIN_COLOR_TEMP_KELVIN,

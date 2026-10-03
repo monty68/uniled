@@ -160,8 +160,16 @@ class SP5XXE(UniledProxy):
         code = {0x57: "SP539E", 0x64: "SP549E"}
         conf = {0x08: SP5XXE_88()}
 
+    class SP541E(SPTechSig):
+        """SP541E."""
+
+        info = "PWM Mono (Music) Controller"
+        code = {0x5C: "SP541E"}
+        conf = {0x01: SP5XXE_81()}
+
     MODEL_SIGNATURE_LIST: Final = [
         SP530E,
+        SP541E,
         SP538E_SP548E,
         SP539E_SP549E,
     ]

@@ -32,6 +32,7 @@
   - **SP635E** / **SP645E** - PWM RGBCCT Controllers
   - **SP636E** / **SP646E** - SPI Single Color Controllers
   - **SP637E** / **SP647E** - SPI CCT Controllers
+  - **SP541E** - PWM Single Color (Mono) WiFi Controller
   - **SP538E** / **SP548E** / **SP638E** / **SP648E** - SPI RGB Controllers
   - **SP539E** / **SP549E** / **SP639E** / **SP649E** - SPI RGBW Controllers
   - **SP63AE** / **SP64AE** - SPI RGBCCT Controllers
