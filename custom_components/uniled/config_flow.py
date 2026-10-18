@@ -636,7 +636,11 @@ class UniledConfigFlowHandler(UniledMeshHandler, flow.ConfigFlow, domain=DOMAIN)
             )
             self.context["title_placeholders"] = {
                 "name": UniledBleDevice.human_readable_name(
-                    None, discovery.name, discovery.address
+                    model.model_name
+                    if getattr(model, "use_model_name", False)
+                    else None,
+                    discovery.name,
+                    discovery.address,
                 )
             }
             return True

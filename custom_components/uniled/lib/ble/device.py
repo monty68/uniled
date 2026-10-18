@@ -162,6 +162,15 @@ class UniledBleDevice(UniledDevice):
         for model in UNILED_BLE_MODELS:
             match = model.match_ble_device(device, advertisement)
 
+            if match is True and getattr(model, "exclusive_match", False):
+                _LOGGER.debug(
+                    "Device '%s' (%s) identified as '%s' (exclusive match).",
+                    device.address,
+                    device.name,
+                    model.model_name,
+                )
+                return model
+
             if isinstance(match, UniledBleModel):
                 _LOGGER.debug(
                     "Device '%s' (%s) identified as '%s', by %s.",
@@ -269,6 +278,12 @@ class UniledBleDevice(UniledDevice):
         """Get the name of the device."""
         if not self._ble_device:
             return self.model_name
+        if getattr(getattr(self, "_model", None), "use_model_name", False):
+            # The advertised name of these devices is unreliable (e.g. "LMB" or
+            # a truncated name), so name them after the model instead.
+            return self.human_readable_name(
+                self.model_name, self._ble_device.name or "", self._ble_device.address
+            )
         return self._ble_device.name or self._ble_device.address
 
     @property
@@ -496,9 +511,13 @@ class UniledBleDevice(UniledDevice):
         for command in commands:
             if self._client.is_connected and command:
                 _LOGGER.debug("%s: Sending command: %s", self.name, command.hex())
+                # Most models want write-with-response; a few (SP661E) only
+                # answer when written without response.
                 reply = await self._client.write_gatt_char(
-                    self._write_char, command, True
-                )  # None)
+                    self._write_char,
+                    command,
+                    getattr(self._model, "write_with_response", True),
+                )
                 # await self._client.write_gatt_char(self._write_char, command, False) # Do not use!
                 if reply is not None:
                     _LOGGER.debug("%s: Command Reply: %s", self.name, repr(reply))

@@ -4,6 +4,7 @@ from typing import Final
 from .device import UNILED_TRANSPORT_BLE
 from .led_chord import SP107E
 from .led_hue import SP110Ex00, SP110Ex10
+from .banlanx_661 import SP661E
 from .banlanx_601 import SP601E
 from .banlanx_60x import SP602E, SP608E
 from .banlanx_6xx import SP6XXE
@@ -18,6 +19,7 @@ UNILED_BLE_MODELS: Final = [
     SP110Ex00,
     SP110Ex10,
     ######
+    SP661E,  # must stay before SP601E (both match manufacturer data starting 01)
     SP601E,
     ######
     SP602E,
